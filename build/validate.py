@@ -17,13 +17,19 @@ sys.path.insert(0, R)
 import selector as S  # noqa: E402
 
 S.SRC = S.Path(os.environ.get("BR_SRC", os.path.join(R, "work/sqlglot")))
-raw = open(sys.argv[1] if len(sys.argv) > 1 else os.path.join(R, "map.pkl"), "rb").read()
+with open(sys.argv[1] if len(sys.argv) > 1 else os.path.join(R, "map.pkl"), "rb") as f:
+    raw = f.read()
 try:
     raw = zlib.decompress(raw)
 except zlib.error:
     pass
 d = pickle.loads(raw)
-cat = json.load(open(os.path.join(R, "kit/sample/tests.json")))["tests"]
+def read(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+cat = json.loads(read(os.path.join(R, "kit/sample/tests.json")))["tests"]
 num_of = {t["id"]: t["number"] for t in cat}
 ms = {t["number"]: math.floor(t["seconds"] * 1000 + 0.5) for t in cat}
 h = S.Hunter(d)
@@ -31,16 +37,39 @@ idx_to_num = [num_of.get(tid) for tid in d["tests"]]
 known = {n for n in idx_to_num if n is not None}
 unmapped = [n for n in num_of.values() if n not in known]
 
-cases = []   # (name, patch text, failing numbers)
-answers = json.load(open(os.path.join(R, "kit/sample/answers.json")))["commits"]
-for cid, a in sorted(answers.items()):
-    cases.append(("sample", cid, open(os.path.join(R, f"kit/sample/commits/{cid}.patch")).read(), set(a["failing"])))
+nums_in_file = {}
+for t in cat:
+    nums_in_file.setdefault(t["file"], set()).add(t["number"])
+
+
+def label_numbers(mid, labels):
+    """Failing test ids -> numbers. A module that fails to collect fails every test in it."""
+    out = set()
+    for x in labels:
+        if x.startswith("COLLECT::"):
+            path = x[len("COLLECT::"):].split("::")[0]
+            hit = {n for f, ns in nums_in_file.items() if f == path or f.startswith(path.rstrip("/") + "/") for n in ns}
+            if not hit:
+                print("WARN", mid, "collection failure matches no catalogued test:", x)
+            out |= hit
+        elif x in num_of:
+            out.add(num_of[x])
+        else:
+            print("WARN", mid, "labelled test not in catalogue:", x)
+    return out
+
+
+cases = []   # (group, id, patch text, failing numbers)
+answers = json.loads(read(os.path.join(R, "kit/sample/answers.json")))["commits"]
+for cid, a in sorted(answers.items()):   # sample answers already hold test numbers
+    cases.append(("sample", cid, read(os.path.join(R, f"kit/sample/commits/{cid}.patch")), set(a["failing"])))
 for lf in sorted(glob.glob(os.path.join(R, "work/mutants/*.json"))):
     mid = os.path.basename(lf)[:-5]
     pf = lf[:-5] + ".patch"
-    if os.path.exists(pf):
-        lab = json.load(open(lf))["failing"]
-        cases.append(("mutant", mid, open(pf).read(), {num_of[x] for x in lab if x in num_of}))
+    if not os.path.exists(pf):
+        print("WARN", mid, "has labels but no patch; skipped")
+        continue
+    cases.append(("mutant", mid, read(pf), label_numbers(mid, json.loads(read(lf))["failing"])))
 
 totals = {}
 for group, cid, text, failing in cases:

@@ -64,14 +64,16 @@ def mutate_py(src):
 
 def mutate_sql(src):
     lines = src.splitlines(keepends=True)
-    idx = [i for i, l in enumerate(lines) if l.strip() and not l.startswith("#") and not l.startswith("--")]
+    idx = [i for i, l in enumerate(lines) if l.strip() and not l.lstrip().startswith(("#", "--"))]
     if not idx:
         return None
     i = rng.choice(idx)
-    words = lines[i].split(" ")
-    j = rng.randrange(len(words))
+    body = lines[i].rstrip("\r\n")
+    eol = lines[i][len(body):]
+    words = body.split(" ")
+    j = rng.randrange(len(words) + 1)
     words.insert(j, rng.choice(["42", "x", "NULL", "0", "1"]))
-    lines[i] = " ".join(words)
+    lines[i] = " ".join(words) + eol   # keep the line break
     return "".join(lines)
 
 def run_suite():
@@ -82,14 +84,15 @@ def run_suite():
                         "--timeout", "120", "tests"], cwd=work, env=env, capture_output=True, text=True)
     fails = set()
     for f in glob.glob(os.path.join(res, "*")):
-        fails |= set(open(f).read().split())
+        with open(f) as fh:
+            fails |= {ln.strip() for ln in fh if ln.strip()}   # one id per line; ids may hold spaces
     return sorted(fails), p.stdout[-300:]
 
 done = 0
 attempt = 0
 while done < count:
     attempt += 1
-    use_fx = rng.random() < (0.27 if MODE == "any" else 0.0)
+    use_fx = bool(fx_files) and rng.random() < (0.27 if MODE == "any" else 0.0)
     path = rng.choice(fx_files if use_fx else py_files)
     rel = os.path.relpath(path, pristine)
     src = open(path, encoding="utf-8").read()

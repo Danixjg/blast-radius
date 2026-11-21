@@ -99,7 +99,8 @@ for dirpath, _, fnames in walk:
             continue
         full = os.path.join(dirpath, fn)
         rel = os.path.relpath(full, root)
-        src = open(full, encoding="utf-8").read()
+        with open(full, encoding="utf-8") as fh:
+            src = fh.read()
         try:
             tree = ast.parse(src)
         except SyntaxError:
@@ -161,13 +162,16 @@ for dirpath, _, fnames in walk:
                         subproc |= lm.get(ln, 0)
 
 # classes deriving from Enum, resolved by simple name through sqlglot's own class graph
-bases_of = {}
+defs_of = {}   # class name -> [bases of each definition]
 for dirpath, _, fnames in os.walk(os.path.join(root, "sqlglot")):
     for fn in fnames:
         if fn.endswith(".py"):
-            for node in ast.walk(ast.parse(open(os.path.join(dirpath, fn), encoding="utf-8").read())):
+            with open(os.path.join(dirpath, fn), encoding="utf-8") as fh:
+                tree_ = ast.parse(fh.read())
+            for node in ast.walk(tree_):
                 if isinstance(node, ast.ClassDef):
-                    bases_of.setdefault(node.name, []).extend(ast.unparse(b).split(".")[-1] for b in node.bases)
+                    defs_of.setdefault(node.name, []).append([ast.unparse(b).split(".")[-1] for b in node.bases])
+bases_of = {k: [b for bases in v for b in bases] for k, v in defs_of.items()}
 ENUM_ROOTS = {"Enum", "IntEnum", "StrEnum", "Flag", "IntFlag"}
 
 
@@ -177,8 +181,12 @@ def _is_enum(name, seen=()):
     return any(b not in seen and _is_enum(b, seen + (name,)) for b in bases_of.get(name, ()))
 
 
-# a name defined both as an enum and as something else is not trusted
-enum_names = {n for n in bases_of if _is_enum(n) and all(_is_enum(b) or b in ENUM_ROOTS or b == "str" for b in bases_of[n] if b not in ENUM_ROOTS) }
+def _def_is_enum(bases):
+    return any(b in ENUM_ROOTS or _is_enum(b) for b in bases)
+
+
+# a name defined both as an enum and as something else is not trusted: every definition must be one
+enum_names = {n for n, defs in defs_of.items() if all(_def_is_enum(bases) for bases in defs)}
 print("enum classes:", len(enum_names), sorted(enum_names)[:12], file=sys.stderr)
 
 data = {
