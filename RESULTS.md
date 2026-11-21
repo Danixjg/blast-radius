@@ -84,14 +84,12 @@ pristine worktree with 4 workers: pristine `complete` with 0 failures, all 66 la
 | --- | ---: | ---: |
 | rev3 (`fcc7d3a`) | 670.708 | 0 |
 | this version (frozen) | 571.500 | 0 |
-| this version with PR #5's probe server merged | 574.340 | 0 |
 
 So the independent set shows a 14.8 % reduction with no misses, rather than the near-zero change on
-the small earlier "fresh" set. The merge with PR #5 costs 2.84 s here: a forked probe does not
-report the `test_lazy_load` observation, so that test is kept conservatively. On the public sample
-the two versions are effectively tied in Docker (97.076 s / 0 misses; median totals 99.18 s for
-this PR and 99.23 s for the merge, CPU 2.10 and 2.15 s). If both PRs ship, the holdout interaction
-should be handled explicitly rather than assumed free.
+the small earlier "fresh" set. A temporary merge with PR #5 was measured and discarded: it scored
+574.340 s with 0 misses here, 2.84 s worse, because a forked probe cannot report the
+`test_lazy_load` observation and keeps that test. On the public sample the two were tied in Docker
+(97.076 s / 0 misses; median totals 99.18 s and 99.23 s). The merge is not part of this PR.
 
 ## Versions
 
