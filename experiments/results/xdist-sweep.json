@@ -1,0 +1,70 @@
+{
+  "status": "failed",
+  "seed": 4107,
+  "env": {
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "SKIP_INTEGRATION": "0"
+  },
+  "expected_runs": 4,
+  "runs": [
+    {
+      "iteration": 0,
+      "patch": "4d63",
+      "distribution": "loadfile",
+      "pytest_worker_count": 4,
+      "tests": 360,
+      "wall_seconds": 11.128910391000318,
+      "child_cpu_seconds": 38.41363299999999,
+      "returncode": 0,
+      "timed_out": false,
+      "failures": 0,
+      "actual_execution_verified": true,
+      "report": "/workspace/blast-radius-results/xdist-sweep/run-0-4d63-loadfile-4/junit.xml",
+      "log": "/workspace/blast-radius-results/xdist-sweep/run-0-4d63-loadfile-4/pytest.log"
+    },
+    {
+      "iteration": 0,
+      "patch": "4d63",
+      "distribution": "loadfile",
+      "pytest_worker_count": 2,
+      "tests": 360,
+      "wall_seconds": 11.782490730000063,
+      "child_cpu_seconds": 30.24806,
+      "returncode": 0,
+      "timed_out": false,
+      "failures": 0,
+      "actual_execution_verified": true,
+      "report": "/workspace/blast-radius-results/xdist-sweep/run-0-4d63-loadfile-2/junit.xml",
+      "log": "/workspace/blast-radius-results/xdist-sweep/run-0-4d63-loadfile-2/pytest.log"
+    },
+    {
+      "iteration": 0,
+      "patch": "4d63",
+      "distribution": "worksteal",
+      "pytest_worker_count": 4,
+      "tests": 360,
+      "wall_seconds": 15.666896934999386,
+      "child_cpu_seconds": 56.322273,
+      "returncode": 1,
+      "timed_out": false,
+      "failures": 1,
+      "actual_execution_verified": false,
+      "report": "/workspace/blast-radius-results/xdist-sweep/run-0-4d63-worksteal-4/junit.xml",
+      "log": "/workspace/blast-radius-results/xdist-sweep/run-0-4d63-worksteal-4/pytest.log"
+    }
+  ],
+  "current_run": {
+    "iteration": 0,
+    "patch": "4d63",
+    "distribution": "worksteal",
+    "pytest_worker_count": 4,
+    "tests": 360
+  },
+  "cpu_note": "CPU aggregates the controller subprocess and waited xdist descendants; it is not fleet occupancy.",
+  "latency_note": "No first-failure timestamps are measured by this benchmark.",
+  "selection_note": "Every architecture executes the same baseline-selected IDs; labels are verification-only.",
+  "error": "RuntimeError: Execution differs from complete labelled selection: {'iteration': 0, 'patch': '4d63', 'distribution': 'worksteal', 'pytest_worker_count': 4, 'tests': 360}; see /workspace/blast-radius-results/xdist-sweep/run-0-4d63-worksteal-4/pytest.log"
+}

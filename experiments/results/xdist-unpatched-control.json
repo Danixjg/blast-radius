@@ -1,0 +1,13 @@
+{
+  "wall_seconds": 15.121011438000096,
+  "child_cpu_seconds": 57.826691000000004,
+  "returncode": 1,
+  "timed_out": false,
+  "control": "unpatched pinned source; same 360 IDs; four work-stealing workers",
+  "complete_test_set": true,
+  "failed": [
+    "tests/test_generator.py::TestGenerator::test_generator_memory"
+  ],
+  "errors": [],
+  "skipped": []
+}

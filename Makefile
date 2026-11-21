@@ -1,4 +1,5 @@
 IMAGE ?= blast-radius-entry
+MAP_FORMAT ?= pickle
 KIT ?= $(CURDIR)/kit
 SAMPLE ?= $(KIT)/sample
 OUTPUT := $(CURDIR)/output.jsonl
@@ -21,7 +22,7 @@ $(KIT)/score.py:
 kit: $(KIT)/score.py
 
 build:
-	docker build --platform linux/amd64 --tag $(IMAGE) .
+	docker build --platform linux/amd64 --build-arg MAP_FORMAT=$(MAP_FORMAT) --tag $(IMAGE) .
 
 sample: kit build
 	docker run $(RUN_FLAGS) $(IMAGE) > $(OUTPUT)

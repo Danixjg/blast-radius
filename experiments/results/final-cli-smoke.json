@@ -1,0 +1,71 @@
+{
+  "runs": [
+    {
+      "iteration": 0,
+      "patch": "2vdj",
+      "mode": "relay",
+      "wall_seconds": 4.027546705999612,
+      "child_cpu_seconds": 10.930864000000001,
+      "first_failure_seconds": 3.6002649749998454,
+      "first_failure_observed_seconds": 4.027319416999944,
+      "tests": 1,
+      "failures": 1,
+      "batches": 1,
+      "peak_workers": 1,
+      "actual_execution_verified": true
+    },
+    {
+      "iteration": 0,
+      "patch": "2vdj",
+      "mode": "static",
+      "wall_seconds": 3.9470613800003775,
+      "child_cpu_seconds": 10.761995000000002,
+      "first_failure_seconds": 3.4133082930002274,
+      "first_failure_observed_seconds": 3.9468550720002895,
+      "tests": 1,
+      "failures": 1,
+      "batches": 1,
+      "peak_workers": 1,
+      "actual_execution_verified": true
+    },
+    {
+      "iteration": 0,
+      "patch": "2vdj",
+      "mode": "priority",
+      "wall_seconds": 3.7345751689999815,
+      "child_cpu_seconds": 10.220115000000002,
+      "first_failure_seconds": 3.300974733000203,
+      "first_failure_observed_seconds": 3.734395381000013,
+      "tests": 1,
+      "failures": 1,
+      "batches": 1,
+      "peak_workers": 1,
+      "actual_execution_verified": true
+    }
+  ],
+  "env": {
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "SKIP_INTEGRATION": "0"
+  },
+  "seed": 4107,
+  "max_workers": 3,
+  "relay_batch_size": 32,
+  "risk_source": "neutral prior; no historical labels available",
+  "expected_runs": 3,
+  "status": "complete",
+  "note": "Failure latency uses retrospective pytest event timestamps, read after completion. Full tests verified using JUnit.",
+  "summary": {
+    "static": {
+      "aggregate_wall_seconds": 3.9470613800003775
+    },
+    "priority": {
+      "aggregate_wall_seconds": 3.7345751689999815
+    },
+    "relay": {
+      "aggregate_wall_seconds": 4.027546705999612
+    }
+  }
+}

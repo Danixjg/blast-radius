@@ -766,9 +766,9 @@ def schedule(tests):
         return 0, []
     durs = sorted(tests, key=lambda x: (-x[1], x[0]))
     total = sum(ms for _, ms in durs)
-    best = None
-    for w in range(1, min(MAX_WORKERS, len(durs)) + 1):
-        if best is not None and max(durs[0][1], -(-total // w)) + WORKER_MS * w >= best[0]:
+    best = (total + WORKER_MS, [[num for num, _ in durs]])
+    for w in range(2, min(MAX_WORKERS, len(durs)) + 1):
+        if max(durs[0][1], -(-total // w)) + WORKER_MS * w >= best[0]:
             break
         loads, bins = [0] * w, [[] for _ in range(w)]
         for num, ms in durs:
@@ -776,7 +776,7 @@ def schedule(tests):
             loads[i] += ms
             bins[i].append(num)
         cost = max(loads) + WORKER_MS * w
-        if best is None or cost < best[0]:
+        if cost < best[0]:
             best = (cost, [b for b in bins if b])
     return best
 
@@ -784,12 +784,77 @@ def schedule(tests):
 # ============================================================================ main
 
 
+PREPARED_MAP_MAGIC = b"BRMAP2\n"
+MASK_MAP_FIELDS = ("opens", "classes", "name_mask")
+
+
+def serialize_map(data):
+    """Pool repeated coverage integers at build time; loading restores the original schema."""
+    masks, indexes = [], {}
+
+    def index(mask):
+        value = indexes.get(mask)
+        if value is None:
+            value = indexes[mask] = len(masks)
+            masks.append(mask)
+        return value
+
+    packed = dict(data)
+    if "lines" in packed:
+        packed["lines"] = {path: {line: index(mask) for line, mask in lines.items()}
+                           for path, lines in data["lines"].items()}
+    for field in MASK_MAP_FIELDS:
+        if field in packed:
+            packed[field] = {key: index(mask) for key, mask in data[field].items()}
+    if "subproc" in packed:
+        packed["subproc"] = index(data["subproc"])
+    return PREPARED_MAP_MAGIC + pickle.dumps({"version": 2, "masks": masks, "data": packed}, protocol=5)
+
+
 def load_map():
     raw = MAP.read_bytes()
+    if raw.startswith(PREPARED_MAP_MAGIC):
+        record = pickle.loads(raw[len(PREPARED_MAP_MAGIC):])
+        if record.get("version") != 2:
+            raise ValueError("unsupported prepared map version")
+        masks, data = record["masks"], record["data"]
+        if not isinstance(data, dict) or not isinstance(masks, list):
+            raise ValueError("prepared map must contain a dictionary and mask pool")
+        if any(type(mask) is not int or mask < 0 for mask in masks):
+            raise ValueError("prepared map contains an invalid coverage mask")
+
+        def expand(mapping):
+            if mapping and (min(mapping.values()) < 0 or max(mapping.values()) >= len(masks)):
+                raise ValueError("prepared map contains an invalid mask index")
+            return {key: masks[value] for key, value in mapping.items()}
+
+        if "lines" in data:
+            data["lines"] = {path: expand(lines) for path, lines in data["lines"].items()}
+        for field in MASK_MAP_FIELDS:
+            if field in data:
+                data[field] = expand(data[field])
+        if "subproc" in data:
+            data["subproc"] = expand({"value": data["subproc"]})["value"]
+        return data
     if raw[:1] == b"x" or raw[:2] in (b"\x78\x9c", b"\x78\xda", b"\x78\x01"):
         import zlib
         raw = zlib.decompress(raw)
     return pickle.loads(raw)
+
+
+def selected_numbers(mask, idx_to_num):
+    """Expand a coverage mask without visiting every catalogue entry for sparse selections."""
+    mask &= (1 << len(idx_to_num)) - 1
+    if mask.bit_count() > len(idx_to_num) // 4:
+        return {num for i, num in enumerate(idx_to_num) if num is not None and (mask >> i) & 1}
+    nums = set()
+    while mask:
+        bit = mask & -mask
+        num = idx_to_num[bit.bit_length() - 1]
+        if num is not None:
+            nums.add(num)
+        mask ^= bit
+    return nums
 
 
 def main():
@@ -813,7 +878,7 @@ def main():
             if hunter is None:
                 raise RuntimeError("no hunter")
             mask = hunter.analyze(p.read_text(encoding="utf-8", errors="replace"))
-            nums = {idx_to_num[i] for i in range(hunter.n) if (mask >> i) & 1} - {None}
+            nums = selected_numbers(mask, idx_to_num)
             if mask:
                 nums.update(unmapped)   # tests the map never saw: keep them
         except Exception as e:

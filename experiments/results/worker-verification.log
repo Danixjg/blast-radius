@@ -1,0 +1,39 @@
+test_duplicate_execution_is_rejected (test_execution_evidence.ExecutionEvidenceTests.test_duplicate_execution_is_rejected) ... ok
+test_missing_report_is_not_success (test_execution_evidence.ExecutionEvidenceTests.test_missing_report_is_not_success) ... ok
+test_report_outcomes_use_catalog_ids (test_execution_evidence.ExecutionEvidenceTests.test_report_outcomes_use_catalog_ids) ... ok
+test_selector_preparation_cannot_inherit_external_map (test_execution_evidence.ExecutionEvidenceTests.test_selector_preparation_cannot_inherit_external_map) ... ok
+test_collection_error_is_not_a_test_failure_or_completion (test_executor.ExecutorTests.test_collection_error_is_not_a_test_failure_or_completion) ... ok
+test_empty_plan (test_executor.ExecutorTests.test_empty_plan) ... ok
+test_every_mode_completes_every_assignment_after_failure (test_executor.ExecutorTests.test_every_mode_completes_every_assignment_after_failure) ... ok
+test_failure_events_measure_failure_before_batch_completion (test_executor.ExecutorTests.test_failure_events_measure_failure_before_batch_completion) ... ok
+test_invalid_plans_rejected_before_launch (test_executor.ExecutorTests.test_invalid_plans_rejected_before_launch) ... ok
+test_missing_executable_is_not_a_successful_completion (test_executor.ExecutorTests.test_missing_executable_is_not_a_successful_completion) ... ok
+test_priority_changes_order_without_dropping_tasks (test_executor.ExecutorTests.test_priority_changes_order_without_dropping_tasks) ... ok
+test_relay_has_exact_singleton_failures_and_completion_barrier (test_executor.ExecutorTests.test_relay_has_exact_singleton_failures_and_completion_barrier) ... ok
+test_relay_microbatches_and_report_paths (test_executor.ExecutorTests.test_relay_microbatches_and_report_paths) ... ok
+test_stale_and_invalid_events_do_not_create_test_failures (test_executor.ExecutorTests.test_stale_and_invalid_events_do_not_create_test_failures) ... ok
+test_timeout_also_terminates_spawned_descendant (test_executor.ExecutorTests.test_timeout_also_terminates_spawned_descendant) ... ok
+test_timeout_is_incomplete_validation_and_continues (test_executor.ExecutorTests.test_timeout_is_incomplete_validation_and_continues) ... ok
+test_every_policy_preserves_selection (test_model_sweep.ModelSweepTests.test_every_policy_preserves_selection) ... ok
+test_heap_implementation_matches_array_lpt (test_model_sweep.ModelSweepTests.test_heap_implementation_matches_array_lpt) ... ok
+test_known_balanced_optimum (test_model_sweep.ModelSweepTests.test_known_balanced_optimum) ... ok
+test_module_group_stays_together (test_model_sweep.ModelSweepTests.test_module_group_stays_together) ... ok
+test_affinity_keeps_each_module_in_one_command (test_policies.PolicyTests.test_affinity_keeps_each_module_in_one_command) ... ok
+test_balanced_batch_target_and_more_batches_than_workers (test_policies.PolicyTests.test_balanced_batch_target_and_more_batches_than_workers) ... ok
+test_balanced_keeps_long_task_early_and_parallelism (test_policies.PolicyTests.test_balanced_keeps_long_task_early_and_parallelism) ... ok
+test_empty_and_zero_duration_inputs (test_policies.PolicyTests.test_empty_and_zero_duration_inputs) ... ok
+test_every_policy_preserves_all_inputs_without_mutation (test_policies.PolicyTests.test_every_policy_preserves_all_inputs_without_mutation) ... ok
+test_invalid_inputs_rejected (test_policies.PolicyTests.test_invalid_inputs_rejected) ... ok
+test_lpt_has_known_optimum_for_independent_example (test_policies.PolicyTests.test_lpt_has_known_optimum_for_independent_example) ... ok
+test_shortfirst_control_does_not_use_risk (test_policies.PolicyTests.test_shortfirst_control_does_not_use_risk) ... ok
+test_map_formats_and_version_guard (test_selector_performance.SelectorPerformanceTests.test_map_formats_and_version_guard) ... ok
+test_real_map_round_trip (test_selector_performance.SelectorPerformanceTests.test_real_map_round_trip) ... ok
+test_sample_selection_and_output_parity (test_selector_performance.SelectorPerformanceTests.test_sample_selection_and_output_parity) ... ok
+test_schedule_known_optima_and_integrity (test_selector_performance.SelectorPerformanceTests.test_schedule_known_optima_and_integrity) ... ok
+test_scheduler_preserves_baseline_on_varied_workloads (test_selector_performance.SelectorPerformanceTests.test_scheduler_preserves_baseline_on_varied_workloads) ... ok
+test_sparse_and_dense_mask_expansion (test_selector_performance.SelectorPerformanceTests.test_sparse_and_dense_mask_expansion) ... ok
+
+----------------------------------------------------------------------
+Ran 34 tests in 6.074s
+
+OK

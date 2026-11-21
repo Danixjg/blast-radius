@@ -1,0 +1,14 @@
+{
+  "kernel": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "cpu_max": "400000 100000",
+  "memory_max": "17179869184",
+  "runtime_commit": "eb11aec4be8cb2122afe713a4816662c3f0fb2fa",
+  "baseline_commit": "3fd38f73ffca368c4a7b4c7472ea0b127f0b4bc3"
+}
