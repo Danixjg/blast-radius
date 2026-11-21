@@ -68,10 +68,7 @@ class Parity(unittest.TestCase):
     def setUpClass(cls):
         cls.server = S.ProbeServer.start()
         assert cls.server is not None, "probe server failed to start"
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.server.close()
+        cls.addClassCleanup(cls.server.close)
 
     def both(self, files, expected, timeout=30):
         self.assertTrue(self.server.eligible(files), "case must exercise the forked path")
@@ -94,8 +91,8 @@ class Parity(unittest.TestCase):
         self.both({LEAF: read(LEAF) + "\ndef (:\n"}, "broken")
 
     def test_deleted_leaf(self):
-        fresh = S.run_probe({LEAF: None}, 30)
-        self.assertEqual(S.run_probe({LEAF: None}, 30, server=self.server), fresh)
+        # nothing imports this dialect at import time, so deleting it breaks no import
+        self.both({LEAF: None}, "ok")
 
     def test_combined_patch(self):
         # the leaf calls a core helper at import time; the helper is patched to raise. The core
@@ -160,11 +157,8 @@ class Checkpoints(unittest.TestCase):
     def setUpClass(cls):
         cls.server = S.ProbeServer.start(extra=2)
         assert cls.server is not None
+        cls.addClassCleanup(cls.server.close)
         assert cls.server.wait_ready(30), "every checkpoint becomes ready"
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.server.close()
 
     def rel_for_stage(self, want):
         for m in S.all_modules():
@@ -200,25 +194,37 @@ class Checkpoints(unittest.TestCase):
 
 @unittest.skipUnless(hasattr(os, "fork") and (S.SRC / "sqlglot").is_dir(), "needs fork and sqlglot sources")
 class Fallback(unittest.TestCase):
-    def test_dead_deep_stage_falls_back_to_fresh(self):
+    def test_dead_deep_stage_falls_back_to_a_shallower_one(self):
         server = S.ProbeServer.start(extra=2)
+        self.addCleanup(server.close)
         self.assertTrue(server.wait_ready(30))
         rel = next(m.replace(".", "/") + ".py" for m in S.all_modules()
                    if (S.SRC / (m.replace(".", "/") + ".py")).is_file()
                    and server.stage_for({m.replace(".", "/") + ".py": ""}) == 2)
+        files = {rel: read(rel) + "\nraise RuntimeError('x')\n"}
         os.kill(server.stages[2].pid, 9)
         server.stages[2].reader.join(timeout=5)
-        self.assertEqual(S.run_probe({rel: read(rel) + "\nraise RuntimeError('x')\n"}, 30, server=server), "broken")
-        server.close()
+        self.assertTrue(server.stages[2].dead)
+        idx = server.stage_for(files)
+        self.assertIsNotNone(idx, "a shallower checkpoint still serves this file")
+        self.assertLess(idx, 2)
+        before = [st.forked for st in server.stages]
+        self.assertEqual(S.run_probe(files, 30, server=server), "broken")
+        after = [st.forked for st in server.stages]
+        self.assertEqual(after[2], before[2], "the dead checkpoint served nothing")
+        self.assertEqual(after[idx], before[idx] + 1, "the shallower checkpoint served it")
+        self.assertEqual(S.run_probe(files, 30), "broken", "and a fresh probe agrees")
 
     def test_dead_server_falls_back_to_fresh(self):
         server = S.ProbeServer.start()
         self.assertIsNotNone(server)
+        self.addCleanup(server.close)
         server.kill_for_test()
+        self.assertFalse(server.eligible({}), "no live checkpoint: every probe is fresh")
         files = {LEAF: read(LEAF) + "\nraise RuntimeError('patched')\n"}
         self.assertEqual(S.run_probe(files, 30, server=server), "broken")
         self.assertEqual(S.run_probe({}, 30, server=server), "ok")
-        server.close()
+        self.assertEqual(server.forked, 0, "nothing went through the dead server")
 
     def test_disabled_by_environment(self):
         with patch.dict(os.environ, {"BR_PROBE_SERVER": "0"}):
