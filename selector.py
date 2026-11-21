@@ -1244,56 +1244,175 @@ class Hunter:
 # Runs in a fresh interpreter (-I -S). Reads {"src", "files", "modules"} from stdin, serves the
 # patched files from memory through a meta-path finder placed in front of the normal one (no
 # overlay directory, no symlinks), imports every sqlglot module, and reports what failed.
-PROBE_CODE = r'''
+# _probe is shared word for word with the probe server below, so both run the same steps.
+PROBE_LIB = r'''
 import importlib, importlib.abc, importlib.util, json, os, sys
 sys.dont_write_bytecode = True
-spec = json.loads(sys.stdin.buffer.read().decode("utf-8", "surrogateescape"))
-src = spec["src"]
-sys.path.insert(0, src)
-patched = {}
-for rel, text in spec["files"].items():
-    m = rel[:-3].replace("/", ".")
-    pkg = m.endswith(".__init__")
-    patched[m[:-9] if pkg else m] = (rel, pkg, text)
 
-class _Loader(importlib.abc.SourceLoader):
-    def __init__(self, path, data):
-        self.path, self.data = path, data
-    def get_filename(self, fullname):
-        return self.path
-    def get_data(self, path):
-        if path == self.path:
-            return self.data
-        with open(path, "rb") as f:
-            return f.read()
 
-class _Finder(importlib.abc.MetaPathFinder):
-    def find_spec(self, name, path=None, target=None):
-        hit = patched.get(name)
-        if hit is None:
-            return None
-        rel, pkg, text = hit
-        if text is None:
-            raise ModuleNotFoundError("No module named %r (deleted by the patch)" % name, name=name)
-        full = os.path.join(src, *rel.split("/"))
-        s = importlib.util.spec_from_loader(name, _Loader(full, text.encode("utf-8", "surrogateescape")),
-                                            origin=full, is_package=pkg)
-        if pkg:
-            s.submodule_search_locations = [os.path.dirname(full)]
-        s.has_location = True
-        return s
+def _probe(spec):
+    src = spec["src"]
+    if sys.path[:1] != [src]:
+        sys.path.insert(0, src)
+    patched = {}
+    for rel, text in spec["files"].items():
+        m = rel[:-3].replace("/", ".")
+        pkg = m.endswith(".__init__")
+        patched[m[:-9] if pkg else m] = (rel, pkg, text)
 
-sys.meta_path.insert(0, _Finder())
-failed = []
-for m in spec["modules"]:
-    try:
-        importlib.import_module(m)
-    except BaseException as e:
-        failed.append([m, (type(e).__name__ + ": " + str(e))[:300]])
-unserved = [m for m, (rel, pkg, text) in patched.items()
-            if text is not None and m in sys.modules and not isinstance(getattr(sys.modules[m], "__loader__", None), _Loader)]
-sys.stdout.write("\n@@BR-PROBE@@" + json.dumps({"failed": failed, "unserved": unserved}) + "\n")
+    class _Loader(importlib.abc.SourceLoader):
+        def __init__(self, path, data):
+            self.path, self.data = path, data
+
+        def get_filename(self, fullname):
+            return self.path
+
+        def get_data(self, path):
+            if path == self.path:
+                return self.data
+            with open(path, "rb") as f:
+                return f.read()
+
+    class _Finder(importlib.abc.MetaPathFinder):
+        def find_spec(self, name, path=None, target=None):
+            hit = patched.get(name)
+            if hit is None:
+                return None
+            rel, pkg, text = hit
+            if text is None:
+                raise ModuleNotFoundError("No module named %r (deleted by the patch)" % name, name=name)
+            full = os.path.join(src, *rel.split("/"))
+            s = importlib.util.spec_from_loader(name, _Loader(full, text.encode("utf-8", "surrogateescape")),
+                                                origin=full, is_package=pkg)
+            if pkg:
+                s.submodule_search_locations = [os.path.dirname(full)]
+            s.has_location = True
+            return s
+
+    sys.meta_path.insert(0, _Finder())
+    failed = []
+    for m in spec["modules"]:
+        try:
+            importlib.import_module(m)
+        except BaseException as e:
+            failed.append([m, (type(e).__name__ + ": " + str(e))[:300]])
+    unserved = [m for m, (rel, pkg, text) in patched.items()
+                if text is not None and m in sys.modules and not isinstance(getattr(sys.modules[m], "__loader__", None), _Loader)]
+    return "\n@@BR-PROBE@@" + json.dumps({"failed": failed, "unserved": unserved}) + "\n"
+'''
+
+PROBE_CODE = PROBE_LIB + r'''
+_spec = json.loads(sys.stdin.buffer.read().decode("utf-8", "surrogateescape"))
+sys.stdout.write(_probe(_spec))
 sys.stdout.flush()
+'''
+
+# The probe server: one interpreter, started like a probe, imports the first module of the probe
+# order (`sqlglot`) exactly as every probe does first, records every module that import loaded or
+# tried to find, and then forks one child per request. A child continues with _probe from that
+# point. For a patch that touches none of those modules, a fresh probe would have reached the very
+# same state after its first import, so the verdict is the same; anything else is not sent here.
+# Protocol (JSON lines): in {"src", "preload"}, then {"id", "spec"}; out {"ready", "loaded",
+# "attempted"}, then {"id", "pid"} when a child starts and {"id", "out"} when it has exited.
+SERVER_CODE = PROBE_LIB + r'''
+import select
+
+
+class _Seen(importlib.abc.MetaPathFinder):
+    def __init__(self):
+        self.names = set()
+
+    def find_spec(self, name, path=None, target=None):
+        self.names.add(name)
+        return None
+
+
+def _emit(obj):
+    data = (json.dumps(obj) + "\n").encode("utf-8", "surrogateescape")
+    while data:
+        data = data[os.write(1, data):]
+
+
+_IN = 0
+_buf = b""
+while b"\n" not in _buf:
+    _chunk = os.read(_IN, 1 << 16)
+    if not _chunk:
+        raise SystemExit(0)
+    _buf += _chunk
+_line, _buf = _buf.split(b"\n", 1)
+_cfg = json.loads(_line.decode("utf-8", "surrogateescape"))
+sys.path.insert(0, _cfg["src"])
+_seen = _Seen()
+sys.meta_path.insert(0, _seen)
+_bad = []
+for _m in _cfg["preload"]:
+    try:
+        importlib.import_module(_m)
+    except BaseException:
+        _bad.append(_m)
+sys.meta_path.remove(_seen)
+_emit({"ready": not _bad, "loaded": sorted(sys.modules), "attempted": sorted(_seen.names)})
+if _bad:
+    raise SystemExit(1)
+
+
+def _child(req, rfd, wfd):
+    # The child: own session (so a timeout kills its whole group), stdout to its own pipe,
+    # then the same _probe as a fresh interpreter, ending with a normal interpreter exit so exit
+    # hooks and non-daemon threads behave exactly as they do in a fresh probe.
+    os.setsid()
+    os.close(rfd)
+    for fd in list(_children):
+        os.close(fd)
+    os.close(_IN)
+    os.dup2(wfd, 1)
+    os.close(wfd)
+    sys.stdout.write(_probe(req["spec"]))
+    sys.stdout.flush()
+    sys.exit(0)
+
+
+_children = {}     # read fd -> [id, pid, bytes]
+_exited = []       # [id, pid, bytes] whose stdout closed, waiting for the process to exit
+_open = True
+while _open or _children or _exited:
+    _fds = ([_IN] if _open else []) + list(_children)
+    _ready = select.select(_fds, [], [], 0.02 if _exited else None)[0] if _fds else []
+    if not _fds and _exited:
+        select.select([], [], [], 0.02)
+    for _fd in _ready:
+        if _fd == _IN:
+            _chunk = os.read(_IN, 1 << 16)
+            if not _chunk:
+                _open = False
+                continue
+            _buf += _chunk
+            while b"\n" in _buf:
+                _line, _buf = _buf.split(b"\n", 1)
+                _req = json.loads(_line.decode("utf-8", "surrogateescape"))
+                _r, _w = os.pipe()
+                _pid = os.fork()
+                if _pid == 0:
+                    _child(_req, _r, _w)
+                os.close(_w)
+                _children[_r] = [_req["id"], _pid, b""]
+                _emit({"id": _req["id"], "pid": _pid})
+        else:
+            _chunk = os.read(_fd, 1 << 16)
+            if _chunk:
+                _children[_fd][2] += _chunk
+                continue
+            os.close(_fd)
+            _exited.append(_children.pop(_fd))
+    for _job in list(_exited):
+        try:
+            _done = os.waitpid(_job[1], os.WNOHANG)[0] != 0
+        except ChildProcessError:
+            _done = True
+        if _done:
+            _exited.remove(_job)
+            _emit({"id": _job[0], "out": _job[2].decode("utf-8", "replace")})
 '''
 
 _MODULES = None
@@ -1332,8 +1451,7 @@ def _kill(p):
         pass
 
 
-def run_probe(files, timeout):
-    """'ok' | 'broken' | 'timeout' | 'error' for importing every sqlglot module with the patch."""
+def _probe_modules(files):
     mods = list(all_modules())
     for rel, text in files.items():
         if rel.startswith("sqlglot/"):
@@ -1343,12 +1461,198 @@ def run_probe(files, timeout):
                     mods.remove(m)
             elif m not in mods:
                 mods.append(m)
-    payload = json.dumps({"src": str(SRC), "files": files, "modules": mods}).encode("utf-8", "surrogateescape")
+    return mods
+
+
+def _probe_env():
     env = {"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", "/tmp")}
     if os.name == "nt":
         env["SYSTEMROOT"] = os.environ.get("SYSTEMROOT", r"C:\WINDOWS")
-    kw = {"start_new_session": True} if os.name != "nt" else {}
     cwd = os.environ.get("TMPDIR") or ("/tmp" if os.path.isdir("/tmp") else None)
+    return env, cwd
+
+
+def _verdict(text):
+    k = text.rfind("\n@@BR-PROBE@@")
+    if k < 0:
+        log("probe produced no report")
+        return "error"
+    try:
+        rep = json.loads(text[k + len("\n@@BR-PROBE@@"):].strip())
+    except ValueError:
+        return "error"
+    if rep.get("unserved"):
+        log("probe did not load patched modules:", rep["unserved"][:3])
+        return "error"
+    if rep.get("failed"):
+        log("probe: patched import fails:", rep["failed"][0])
+        return "broken"
+    return "ok"
+
+
+class ProbeServer:
+    """Client for SERVER_CODE. Any trouble with the server itself makes run() return None, and the
+    caller falls back to a fresh probe; a probe child that times out is killed with its group."""
+
+    START_TIMEOUT_S = 10.0
+
+    def __init__(self, proc, loaded, attempted):
+        self.proc, self.loaded, self.attempted = proc, loaded, attempted
+        self.forked = 0
+        self.dead = False
+        self._lock = threading.Lock()
+        self._waiters = {}
+        self._next = 0
+        self._reader = threading.Thread(target=self._read, daemon=True)
+        self._reader.start()
+
+    @staticmethod
+    def eligible_for(files, loaded, attempted):
+        for rel, text in files.items():
+            if not rel.startswith("sqlglot/") or not rel.endswith(".py"):
+                return False
+            m = module_of(rel)
+            if m in loaded or m in attempted:
+                return False
+        return True
+
+    def eligible(self, files):
+        return not self.dead and self.eligible_for(files, self.loaded, self.attempted)
+
+    @classmethod
+    def start(cls):
+        if os.environ.get("BR_PROBE_SERVER", "1") == "0" or not hasattr(os, "fork") or os.name == "nt":
+            return None
+        env, cwd = _probe_env()
+        try:
+            proc = subprocess.Popen([sys.executable, "-I", "-S", "-c", SERVER_CODE], stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd,
+                                    start_new_session=True)
+        except Exception as e:
+            log("probe server could not start:", repr(e))
+            return None
+        box = []
+        t = threading.Thread(target=lambda: box.append(proc.stdout.readline()), daemon=True)
+        try:
+            proc.stdin.write((json.dumps({"src": str(SRC), "preload": all_modules()[:1]}) + "\n").encode())
+            proc.stdin.flush()
+            t.start()
+            t.join(cls.START_TIMEOUT_S)
+            msg = json.loads(box[0]) if box and box[0] else {}
+        except Exception as e:
+            log("probe server failed:", repr(e))
+            msg = {}
+        if not msg.get("ready"):
+            log("probe server not ready; fresh probes only")
+            _kill(proc)
+            try:
+                proc.wait(timeout=5)
+            except Exception:
+                pass
+            return None
+        return cls(proc, set(msg["loaded"]), set(msg["attempted"]))
+
+    def _read(self):
+        try:
+            for line in self.proc.stdout:
+                msg = json.loads(line)
+                with self._lock:
+                    q = self._waiters.get(msg.get("id"))
+                if q is not None:
+                    q.put(msg)
+        except Exception as e:
+            log("probe server reader:", repr(e))
+        self.dead = True
+        with self._lock:
+            for q in self._waiters.values():
+                q.put({"dead": True})
+
+    def run(self, files, timeout):
+        """Verdict, or None when the server cannot serve (the caller probes fresh)."""
+        import queue
+        if self.dead:
+            return None
+        deadline = time.monotonic() + timeout
+        q = queue.Queue()
+        with self._lock:
+            self._next += 1
+            rid = self._next
+            self._waiters[rid] = q
+            try:
+                spec = {"src": str(SRC), "files": files, "modules": _probe_modules(files)}
+                self.proc.stdin.write((json.dumps({"id": rid, "spec": spec}) + "\n").encode("utf-8", "surrogateescape"))
+                self.proc.stdin.flush()
+            except Exception as e:
+                log("probe server write failed:", repr(e))
+                self.dead = True
+                return None
+        try:
+            pid = None
+            while True:
+                try:
+                    msg = q.get(timeout=max(0.0, deadline - time.monotonic()))
+                except queue.Empty:
+                    if pid is None:
+                        log("probe server did not start a child in time")
+                        self.dead = True
+                        return None
+                    try:
+                        os.killpg(pid, 9)
+                    except OSError:
+                        pass
+                    with self._lock:
+                        self.forked += 1
+                    return "timeout"
+                if msg.get("dead"):
+                    return None
+                if "pid" in msg:
+                    pid = msg["pid"]
+                elif "out" in msg:
+                    with self._lock:
+                        self.forked += 1
+                    return _verdict(msg["out"])
+        finally:
+            with self._lock:
+                self._waiters.pop(rid, None)
+
+    def close(self):
+        try:
+            self.proc.stdin.close()
+        except Exception:
+            pass
+        try:
+            self.proc.wait(timeout=2)
+        except Exception:
+            _kill(self.proc)
+            try:
+                self.proc.wait(timeout=5)
+            except Exception:
+                pass
+        self._reader.join(timeout=2)
+        try:
+            self.proc.stdout.close()
+        except Exception:
+            pass
+
+    def kill_for_test(self):
+        _kill(self.proc)
+        self.proc.wait(timeout=5)
+        self._reader.join(timeout=5)
+        self.dead = True
+
+
+def run_probe(files, timeout, server=None):
+    """'ok' | 'broken' | 'timeout' | 'error' for importing every sqlglot module with the patch."""
+    if server is not None and server.eligible(files):
+        start = time.monotonic()
+        res = server.run(files, timeout)
+        if res is not None:
+            return res
+        timeout = max(MIN_PROBE_S, timeout - (time.monotonic() - start))
+    payload = json.dumps({"src": str(SRC), "files": files, "modules": _probe_modules(files)}).encode(
+        "utf-8", "surrogateescape")
+    env, cwd = _probe_env()
+    kw = {"start_new_session": True} if os.name != "nt" else {}
     try:
         p = subprocess.Popen([sys.executable, "-I", "-S", "-c", PROBE_CODE], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd, **kw)
@@ -1368,31 +1672,25 @@ def run_probe(files, timeout):
         _kill(p)
         log("probe failed:", repr(e))
         return "error"
-    text = out.decode("utf-8", "replace")
-    k = text.rfind("\n@@BR-PROBE@@")
-    if k < 0:
-        log("probe produced no report, rc", p.returncode)
-        return "error"
-    try:
-        rep = json.loads(text[k + len("\n@@BR-PROBE@@"):].strip())
-    except ValueError:
-        return "error"
-    if rep.get("unserved"):
-        log("probe did not load patched modules:", rep["unserved"][:3])
-        return "error"
-    if rep.get("failed"):
-        log("probe: patched import fails:", rep["failed"][0])
-        return "broken"
-    return "ok"
+    return _verdict(out.decode("utf-8", "replace"))
 
 
 def run_probes(jobs, parallel=PROBE_PARALLEL):
     """jobs: {key: files}. Returns {key: outcome}. Every probe gets at most what is left of the
     batch budget (minus the reserve for scheduling and output); one that cannot start in time is
-    'skipped'. The caller treats anything but 'ok' as "run every test"."""
+    'skipped'. The caller treats anything but 'ok' as "run every test". Jobs with identical files
+    are probed once. When two or more jobs patch only sqlglot modules, a probe server is started
+    and serves the jobs it is eligible for (see SERVER_CODE)."""
+    groups = {}
+    for key, files in jobs.items():
+        groups.setdefault(json.dumps(files, sort_keys=True), []).append(key)
+    unique = {keys[0]: jobs[keys[0]] for keys in groups.values()}
     results = {}
-    order = list(jobs)
+    order = list(unique)
     lock = threading.Lock()
+    server = None
+    if sum(all(r.startswith("sqlglot/") for r in f) for f in unique.values()) >= 2:
+        server = ProbeServer.start()
 
     def worker():
         while True:
@@ -1404,7 +1702,7 @@ def run_probes(jobs, parallel=PROBE_PARALLEL):
             if left < MIN_PROBE_S:
                 res = "skipped"
             else:
-                res = run_probe(jobs[key], min(PROBE_TIMEOUT_S, left))
+                res = run_probe(unique[key], min(PROBE_TIMEOUT_S, left), server=server)
             with lock:
                 results[key] = res
 
@@ -1414,9 +1712,15 @@ def run_probes(jobs, parallel=PROBE_PARALLEL):
     for t in threads:
         # never wait past the budget: a stuck probe is abandoned (and its commit runs everything)
         t.join(max(0.0, remaining() - RESERVE_S + PROBE_TIMEOUT_S + 6))
-    for key in jobs:
-        results.setdefault(key, "skipped")
-    return results
+    if server is not None:
+        if all(not t.is_alive() for t in threads):
+            server.close()
+        log(f"probe server: {server.forked} of {len(unique)} probes forked")
+    out = {}
+    for keys in groups.values():
+        for key in keys:
+            out[key] = results.get(keys[0], "skipped")
+    return out
 
 
 # ============================================================================ scheduling

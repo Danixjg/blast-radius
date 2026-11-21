@@ -70,6 +70,16 @@ widens to a safe superset whenever that reasoning runs out.
   *every* sqlglot module with the *combined* patch served from memory through a meta-path finder
   (no overlay directory or symlinks; deleted modules raise). Any failure, a timeout, a probe that
   did not load the patched source, or a probe that could not start means: run every test.
+- **Probe server**: when two or more probes patch only sqlglot modules, one interpreter starts
+  like a probe, imports `sqlglot` (the first module every probe imports), records every module
+  that import loaded or tried to find, and forks one child per probe. A probe goes there only
+  when its patch touches none of those modules, so the child starts from exactly the state a fresh
+  probe reaches after its first import, and runs the same code from there (exit hooks and
+  non-daemon threads included). Anything else, or any trouble with the server, uses a fresh probe.
+  Probes with identical files run once. `build/probe_parity.py` checks verdict parity against
+  fresh probes on any patch directories: 117/117 identical on the sample plus five generated
+  66-patch sets; whole-run CPU fell 1.1–1.6 s per 66-patch set with identical output, and was
+  unchanged on the sample. `BR_PROBE_SERVER=0` turns it off.
 - **Deadline**: the batch has one monotonic budget (150 s, inside both the 3 min practice and
   4.5 min final limits). Up to two probes run at a time, each bounded by `min(8 s, budget left
   minus a 5 s reserve)`; a probe that cannot start in time is skipped. Skipped or unfinished probes
