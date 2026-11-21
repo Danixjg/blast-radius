@@ -103,6 +103,30 @@ themselves, replay the assertion. On Windows (no fork, so no server) selections 
 to the pre-merge branch on all eight labelled sets. The merged version has not been re-measured in
 Docker or on the independent holdout; the server path needs Linux.
 
+## Second independent holdout (frozen merged artifact)
+
+The merged branch was frozen before this set existed: commit `a654094`, `selector.py` SHA-256
+`9134f268071812b95436ab2d818d06b6aef769fae9faad4d8b6a507e7725d902`, `profile.pkl`
+`d306c5b42d9767fbef629f12dbb1922c030dec4b7dde75b2154d961ba120967b`. Then
+`build/holdout.py --seed 271828 --n 66` generated 66 patches with a seed used by no earlier set.
+`build/label.py` ran the full suite per patch, on Windows with 4 workers. The pristine run was
+`complete` with 0 failures. 65 patches were `complete` (37 breaking). One generated patch was
+corrupt; `git apply` refused it, so it is left out. Scored by the kit's `score.py`:
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 619.830 | 0 |
+| this branch (frozen `a654094`) | 491.085 | 0 |
+
+That is a 20.8 % reduction with no misses. The oracle (only the failing tests, packed) is 269.140 s.
+
+Most of the remaining 221.9 s is structural:
+
+- three import failures (a missing module, two removed imports) that the probe turns into
+  "run everything" (62.8 s over the oracle);
+- `is`/`==` swaps and code edits whose selection includes the 21 s `test_execute_tpcds`;
+- class-attribute string edits read by many tests.
+
 ## Adversarial checks
 
 Targeted tests were added for the three rules most likely to be overfitted:
