@@ -1,9 +1,17 @@
 """Merge per-process coverage pickles into the selector's map.
 
-usage: mkmap.py <cov_dir> <sqlglot_root> <tests.json> <out.pkl>
+usage: mkmap.py <cov_dir> <sqlglot_root> <tests.json> <out.pkl> --pristine-ok <events.jsonl> [...]
+                [--allow-untraced]
 
 Everything is keyed by test id (the selector maps ids to numbers at run time) and masks are
 Python ints with one bit per test.
+
+The map is only written (atomically) when every coverage pass finished cleanly with every
+catalogued test reporting and none failing (the failplugin events given with --pristine-ok), and
+every catalogued test was actually traced. A test without coverage would otherwise be serialised
+with an empty footprint and never selected. --allow-untraced leaves such tests out of the map's
+test list instead, so the selector treats them as unmapped and keeps them whenever it selects
+anything.
 """
 import ast
 import glob
@@ -18,8 +26,49 @@ from collections import defaultdict
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import selector as S  # noqa: E402
 
-cov_dir, root, tests_json, out = sys.argv[1:5]
-test_ids = [t["id"] for t in json.load(open(tests_json))["tests"]]
+_args = sys.argv[1:]
+_markers, ALLOW_UNTRACED = [], "--allow-untraced" in _args
+if ALLOW_UNTRACED:
+    _args.remove("--allow-untraced")
+while "--pristine-ok" in _args:
+    _i = _args.index("--pristine-ok")
+    _markers.append(_args[_i + 1])
+    del _args[_i:_i + 2]
+cov_dir, root, tests_json, out = _args[:4]
+test_ids = [t["id"] for t in json.load(open(tests_json, encoding="utf-8"))["tests"]]
+
+
+def _known_failures():
+    """Order-dependent pristine failures a reverse pass may show (build/order_dependent.txt)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "order_dependent.txt")
+    with open(path, encoding="utf-8") as f:
+        return {ln.strip() for ln in f if ln.strip() and not ln.startswith("#")}
+
+
+def refuse(msg):
+    print("mkmap: REFUSED:", msg, file=sys.stderr)
+    sys.exit(1)
+
+
+if not _markers:
+    refuse("no --pristine-ok events file: the coverage passes are unverified")
+for _mk in _markers:
+    _ev = [json.loads(ln) for ln in open(_mk, encoding="utf-8") if ln.strip()]
+    _fin = [e for e in _ev if e["event"] == "finish"]
+    _fails = {e["nodeid"] for e in _ev if e["event"] == "fail"}
+    _reverse = os.path.basename(os.path.dirname(_mk)).endswith("-1")
+    if not _fin or _fin[-1]["exitstatus"] not in ((0, 1) if _reverse else (0,)):
+        refuse(f"{_mk}: coverage pass did not finish cleanly")
+    if any(e["event"] == "collect_error" for e in _ev):
+        refuse(f"{_mk}: collection errors in the pristine suite")
+    if _fails - (_known_failures() if _reverse else set()):
+        refuse(f"{_mk}: the pristine suite failed under coverage: {sorted(_fails)[:3]}")
+    if _fin[-1]["exitstatus"] == 1 and not _fails:
+        refuse(f"{_mk}: exit status 1 without a recorded failure")
+    _done = {e["nodeid"] for e in _ev if e["event"] == "done"}
+    _miss = [t for t in test_ids if t not in _done]
+    if _miss:
+        refuse(f"{_mk}: {len(_miss)} catalogued tests never reported, e.g. {_miss[:3]}")
 tindex = {tid: i for i, tid in enumerate(test_ids)}
 
 lines = defaultdict(lambda: defaultdict(int))
@@ -87,6 +136,8 @@ for path in sorted(glob.glob(os.path.join(cov_dir, "child-*.pkl"))):
 missing = [test_ids[i] for i in range(len(test_ids)) if not (seen >> i) & 1]
 print("tests without coverage:", len(missing), missing[:5], file=sys.stderr)
 print("unknown nodeids:", len(unknown), sorted(unknown)[:5], file=sys.stderr)
+if missing and not ALLOW_UNTRACED:
+    refuse(f"{len(missing)} catalogued tests were never traced")
 
 name_mask = defaultdict(int)   # name -> tests running a line that mentions it
 uses = defaultdict(list)       # name -> [(file, line, info)] mentions evaluated at import time
@@ -98,7 +149,7 @@ for dirpath, _, fnames in walk:
         if not fn.endswith(".py"):
             continue
         full = os.path.join(dirpath, fn)
-        rel = os.path.relpath(full, root)
+        rel = os.path.relpath(full, root).replace(os.sep, "/")
         with open(full, encoding="utf-8") as fh:
             src = fh.read()
         try:
@@ -191,7 +242,8 @@ print("enum classes:", len(enum_names), sorted(enum_names)[:12], file=sys.stderr
 
 data = {
     "enum_names": enum_names,
-    "tests": test_ids,
+    # untraced tests (only with --allow-untraced) are left out: the selector keeps unmapped tests
+    "tests": [t if (seen >> i) & 1 else None for i, t in enumerate(test_ids)],
     "lines": {f: dict(v) for f, v in lines.items()},
     "opens": dict(opens),
     "classes": dict(classes),
@@ -206,5 +258,7 @@ data = {
 }
 import zlib
 blob = zlib.compress(pickle.dumps(S.pack_map(data), protocol=pickle.HIGHEST_PROTOCOL), 9)
-open(out, "wb").write(blob)
+with open(out + ".tmp", "wb") as _f:
+    _f.write(blob)
+os.replace(out + ".tmp", out)
 print("map bytes", len(blob), "files", len(lines), "classes", len(classes), "imp_opens", data["imp_opens"][:5], file=sys.stderr)

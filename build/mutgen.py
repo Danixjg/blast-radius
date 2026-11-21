@@ -1,6 +1,10 @@
 """Generate mutation patches resembling the sample set and label them by running the full suite.
 
-usage: mutgen.py <pristine_root> <work_root> <out_dir> <count> <seed>
+usage: mutgen.py <pristine_root> <work_git_checkout> <out_dir> <count> <seed>
+
+Labels come from build/label.py: a run that was interrupted, crashed, timed out or left tests
+unreported is stored with status "incomplete" and is never a zero-failure label
+(build/answers.py and build/validate.py only score complete labels).
 """
 import difflib, io, json, os, random, re, subprocess, sys, tokenize, glob, shutil
 
@@ -76,17 +80,11 @@ def mutate_sql(src):
     lines[i] = " ".join(words) + eol   # keep the line break
     return "".join(lines)
 
-def run_suite():
-    res = os.path.join(work, ".fails")
-    shutil.rmtree(res, ignore_errors=True)
-    env = dict(os.environ, SKIP_INTEGRATION="0", PYTHONPATH=work + ":" + os.path.dirname(os.path.abspath(__file__)), FAIL_OUT=res)
-    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-p", "failplugin", "-n", "8",
-                        "--timeout", "120", "tests"], cwd=work, env=env, capture_output=True, text=True)
-    fails = set()
-    for f in glob.glob(os.path.join(res, "*")):
-        with open(f) as fh:
-            fails |= {ln.strip() for ln in fh if ln.strip()}   # one id per line; ids may hold spaces
-    return sorted(fails), p.stdout[-300:]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import label  # noqa: E402  (shared labeller: exit status, completeness, incremental record)
+
+CATALOG = label.catalog(os.environ.get("MUT_TESTS", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "kit", "sample", "tests.json")))
+
 
 done = 0
 attempt = 0
@@ -102,13 +100,13 @@ while done < count:
     diff = "".join(difflib.unified_diff(src.splitlines(keepends=True), new.splitlines(keepends=True), "a/" + rel, "b/" + rel))
     patch = f"diff --git a/{rel} b/{rel}\n" + diff
     mid = f"m{seed}x{done:03d}"
-    target = os.path.join(work, rel)
-    open(target, "w", encoding="utf-8").write(new)
-    try:
-        fails, tail = run_suite()
-    finally:
-        shutil.copyfile(path, target)
-    open(os.path.join(out, mid + ".patch"), "w").write(patch)
-    json.dump({"failing": fails, "file": rel, "tail": tail}, open(os.path.join(out, mid + ".json"), "w"))
-    print(mid, rel, len(fails), flush=True)
+    pfile = os.path.join(out, mid + ".patch")
+    with open(pfile, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(patch)
+    # <work> must be a clean git checkout of the pin: the patch is applied with git apply and the
+    # tree reset afterwards. Only a complete run is a label; anything else is recorded as such.
+    lab = label.label_patch(work, pfile, CATALOG)
+    lab["file"] = rel
+    json.dump(lab, open(os.path.join(out, mid + ".json"), "w"), indent=1)
+    print(mid, rel, lab["status"], len(lab["failing"]), flush=True)
     done += 1

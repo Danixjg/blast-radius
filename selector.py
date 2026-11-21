@@ -1,36 +1,56 @@
 """Blast Radius selector: a hunter and a catcher.
 
 hunter  - reads each patch, pins every edit to the exact AST node it touches (a statement in
-          a function, a lambda, a class attribute, a module constant, a fixture file) and maps
-          it to the tests that can observe it, using a per-test coverage map of the pinned
-          sqlglot that was recorded at build time (lines run per test, including spawned pool
-          workers and class-level setup; fixture files opened; classes instantiated).
-catcher - the safety net behind the hunter. Whenever precise reasoning runs out (syntax
-          errors, deleted files, code that runs while modules import, names it cannot follow,
-          missing sources) it widens to a conservative superset, and for import-time edits it
-          actually imports the patched modules in a sandbox: if that raises, every test fails.
+          a function, a lambda, a class attribute, a module constant, a dictionary entry, a
+          fixture file) and maps it to the tests that can observe it, using a per-test coverage
+          map of the pinned sqlglot recorded at build time (lines run per test, including spawned
+          pool workers and class-level setup; fixture files opened; classes instantiated) and an
+          optional runtime profile of pristine facts (which tests read each literal dictionary
+          entry; which operand facts each test saw at `is`/`==` comparisons, from which an
+          operator edit is decided here at run time).
+catcher - the safety net behind the hunter. Whenever precise reasoning runs out (files that do
+          not compile under Python's byte-level rules, pytest collection files, deleted files,
+          code that runs while modules import, names it cannot follow, missing sources) it widens
+          to a conservative superset, and for import-time edits it imports every sqlglot module
+          from the combined patch in a sandbox: if anything raises or hangs, every test is run.
 Finally the selected tests are packed onto 1..8 workers to minimise max(load) + 2 s/worker.
+
+The whole batch runs against one monotonic deadline: probes are bounded by what is left, and a
+probe that cannot finish in time (or is inconclusive) turns that commit into "run everything".
 
 Standard library only. stdout carries exactly one JSON line per commit; logs go to stderr.
 """
 
 import ast
+import io
 import json
 import os
 import pickle
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
+import threading
+import time
+import tokenize
 from pathlib import Path
 
+T0 = time.monotonic()
 HERE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("BR_DATA", "/data"))
 SRC = Path(os.environ.get("BR_SRC", HERE / "src"))
 MAP = Path(os.environ.get("BR_MAP", HERE / "map.pkl"))
+PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 WORKER_MS = 2000
 MAX_WORKERS = 8
+# The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
+# ever take this long when patched imports hang, so the budget is deliberately well inside both.
+BUDGET_S = float(os.environ.get("BR_BUDGET", "150"))
+RESERVE_S = float(os.environ.get("BR_RESERVE", "5"))          # kept back to schedule and emit
+# a probe normally takes 0.3 s (import every sqlglot module, patched ones from source); anything
+# far slower is treated as a hang, which fails every test anyway, so the commit runs everything
+PROBE_TIMEOUT_S = float(os.environ.get("BR_PROBE_TIMEOUT", "8"))
+MIN_PROBE_S = 1.0                                               # not worth starting below this
+PROBE_PARALLEL = max(1, min(2, os.cpu_count() or 1))
 DIALECT_DIRS = ("dialects", "parsers", "generators", "typing", "tokenizers")
 CORE_MODULES = {"sqlglot", "sqlglot.tokens", "sqlglot.tokenizer_core", "sqlglot.parser", "sqlglot.generator",
                 "sqlglot.dialects.dialect", "sqlglot.expressions.core", "sqlglot.helper", "sqlglot.trie"}
@@ -39,6 +59,13 @@ DEFS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 COMPOUND = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith, ast.Try, ast.Match)
 if hasattr(ast, "TryStar"):
     COMPOUND = COMPOUND + (ast.TryStar,)
+# pytest reads these at start-up; a broken or changed one can fail every test
+PYTEST_CONFIG = {"pytest.ini", ".pytest.ini", "tox.ini", "setup.cfg"}
+TEST_FILE = re.compile(r"(^|/)(test_[^/]*|[^/]*_test)\.py$")
+# top-level names a new file at the repository root (first on sys.path in the test run) shadows
+SHADOW_EXTRA = {"sitecustomize", "usercustomize", "pytest", "_pytest", "pluggy", "xdist", "execnet", "duckdb",
+                "pandas", "numpy", "dateutil", "pytz", "iniconfig", "packaging", "pytest_timeout", "sqlglot",
+                "tests", "conftest", "sqlglotrs", "sqlglotc", "typing_extensions", "psutil"}
 
 
 def log(*a):
@@ -48,6 +75,10 @@ def log(*a):
 def module_of(rel):
     m = rel[:-3].replace("/", ".")
     return m[:-9] if m.endswith(".__init__") else m
+
+
+def remaining():
+    return T0 + BUDGET_S - time.monotonic()
 
 
 # ============================================================================ patches
@@ -186,30 +217,48 @@ def changed_cols(a, b):
     return p, max(p + 1, len(a) - s)
 
 
-# Static semantic equivalence, not a patch lookup: None and enum members are
-# singletons, so an identity test and an equality test against one agree.
-# True/False are deliberately excluded: 1 == True but 1 is not True.
+def compile_check(new_bytes, rel):
+    """(tree, problem): parse and fully compile the patched file the way the interpreter would
+    import it (BOM, coding cookie, symbol table and code generation errors included), and make sure
+    the text this module analyses is the text Python will run."""
+    try:
+        tree = ast.parse(new_bytes, rel)
+        compile(tree, rel, "exec", dont_inherit=True)
+    except (SyntaxError, ValueError, UnicodeError, MemoryError, RecursionError) as e:
+        return None, f"does not compile: {e!r}"[:200]
+    try:
+        enc, _ = tokenize.detect_encoding(io.BytesIO(new_bytes).readline)
+    except SyntaxError as e:
+        return None, f"bad encoding declaration: {e!r}"[:200]
+    if enc not in ("utf-8", "utf-8-sig") and not new_bytes.isascii():
+        try:
+            as_python = new_bytes.decode(enc)
+        except (LookupError, UnicodeError):
+            return None, "undecodable"
+        if as_python.lstrip("\ufeff") != new_bytes.decode("utf-8", "surrogateescape").lstrip("\ufeff"):
+            return None, f"declared encoding {enc} changes the source text"
+    return tree, None
+
+
+# Swapping `is` <-> `==` (or `is not` <-> `!=`) is only harmless when, for the operands that
+# actually reach the comparison, identity and equality agree and equality has no side effects.
+# The text alone cannot show that (overloaded __eq__, str- or int-backed enums), so the decision
+# is made per edit from pristine operand facts the profile recorded at that comparison (identity,
+# the result of side-effect-free equality, whether != is side-effect free); see eq_swap_mask.
 _EQ_OP = re.compile(r"\bis not\b|\bis\b|==|!=")
-_EQ_SINGLETON = re.compile(r"^None\b|^(?:[A-Za-z_][\w]*\.)*([A-Za-z_]\w*)\.([A-Z][A-Z0-9_]*)\b")
-ENUM_NAMES = set()   # sqlglot classes deriving from Enum (from the map); only their members are singletons
 _EQ_PAIRS = {("is", "=="), ("==", "is"), ("is not", "!="), ("!=", "is not")}
 
 
-def _equivalent_op_change(a, b):
-    """Only `is` <-> `==` (or `is not` <-> `!=`) against None / an enum member changed."""
+def eq_swap_cols(a, b):
+    """Column of the operator when only `is`<->`==` / `is not`<->`!=` changed between the lines."""
     ma, mb = list(_EQ_OP.finditer(a)), list(_EQ_OP.finditer(b))
     if len(ma) != 1 or len(mb) != 1:
-        return False
+        return None
     if (ma[0].group(), mb[0].group()) not in _EQ_PAIRS:
-        return False
+        return None
     if a[:ma[0].start()] != b[:mb[0].start()] or a[ma[0].end():] != b[mb[0].end():]:
-        return False
-    m = _EQ_SINGLETON.match(a[ma[0].end():].strip())
-    if not m:
-        return False
-    # None, or a member of a class known to be an Enum (not just any UPPER_CASE attribute:
-    # Drill.DATE_FORMAT is a str, exp.UnixToTime.SECONDS an expression)
-    return m.group(1) is None or m.group(1) in ENUM_NAMES
+        return None
+    return ma[0].start(), ma[0].end()
 
 
 # ============================================================================ AST helpers
@@ -263,8 +312,12 @@ def _find_child(node, line, c0, c1):
 
 
 def line_cols(text):
+    """Columns that identify a whole removed/added line: its first code character. (The full
+    line would include a trailing comment, which no statement node spans, so a module- or
+    class-level statement like `x = 1  # note` was never found.)"""
     t = text.rstrip()
-    return len(t) - len(t.lstrip()), max(len(t), len(t) - len(t.lstrip()) + 1)
+    c0 = len(t) - len(t.lstrip())
+    return c0, c0 + 1
 
 
 def assigned_names(st):
@@ -285,6 +338,11 @@ def assigned_names(st):
             if n is not st and isinstance(n, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Import, ast.ImportFrom) + DEFS):
                 names.extend(assigned_names(n))
     return names
+
+
+def star_import(st):
+    """The statement is, or contains, `from X import *`."""
+    return any(isinstance(n, ast.ImportFrom) and any(a.name == "*" for a in n.names) for n in ast.walk(st))
 
 
 def is_docstring(st):
@@ -365,6 +423,28 @@ def find_def(tree, path):
     return node
 
 
+def _dump(node):
+    return ast.dump(node, include_attributes=False) if node is not None else None
+
+
+def _body_stmt(tree, cls_path, target_dump):
+    """The unique statement in a class body (or the module) assigning exactly this target."""
+    owner = find_def(tree, cls_path) if cls_path else tree
+    if owner is None:
+        return None
+    hits = []
+    for st in owner.body:
+        if isinstance(st, ast.Assign) and len(st.targets) == 1:
+            t = st.targets[0]
+        elif isinstance(st, ast.AnnAssign) and st.value is not None:
+            t = st.target
+        else:
+            continue
+        if _dump(t) == target_dump:
+            hits.append(st)
+    return hits[0] if len(hits) == 1 else None
+
+
 # ============================================================================ map format
 
 # A packed map stores its two big sections as one pickle per key, so a run decodes only the
@@ -424,7 +504,7 @@ def unpack_map(data):
 
 
 class Hunter:
-    def __init__(self, data):
+    def __init__(self, data, profile=None):
         if LAZY_KEY in data:
             data = dict(data)
             for k in data[LAZY_KEY]:
@@ -435,17 +515,28 @@ class Hunter:
         self.lines = data["lines"]
         self.classes = data["classes"]
         self.imp = {f: set(v) for f, v in data["imp_lines"].items()}
-        self._src, self._tree, self._group = {}, {}, {}
+        self._src, self._tree, self._group, self._mention = {}, {}, {}, {}
+        self.file_tests = {}
+        for i, t in enumerate(data["tests"]):
+            if t is None:
+                continue   # untraced at build time: main() keeps it as an unmapped test
+            f = t.split("::")[0]
+            self.file_tests[f] = self.file_tests.get(f, 0) | (1 << i)
+        self.test_files = sorted(self.file_tests)
+        self.prof = profile or {}
+        self.keys = self.prof.get("keys", {})
+        self.cmp = self.prof.get("cmp", {})
+        self.unobserved = self.prof.get("unobserved", 0)
         self.import_time = False
-        self.to_import = {}
-        ENUM_NAMES.clear()
-        ENUM_NAMES.update(data.get("enum_names", ()))
+        self.probe_files = {}
+        self.need_probe = False
+        self._kd_memo = {}
 
     # ---------------------------------------------------------------- sources
     def source(self, rel):
         if rel not in self._src:
             try:
-                self._src[rel] = (SRC / rel).read_text(encoding="utf-8")
+                self._src[rel] = (SRC / rel).read_bytes().decode("utf-8", "surrogateescape")
             except Exception:
                 self._src[rel] = None
         return self._src[rel]
@@ -472,6 +563,17 @@ class Hunter:
         m = 0
         for v in self.lines.get(rel, {}).values():
             m |= v
+        return m
+
+    def scope_tests(self, d):
+        """Tests collected from directory d (repository-relative, '' for everything)."""
+        d = d.strip("/")
+        if d in ("", "."):
+            return self.ALL
+        m = 0
+        for f, v in self.file_tests.items():
+            if f == d or f.startswith(d + "/"):
+                m |= v
         return m
 
     def group_mask(self, rel):
@@ -601,53 +703,91 @@ class Hunter:
         return s1 | (inst if inst else self.fallback(rel, cls_path))
 
     def analyze_py(self, rel, fp):
+        """Mask for a modified .py file, or ALL when it cannot be reasoned about."""
         old = self.source(rel)
         if old is None:
             log(rel, "no source: catcher takes all")
             return self.ALL
         new = apply_hunks(old, fp.hunks)
         if new is None:
-            log(rel, "patch does not apply: catcher takes the file")
-            return self.fallback(rel) | self.d["subproc"]
-        try:
-            ntree = ast.parse(new)
-        except (SyntaxError, ValueError):
-            log(rel, "syntax error: everything importing it fails")
+            log(rel, "patch does not apply: catcher takes all")
             return self.ALL
+        ntree, problem = compile_check(new.encode("utf-8", "surrogateescape"), rel)
+        if problem:
+            log(rel, problem)
+            return self.broken_file(rel)
         otree = self.tree(rel)
         if otree is None:
             return self.ALL
         visited = set()
         m = 0
         before, self.import_time = self.import_time, False
+        self._kd_memo = {}
         for kind, ol, nl, ot, nt in edits(fp.hunks):
             if kind == "replace":
-                if ot.rstrip() == nt.rstrip() or self._comment_change(ot, nt, otree, ol) or _equivalent_op_change(ot, nt):
+                if ot.rstrip() == nt.rstrip():
+                    if not self._in_string(otree, ol, True):
+                        continue
+                    m |= self._site_mask(rel, locate(otree, ol, *line_cols(ot)), visited, otree, ntree)
                     continue
+                if self._comment_change(ot, nt, otree, ol):
+                    continue
+                cols = eq_swap_cols(ot, nt)
+                if cols is not None:
+                    got = self.eq_swap_mask(rel, otree, ol, cols)
+                    if got is not None:
+                        m |= got
+                        continue
                 c0, c1 = changed_cols(ot, nt)
                 site = locate(otree, ol, c0, c1)
-                m |= self._site_mask(rel, site, visited)
+                m |= self._site_mask(rel, site, visited, otree, ntree)
             elif kind == "remove":
                 if not ot.strip() or (ot.strip().startswith("#") and not self._in_string(otree, ol)):
                     continue
                 c0, c1 = line_cols(ot)
-                m |= self._site_mask(rel, locate(otree, ol, c0, c1, precise=False), visited)
+                m |= self._site_mask(rel, locate(otree, ol, c0, c1, precise=False), visited, otree, ntree)
             else:
                 if not nt.strip() or (nt.strip().startswith("#") and not self._in_string(ntree, nl)):
                     continue
                 m |= self._added(rel, otree, ntree, ol, nl, nt, visited)
         if self.import_time and rel.startswith("sqlglot/"):
-            self.to_import[rel] = new
+            self.need_probe = True
+        if self.import_time and rel.startswith("tests/"):
+            # module-level code of a test file runs at collection: its own tests and its importers
+            m |= self.file_tests.get(rel, 0) | self.importers_of_test_module(rel)
         self.import_time = self.import_time or before
         return m
 
-    def _site_mask(self, rel, site, visited):
+    def broken_file(self, rel):
+        """A file that will not compile (or whose bytes mean something else to Python)."""
+        if rel.startswith("tests/") and os.path.basename(rel) not in ("conftest.py", "__init__.py"):
+            # only that test module (and whatever imports it) fails to collect
+            return self.file_tests.get(rel, 0) | self.importers_of_test_module(rel)
+        if os.path.basename(rel) == "conftest.py" or rel.endswith("/__init__.py") and rel.startswith("tests/"):
+            return self.scope_tests(os.path.dirname(rel))
+        return self.ALL
+
+    def _site_mask(self, rel, site, visited, otree=None, ntree=None):
         if site.kind == "func":
             return self.func_mask(rel, site, visited)
         if site.kind == "stmt":
             st = site.stmt
+            if star_import(st):
+                return self.star_import_changed(rel)
+            if ntree is not None:
+                got = self.dict_entry_mask(rel, site, otree, ntree)
+                if got is not None:
+                    return got
             return self.resolve_stmt(rel, site.cls_path, assigned_names(st), site.span, is_docstring(st), visited)
         return 0
+
+    def star_import_changed(self, rel):
+        """`from X import *` re-exports an open set of names (sqlglot.expressions is built this
+        way); adding, removing or changing one can drop or shadow names that are only looked up at
+        run time (`exp.Properties`), which neither coverage nor the import probe can see."""
+        log(rel, "star import changed: catcher takes all")
+        self.import_time = True
+        return self.ALL
 
     def _added(self, rel, otree, ntree, ol, nl, nt, visited):
         c0, c1 = line_cols(nt)
@@ -668,6 +808,8 @@ class Hunter:
             return m
         if site.kind == "stmt":
             st = site.stmt
+            if star_import(st):
+                return self.star_import_changed(rel)
             names = assigned_names(st)
             span = (max(1, ol - 1), ol)
             if isinstance(st, DEFS) and find_def(otree, site.func_path) is None:
@@ -676,10 +818,12 @@ class Hunter:
         return 0
 
     @staticmethod
-    def _in_string(tree, line):
+    def _in_string(tree, line, whole=False):
+        """The line lies inside a multi-line string (whole=True: anywhere in one, ends included)."""
         for node in chain_at(tree, line):
-            if isinstance(node, (ast.Constant, ast.JoinedStr)) and node.lineno < line <= node.end_lineno:
-                return True
+            if isinstance(node, (ast.Constant, ast.JoinedStr)) and node.lineno != node.end_lineno:
+                if node.lineno < line <= node.end_lineno or (whole and node.lineno <= line <= node.end_lineno):
+                    return True
         return False
 
     def _comment_change(self, ot, nt, otree, ol):
@@ -692,7 +836,190 @@ class Hunter:
         rest_long = long_[len(code):].strip()
         rest_short = short[len(code):].strip()
         return (not rest_long or rest_long.startswith("#")) and (not rest_short or rest_short.startswith("#")) \
-            and not self._in_string(otree, ol)
+            and not self._in_string(otree, ol, True)
+
+    # ---------------------------------------------------------------- runtime-profile shortcuts
+    def eq_swap_mask(self, rel, otree, line, cols):
+        """Tests that can tell an `is`<->`==` swap at this comparison apart, or None when the
+        profile has no evidence for this exact comparison."""
+        if not self.cmp:
+            return None
+        node = None
+        for n in chain_at(otree, line, cols[0], cols[1]):
+            if isinstance(n, ast.Compare):
+                node = n
+        if node is None or len(node.ops) != 1 or not isinstance(node.ops[0], (ast.Is, ast.IsNot, ast.Eq, ast.NotEq)):
+            return None
+        if node.lineno != line or node.end_lineno != line:
+            return None
+        rec = self.cmp.get((rel, node.lineno, node.col_offset))
+        if rec is None:
+            return None
+        negated = isinstance(node.ops[0], (ast.IsNot, ast.NotEq))
+        if not all(self._swap_preserves(f, negated) for f in rec["imp"]):
+            return self.ALL   # an evaluation while modules import would change
+        seen = bad = 0
+        for fact, mask in rec["facts"].items():
+            seen |= mask
+            if not self._swap_preserves(fact, negated):
+                bad |= mask
+        ran = self.span_mask(rel, line, line)
+        # kept: tests with an operand fact the swap changes, tests that ran the line but were
+        # never seen evaluating it, and tests whose instrumented run took a different path
+        return bad | (ran & ~seen) | (ran & self.unobserved)
+
+    @staticmethod
+    def _swap_preserves(fact, negated):
+        """Decided here, per edit, from pristine operand facts (identical, eq, ne_ok): swapping
+        `is`<->`==` (negated: `is not`<->`!=`) leaves this evaluation unchanged only when the
+        equality involved runs side-effect-free builtin code and agrees with identity."""
+        identical, eq, ne_ok = fact
+        if eq is None or eq != identical:
+            return False
+        return ne_ok if negated else True
+
+    def dict_entry_mask(self, rel, site, otree, ntree):
+        """Per-entry coverage for a literal dictionary whose entries only changed value.
+
+        Applies when the old and new statements assign the same target, the dictionaries have the
+        same keys and spreads in the same order, every changed value is an expression whose
+        construction has no side effects, and the profile vouches that each changed entry's value
+        is only ever read by the tests it lists (through aliases, subclasses and dictionaries
+        derived from it). Returns None to fall back to the class-attribute logic."""
+        st = site.stmt
+        if not self.keys or not isinstance(st, (ast.Assign, ast.AnnAssign)) or not isinstance(st.value, ast.Dict):
+            return None
+        key = (rel, st.lineno)
+        if key in self._kd_memo:
+            got = self._kd_memo[key]
+            return 0 if got is not None else None   # already counted once for this statement
+        got = self._dict_entry_mask(rel, site, st, ntree)
+        self._kd_memo[key] = got
+        return got
+
+    def _dict_entry_mask(self, rel, site, st, ntree):
+        target = st.targets[0] if isinstance(st, ast.Assign) else st.target
+        if isinstance(st, ast.Assign) and len(st.targets) != 1:
+            return None
+        nst = _body_stmt(ntree, site.cls_path, _dump(target))
+        if nst is None or type(nst) is not type(st) or not isinstance(nst.value, ast.Dict):
+            return None
+        if isinstance(st, ast.AnnAssign) and _dump(st.annotation) != _dump(nst.annotation):
+            return None
+        od, nd = st.value, nst.value
+        if len(od.keys) != len(nd.keys):
+            return None
+        owner = self.keys.get((rel, od.lineno, od.col_offset))
+        if owner is None or owner["n"] != len(od.keys):
+            return None
+        changed = []
+        for i, (ok, nk, ov, nv) in enumerate(zip(od.keys, nd.keys, od.values, nd.values)):
+            if _dump(ok) != _dump(nk):
+                return None
+            if owner["keysrc"][i] != _dump(ok):
+                return None   # the profile describes a different dictionary
+            if _dump(ov) != _dump(nv):
+                if ok is None:
+                    return None   # a spread changed
+                changed.append(i)
+        if not changed:
+            return None
+        mask = 0
+        for i in changed:
+            if not (self.safe_value(rel, od.values[i]) and self.safe_value(rel, nd.values[i])):
+                return None
+            em = owner["mask"][i]
+            if em is None:
+                return None   # entry not trusted (read at import time, dynamic, unknown key)
+            mask |= em
+        # the new value is still evaluated when the class body runs: probe the import
+        self.import_time = True
+        return mask | self.d["subproc"] | self.unobserved
+
+    def safe_value(self, rel, node, depth=0):
+        """Building this value cannot run code with side effects (beyond failing outright, which
+        the import probe catches)."""
+        if depth > 12:
+            return False
+        if isinstance(node, ast.Constant):
+            return True
+        if isinstance(node, ast.Name):
+            return True
+        if isinstance(node, ast.Attribute):
+            return self.safe_value(rel, node.value, depth + 1) and isinstance(node.value, (ast.Name, ast.Attribute))
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            return all(self.safe_value(rel, e, depth + 1) for e in node.elts) and not any(isinstance(e, ast.Starred) for e in node.elts)
+        if isinstance(node, ast.Dict):
+            return all(k is not None and self.safe_value(rel, k, depth + 1) for k in node.keys) and \
+                all(self.safe_value(rel, v, depth + 1) for v in node.values)
+        if isinstance(node, ast.UnaryOp):
+            return isinstance(node.operand, ast.Constant)
+        if isinstance(node, ast.BinOp):
+            return isinstance(node.left, ast.Constant) and isinstance(node.right, ast.Constant)
+        if isinstance(node, ast.Lambda):
+            a = node.args
+            return all(self.safe_value(rel, d, depth + 1) for d in a.defaults + [d for d in a.kw_defaults if d is not None])
+        if isinstance(node, ast.Call):
+            return self.closure_factory_call(rel, node, depth)
+        return False
+
+    def closure_factory_call(self, rel, call, depth):
+        """A call to a sqlglot function that only builds and returns a nested function, with
+        arguments that bind to its signature, cannot have side effects."""
+        if any(isinstance(a, ast.Starred) for a in call.args) or any(k.arg is None for k in call.keywords):
+            return False
+        if not all(self.safe_value(rel, a, depth + 1) for a in call.args) or \
+                not all(self.safe_value(rel, k.value, depth + 1) for k in call.keywords):
+            return False
+        if not isinstance(call.func, ast.Name):
+            return False
+        fn = self._resolve_function(rel, call.func.id)
+        if fn is None or fn.decorator_list:
+            return False
+        body = fn.body[1:] if fn.body and is_docstring(fn.body[0]) else fn.body
+        if not body or not isinstance(body[-1], ast.Return) or not isinstance(body[-1].value, (ast.Name, ast.Lambda)):
+            return False
+        for s in body[:-1]:
+            if not isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) or s.decorator_list:
+                return False
+            if any(not isinstance(d, ast.Constant) for d in s.args.defaults + [d for d in s.args.kw_defaults if d]):
+                return False
+        if isinstance(body[-1].value, ast.Name) and body[-1].value.id not in {s.name for s in body[:-1]}:
+            return False
+        return self._binds(fn.args, call)
+
+    @staticmethod
+    def _binds(a, call):
+        pos = a.posonlyargs + a.args
+        if len(call.args) > len(pos) and a.vararg is None:
+            return False
+        given = {p.arg for p in pos[:len(call.args)]}
+        names = {p.arg for p in a.args + a.kwonlyargs}
+        for k in call.keywords:
+            if k.arg in given or (k.arg not in names and a.kwarg is None):
+                return False
+            given.add(k.arg)
+        required = [p.arg for p in pos[:len(pos) - len(a.defaults)]]
+        required += [p.arg for p, d in zip(a.kwonlyargs, a.kw_defaults) if d is None]
+        return all(r in given for r in required)
+
+    def _resolve_function(self, rel, name, depth=0):
+        """The module-level def a name refers to in rel (directly or via `from sqlglot.x import`)."""
+        tree = self.tree(rel)
+        if tree is None or depth > 3:
+            return None
+        for st in tree.body:
+            if isinstance(st, (ast.FunctionDef, ast.AsyncFunctionDef)) and st.name == name:
+                return st
+        for st in tree.body:
+            if isinstance(st, ast.ImportFrom) and st.level == 0 and (st.module or "").startswith("sqlglot"):
+                for al in st.names:
+                    if (al.asname or al.name) == name:
+                        base = st.module.replace(".", "/")
+                        for cand in (base + ".py", base + "/__init__.py"):
+                            if (SRC / cand).exists():
+                                return self._resolve_function(cand, al.name, depth + 1)
+        return None
 
     # ---------------------------------------------------------------- other files
     def analyze_other(self, rel):
@@ -704,116 +1031,392 @@ class Hunter:
         return m
 
     def tests_mentioning(self, word):
-        files = {t.split("::")[0] for t in self.d["tests"]}
-        hit = {f for f in files if word in (self.source(f) or "")}
-        m = 0
-        for i, t in enumerate(self.d["tests"]):
-            if t.split("::")[0] in hit:
-                m |= 1 << i
-        return m
+        if word not in self._mention:
+            m = 0
+            for f in self.test_files:
+                if word in (self.source(f) or ""):
+                    m |= self.file_tests[f]
+            self._mention[word] = m
+        return self._mention[word]
+
+    def importers_of_test_module(self, rel):
+        return self.tests_mentioning(module_of(rel).rsplit(".", 1)[-1])
+
+    # ---------------------------------------------------------------- pytest collection
+    def collection_scope(self, rel):
+        """The directory whose tests a conftest.py / package __init__.py at rel governs, else None.
+        `pytest tests` loads conftest.py from the repository root and from tests/ downwards."""
+        d, base = os.path.dirname(rel), os.path.basename(rel)
+        in_tests = d == "tests" or d.startswith("tests/")
+        if base == "conftest.py" and (d == "" or in_tests):
+            return d
+        if base == "__init__.py" and in_tests:
+            return d
+        return None
+
+    def comment_only(self, fp, rel):
+        """Every edit of a modified file is a blank or comment line outside strings, and the
+        patched file still compiles to the same meaning."""
+        old = self.source(rel)
+        if old is None or fp.old != fp.new:
+            return False
+        new = apply_hunks(old, fp.hunks)
+        if new is None:
+            return False
+        ntree, problem = compile_check(new.encode("utf-8", "surrogateescape"), rel)
+        otree = self.tree(rel)
+        if problem or otree is None:
+            return False
+        for kind, ol, nl, ot, nt in edits(fp.hunks):
+            for text, tree, ln in ((ot, otree, ol), (nt, ntree, nl)):
+                if text is None:
+                    continue
+                s = text.strip()
+                if s and not s.startswith("#"):
+                    return False
+                if self._in_string(tree, ln, True):
+                    return False
+        return True
+
+    def analyze_root_file(self, fp, path):
+        """A file outside sqlglot/ and tests/."""
+        if path == "pyproject.toml":
+            return self.pyproject_mask(fp)
+        parts = path.split("/")
+        name = None
+        if len(parts) == 1 and path.endswith(".py"):
+            name = path[:-3]
+        elif len(parts) == 2 and parts[1] == "__init__.py":
+            name = parts[0]
+        if name and (name in sys.stdlib_module_names or name in SHADOW_EXTRA):
+            return self.ALL   # shadows a module every test imports (the root is on sys.path)
+        return self.analyze_other(path)
+
+    def pyproject_mask(self, fp):
+        try:
+            import tomllib
+        except ImportError:
+            return self.ALL
+        old = self.source("pyproject.toml")
+        if old is None or fp.old != fp.new or fp.old is None:
+            return self.ALL
+        new = apply_hunks(old, fp.hunks)
+        if new is None:
+            return self.ALL
+        try:
+            o, n = tomllib.loads(old), tomllib.loads(new)
+        except Exception:
+            return self.ALL   # pytest refuses to start on an invalid pyproject.toml
+        ot, nt = o.get("tool", {}), n.get("tool", {})
+        if ot.get("pytest") != nt.get("pytest"):
+            return self.ALL
+        return 0
 
     # ---------------------------------------------------------------- one patch
     def analyze(self, patch_text):
+        """(mask, probe): the selected tests, and the combined patch to import-check (or None)."""
         self.import_time = False
-        self.to_import = {}
+        self.need_probe = False
+        self.probe_files = {}
+        files = parse_patch(patch_text)
+        self.probe_files = self.combined(files)
         m = 0
-        for fp in parse_patch(patch_text):
+        for fp in files:
             rel = fp.old or fp.new
-            if rel is None or not rel.startswith(("sqlglot/", "tests/")):
+            if rel is None:
                 continue
             try:
-                if fp.new is None or (fp.old and fp.old != fp.new):
-                    log(rel, "deleted or renamed: catcher takes all")
-                    m |= self.ALL
-                elif fp.old is None:
-                    if rel.endswith(".py"):
-                        # a new module is only seen by discovery (entry points, package walks)
-                        m |= self.fallback(os.path.dirname(rel) + "/__init__.py") | self.d["subproc"]
-                        if rel.startswith("tests/"):
-                            m |= self.tests_mentioning(os.path.splitext(os.path.basename(rel))[0])
-                    else:
-                        m |= self.analyze_other(rel)
-                elif rel.endswith(".py"):
-                    m |= self.analyze_py(rel, fp)
-                    if rel.startswith("tests/") and self.import_time:
-                        # shared test helpers: everything importing them
-                        m |= self.tests_mentioning(module_of(rel).rsplit(".", 1)[-1])
-                else:
-                    m |= self.analyze_other(rel)
+                m |= self.analyze_file(fp)
             except Exception as e:   # catcher: never crash, widen instead
-                log(rel, "analysis error, catcher widens:", repr(e))
-                m |= self.fallback(rel) | self.d["subproc"] if rel.endswith(".py") else self.ALL
+                log(rel, "analysis error, catcher takes all:", repr(e))
+                m |= self.ALL
+            if m == self.ALL:
+                break
         if self.import_time:
             m |= self.d["subproc"]
-        if self.to_import and m != self.ALL and not import_ok(self.to_import):
-            log("patched modules fail to import: catcher takes all")
-            m = self.ALL
+        probe = None
+        if self.need_probe and m != self.ALL:
+            probe = {rel: text for rel, text in self.probe_files.items()
+                     if rel.endswith(".py") and rel.startswith(("sqlglot/", "tests/"))}
+        return m, probe
+
+    def combined(self, files):
+        """rel -> patched text (None: deleted) for every .py file the patch touches, so the
+        import probe sees the whole patch, not just the file that triggered it."""
+        out = {}
+        for fp in files:
+            if fp.old and fp.old != fp.new and fp.old.endswith(".py"):
+                out[fp.old] = None
+        for fp in files:
+            if not fp.new or not fp.new.endswith(".py"):
+                continue
+            base = "" if fp.old is None else self.source(fp.old)
+            text = apply_hunks(base, fp.hunks) if base is not None else None
+            if text is not None:
+                out[fp.new] = text
+        return out
+
+    def analyze_file(self, fp):
+        old, new = fp.old, fp.new
+        rel = old or new
+        paths = [p for p in (old, new) if p]
+        # pytest configuration at the root or on the way down to tests/ decides rootdir and options
+        for p in paths:
+            d, base = os.path.dirname(p), os.path.basename(p)
+            if (base in PYTEST_CONFIG or (base == "pyproject.toml" and d)) and d in ("", "tests") or \
+                    (base in PYTEST_CONFIG or base == "pyproject.toml") and d.startswith("tests/"):
+                log(p, "pytest configuration: catcher takes all")
+                return self.ALL
+        # pytest collection files govern every test below them
+        scopes = {self.collection_scope(p) for p in paths} - {None}
+        if scopes:
+            if old == new and self.comment_only(fp, rel):
+                return 0
+            m = 0
+            for s in scopes:
+                m |= self.scope_tests(s)
+            return m
+        if not rel.startswith(("sqlglot/", "tests/")):
+            m = 0
+            for p in paths:
+                m |= self.analyze_root_file(fp, p)
+            return m
+        if new is None or (old and old != new):
+            if rel.startswith("sqlglot/"):
+                log(rel, "deleted or renamed: catcher takes all")
+                return self.ALL
+            m = 0
+            if old.endswith(".py"):
+                # the old module's tests vanish and everything importing it fails
+                m |= self.file_tests.get(old, 0) | self.importers_of_test_module(old)
+                if new and new.endswith(".py"):
+                    m |= self.new_test_file(new, fp)
+                    if new in self.file_tests:
+                        m |= self.file_tests[new]
+            else:
+                m |= self.analyze_other(old)
+                if new:
+                    m |= self.analyze_other(new)
+            return m
+        if old is None:
+            if new.endswith(".py"):
+                if new.startswith("tests/"):
+                    return self.new_test_file(new, fp)
+                # a new sqlglot module is only seen by discovery (entry points, package walks)
+                self.import_time = True
+                self.need_probe = True
+                return self.fallback(os.path.dirname(new) + "/__init__.py") | self.d["subproc"]
+            return self.analyze_other(new)
+        if rel.endswith(".py"):
+            return self.analyze_py(rel, fp)
+        return self.analyze_other(rel)
+
+    def new_test_file(self, rel, fp):
+        """A test-tree .py file that did not exist before."""
+        text = self.probe_files.get(rel)
+        m = self.tests_mentioning(module_of(rel).rsplit(".", 1)[-1])
+        if text is None:
+            return self.scope_tests("tests")
+        tree, problem = compile_check(text.encode("utf-8", "surrogateescape"), rel)
+        if problem:
+            return m   # it fails to collect on its own; its tests are not catalogued
+        if TEST_FILE.search(rel):
+            # collected in every worker: module-level code with side effects can reach any test
+            for st in tree.body:
+                if isinstance(st, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef)) or is_docstring(st):
+                    continue
+                if isinstance(st, ast.ClassDef) and not st.decorator_list and not st.keywords and \
+                        all(isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Pass)) or is_docstring(s) or
+                            (isinstance(s, (ast.Assign, ast.AnnAssign)) and self.safe_value(rel, s.value or ast.Constant(None)))
+                            for s in st.body):
+                    continue
+                if isinstance(st, (ast.Assign, ast.AnnAssign)) and st.value is not None and self.safe_value(rel, st.value):
+                    continue
+                return self.scope_tests("tests")
+            for st in tree.body:
+                if isinstance(st, ast.ImportFrom) and st.level == 0 and (st.module or "").startswith("tests"):
+                    return self.scope_tests("tests")   # imports run other test modules' code
         return m
 
 
 # ============================================================================ catcher: live import check
 
+# Runs in a fresh interpreter (-I -S). Reads {"src", "files", "modules"} from stdin, serves the
+# patched files from memory through a meta-path finder placed in front of the normal one (no
+# overlay directory, no symlinks), imports every sqlglot module, and reports what failed.
+PROBE_CODE = r'''
+import importlib, importlib.abc, importlib.util, json, os, sys
+sys.dont_write_bytecode = True
+spec = json.loads(sys.stdin.buffer.read().decode("utf-8", "surrogateescape"))
+src = spec["src"]
+sys.path.insert(0, src)
+patched = {}
+for rel, text in spec["files"].items():
+    m = rel[:-3].replace("/", ".")
+    pkg = m.endswith(".__init__")
+    patched[m[:-9] if pkg else m] = (rel, pkg, text)
 
-def _overlay(root, patched):
-    """Mirror SRC/sqlglot under root with symlinks; only patched files are written."""
-    need = set()
-    for rel in patched:
-        d = os.path.dirname(rel)
-        while d:
-            need.add(d)
-            d = os.path.dirname(d)
+class _Loader(importlib.abc.SourceLoader):
+    def __init__(self, path, data):
+        self.path, self.data = path, data
+    def get_filename(self, fullname):
+        return self.path
+    def get_data(self, path):
+        if path == self.path:
+            return self.data
+        with open(path, "rb") as f:
+            return f.read()
 
-    def build(rel_dir):
-        os.makedirs(os.path.join(root, rel_dir), exist_ok=True)
-        for entry in os.listdir(SRC / rel_dir):
-            sub = f"{rel_dir}/{entry}"
-            dst = os.path.join(root, sub)
-            if sub in patched:
-                with open(dst, "w", encoding="utf-8") as f:
-                    f.write(patched[sub])
-            elif sub in need:
-                build(sub)
-            else:
-                os.symlink(SRC / sub, dst)
+class _Finder(importlib.abc.MetaPathFinder):
+    def find_spec(self, name, path=None, target=None):
+        hit = patched.get(name)
+        if hit is None:
+            return None
+        rel, pkg, text = hit
+        if text is None:
+            raise ModuleNotFoundError("No module named %r (deleted by the patch)" % name, name=name)
+        full = os.path.join(src, *rel.split("/"))
+        s = importlib.util.spec_from_loader(name, _Loader(full, text.encode("utf-8", "surrogateescape")),
+                                            origin=full, is_package=pkg)
+        if pkg:
+            s.submodule_search_locations = [os.path.dirname(full)]
+        s.has_location = True
+        return s
 
-    build("sqlglot")
-
-
-def import_ok(patched):
-    """False only when importing the patched modules raises."""
-    tmp = None
+sys.meta_path.insert(0, _Finder())
+failed = []
+for m in spec["modules"]:
     try:
-        tmp = tempfile.mkdtemp(prefix="br-", dir="/tmp" if os.path.isdir("/tmp") else None)
-        _overlay(tmp, patched)
-        code = "import importlib, sys; [importlib.import_module(m) for m in sys.argv[1:]]"
-        env = {"PYTHONPATH": tmp, "PYTHONDONTWRITEBYTECODE": "1", "HOME": tmp, "PATH": os.environ.get("PATH", "")}
-        cmd = [sys.executable, "-S", "-c", code, *[module_of(p) for p in patched]]
-        try:
-            r = subprocess.run(cmd, cwd=tmp, env=env, timeout=30,
-                               stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            failed = r.returncode != 0
-            detail = r.stderr.decode(errors="replace").strip().splitlines()[-1:] if failed else []
-        except subprocess.TimeoutExpired:
-            # A hang at import time fails every test just as a raise does.
-            failed, detail = True, ["import timed out"]
-        if failed:
-            log("import check failed:", detail)
-            # make sure the unpatched modules import here, or the failure says nothing
-            env["PYTHONPATH"] = str(SRC)
-            # cwd must not be the overlay: -c puts the cwd first on sys.path
-            try:
-                r0 = subprocess.run(cmd, cwd=str(SRC), env=env, timeout=30,
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except subprocess.TimeoutExpired:
-                return True   # control hangs too: an environment problem, not the patch
-            return r0.returncode != 0
-        return True
+        importlib.import_module(m)
+    except BaseException as e:
+        failed.append([m, (type(e).__name__ + ": " + str(e))[:300]])
+unserved = [m for m, (rel, pkg, text) in patched.items()
+            if text is not None and m in sys.modules and not isinstance(getattr(sys.modules[m], "__loader__", None), _Loader)]
+sys.stdout.write("\n@@BR-PROBE@@" + json.dumps({"failed": failed, "unserved": unserved}) + "\n")
+sys.stdout.flush()
+'''
+
+_MODULES = None
+
+
+def all_modules():
+    """Every importable sqlglot module of the pinned source (the probe imports them all)."""
+    global _MODULES
+    if _MODULES is None:
+        mods = []
+        root = SRC / "sqlglot"
+        for dirpath, dirnames, fnames in os.walk(root):
+            dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+            for fn in sorted(fnames):
+                if fn.endswith(".py"):
+                    rel = os.path.relpath(os.path.join(dirpath, fn), SRC).replace(os.sep, "/")
+                    m = module_of(rel)
+                    if "sqlglotc" in m or m.endswith("__main__"):
+                        continue
+                    mods.append(m)
+        _MODULES = mods
+    return _MODULES
+
+
+def _kill(p):
+    try:
+        if os.name != "nt":
+            os.killpg(p.pid, 9)
+        else:
+            p.kill()
+    except OSError:
+        pass
+    try:
+        p.kill()
+    except OSError:
+        pass
+
+
+def run_probe(files, timeout):
+    """'ok' | 'broken' | 'timeout' | 'error' for importing every sqlglot module with the patch."""
+    mods = list(all_modules())
+    for rel, text in files.items():
+        if rel.startswith("sqlglot/"):
+            m = module_of(rel)
+            if text is None:
+                if m in mods:
+                    mods.remove(m)
+            elif m not in mods:
+                mods.append(m)
+    payload = json.dumps({"src": str(SRC), "files": files, "modules": mods}).encode("utf-8", "surrogateescape")
+    env = {"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", "/tmp")}
+    if os.name == "nt":
+        env["SYSTEMROOT"] = os.environ.get("SYSTEMROOT", r"C:\WINDOWS")
+    kw = {"start_new_session": True} if os.name != "nt" else {}
+    cwd = os.environ.get("TMPDIR") or ("/tmp" if os.path.isdir("/tmp") else None)
+    try:
+        p = subprocess.Popen([sys.executable, "-I", "-S", "-c", PROBE_CODE], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd, **kw)
     except Exception as e:
-        log("import check skipped:", repr(e))
-        return True
-    finally:
-        if tmp:
-            shutil.rmtree(tmp, ignore_errors=True)
+        log("probe could not start:", repr(e))
+        return "error"
+    try:
+        out, _ = p.communicate(payload, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill(p)
+        try:
+            p.communicate(timeout=5)
+        except Exception:
+            pass
+        return "timeout"
+    except Exception as e:
+        _kill(p)
+        log("probe failed:", repr(e))
+        return "error"
+    text = out.decode("utf-8", "replace")
+    k = text.rfind("\n@@BR-PROBE@@")
+    if k < 0:
+        log("probe produced no report, rc", p.returncode)
+        return "error"
+    try:
+        rep = json.loads(text[k + len("\n@@BR-PROBE@@"):].strip())
+    except ValueError:
+        return "error"
+    if rep.get("unserved"):
+        log("probe did not load patched modules:", rep["unserved"][:3])
+        return "error"
+    if rep.get("failed"):
+        log("probe: patched import fails:", rep["failed"][0])
+        return "broken"
+    return "ok"
+
+
+def run_probes(jobs, parallel=PROBE_PARALLEL):
+    """jobs: {key: files}. Returns {key: outcome}. Every probe gets at most what is left of the
+    batch budget (minus the reserve for scheduling and output); one that cannot start in time is
+    'skipped'. The caller treats anything but 'ok' as "run every test"."""
+    results = {}
+    order = list(jobs)
+    lock = threading.Lock()
+
+    def worker():
+        while True:
+            with lock:
+                if not order:
+                    return
+                key = order.pop(0)
+            left = remaining() - RESERVE_S
+            if left < MIN_PROBE_S:
+                res = "skipped"
+            else:
+                res = run_probe(jobs[key], min(PROBE_TIMEOUT_S, left))
+            with lock:
+                results[key] = res
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(min(parallel, len(order)))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        # never wait past the budget: a stuck probe is abandoned (and its commit runs everything)
+        t.join(max(0.0, remaining() - RESERVE_S + PROBE_TIMEOUT_S + 6))
+    for key in jobs:
+        results.setdefault(key, "skipped")
+    return results
 
 
 # ============================================================================ scheduling
@@ -843,48 +1446,90 @@ def schedule(tests):
 # ============================================================================ main
 
 
-def load_map():
-    raw = MAP.read_bytes()
+def _load(path):
+    raw = Path(path).read_bytes()
     if raw[:1] == b"x" or raw[:2] in (b"\x78\x9c", b"\x78\xda", b"\x78\x01"):
         import zlib
         raw = zlib.decompress(raw)
     return pickle.loads(raw)
 
 
+def load_map():
+    return _load(MAP)
+
+
+def load_profile(tests):
+    """The runtime profile, if present and built for the same test list."""
+    try:
+        if not PROFILE.exists():
+            return None
+        prof = _load(PROFILE)
+        if prof.get("version") != 2 or prof.get("tests") != tests or not prof.get("complete"):
+            log("profile ignored: wrong version, another test list, or incomplete")
+            return None
+        trusted = sum(m is not None for o in prof["keys"].values() for m in o["mask"])
+        log(f"profile loaded: version 2 from {PROFILE}, {trusted} trusted dictionary entries, "
+            f"{len(prof['cmp'])} comparison sites, {bin(prof.get('unobserved', 0)).count('1')} unobserved tests")
+        return prof
+    except Exception as e:
+        log("profile unavailable:", repr(e))
+        return None
+
+
 def main():
-    catalog = json.loads((DATA / "tests.json").read_text())["tests"]
+    catalog = json.loads((DATA / "tests.json").read_text(encoding="utf-8"))["tests"]
     patches = sorted((DATA / "commits").glob("*.patch"))
     ms_by_num = {t["number"]: int(round(t["seconds"] * 1000)) for t in catalog}
     all_nums = [t["number"] for t in catalog]
     hunter = None
     try:
         data = load_map()
-        hunter = Hunter(data)
+        hunter = Hunter(data, load_profile(data["tests"]))
         num_of = {t["id"]: t["number"] for t in catalog}
         idx_to_num = [num_of.get(tid) for tid in data["tests"]]
         known = {n for n in idx_to_num if n is not None}
         unmapped = [n for n in all_nums if n not in known]
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
-    out, total = [], 0
+
+    selected, probes = {}, {}
     for p in patches:
+        cid = p.stem
         try:
             if hunter is None:
                 raise RuntimeError("no hunter")
-            mask = hunter.analyze(p.read_text(encoding="utf-8", errors="replace"))
+            if remaining() < RESERVE_S:
+                raise RuntimeError("out of time")
+            text = p.read_bytes().decode("utf-8", "surrogateescape")
+            mask, probe = hunter.analyze(text)
             nums = {idx_to_num[i] for i in range(hunter.n) if (mask >> i) & 1} - {None}
             if mask:
                 nums.update(unmapped)   # tests the map never saw: keep them
+            selected[cid] = nums
+            if probe is not None:
+                probes[cid] = probe
         except Exception as e:
-            log(p.stem, "hunter failed, catcher runs everything:", repr(e))
-            nums = set(all_nums)
-        cost, workers = schedule([(n, ms_by_num[n]) for n in nums])
+            log(cid, "hunter failed, catcher runs everything:", repr(e))
+            selected[cid] = set(all_nums)
+
+    if probes:
+        outcome = run_probes(probes)
+        for cid, res in outcome.items():
+            if res != "ok":
+                log(cid, f"import probe {res}: catcher takes all")
+                selected[cid] = set(all_nums)
+
+    out, total = [], 0
+    for p in patches:
+        cid = p.stem
+        cost, workers = schedule([(n, ms_by_num[n]) for n in selected.get(cid, all_nums)])
         total += cost
-        log(f"{p.stem}: {len(nums)} tests, {len(workers)} workers, {cost / 1000:.3f}s")
-        out.append(json.dumps({"commit": p.stem, "workers": workers}, separators=(",", ":")))
+        log(f"{cid}: {sum(map(len, workers))} tests, {len(workers)} workers, {cost / 1000:.3f}s")
+        out.append(json.dumps({"commit": cid, "workers": workers}, separators=(",", ":")))
     sys.stdout.write("".join(line + "\n" for line in out))
     sys.stdout.flush()
-    log(f"predicted schedule total {total / 1000:.3f}s over {len(out)} commits")
+    log(f"predicted schedule total {total / 1000:.3f}s over {len(out)} commits, "
+        f"{len(probes)} probes, {time.monotonic() - T0:.2f}s wall")
 
 
 if __name__ == "__main__":

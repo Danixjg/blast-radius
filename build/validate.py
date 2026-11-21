@@ -1,90 +1,70 @@
-"""Fast in-process validation (one Hunter, no subprocess per run, no data-dir copies).
+"""Fast in-process replay (one Hunter, real import probes) over labelled patch sets.
 
-usage: validate.py [map.pkl]
-Scores the sample commits and every labelled mutant in work/mutants: misses, and simulated
-cost including commits that break nothing. Based on a script by the repo owner.
+usage: validate.py [--map map.pkl] [--profile profile.pkl|none] [--set DIR ...] [-v]
+
+Default sets: the sample (official answers). A --set DIR needs DIR/data/commits + DIR/answers.json
+(build/answers.py writes them from label.py labels; incomplete labels are never included).
+Prints misses and simulated cost per set. End-to-end numbers (CPU, wall, official scorer) come
+from build/bench.py; this is for quick iteration only.
 """
-import glob
+import argparse
 import json
 import math
 import os
-import pickle
 import sys
-import zlib
+from pathlib import Path
 
-R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, R)
+R = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(R))
 import selector as S  # noqa: E402
 
-S.SRC = S.Path(os.environ.get("BR_SRC", os.path.join(R, "work/sqlglot")))
-with open(sys.argv[1] if len(sys.argv) > 1 else os.path.join(R, "map.pkl"), "rb") as f:
-    raw = f.read()
-try:
-    raw = zlib.decompress(raw)
-except zlib.error:
-    pass
-d = pickle.loads(raw)
-def read(path):
-    with open(path, encoding="utf-8") as f:
-        return f.read()
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--map", default=str(R / "map.pkl"))
+    ap.add_argument("--profile", default=str(R / "profile.pkl"))
+    ap.add_argument("--set", action="append", default=[])
+    ap.add_argument("-v", action="store_true")
+    a = ap.parse_args()
+    S.SRC = Path(os.environ.get("BR_SRC", R / "work" / "sqlglot"))
+    S.MAP = Path(a.map)
+    S.PROFILE = Path(a.profile) if a.profile != "none" else Path(os.devnull + ".none")
+    S.BUDGET_S = 10 ** 6   # replay: no batch deadline
+    data = S.load_map()
+    h = S.Hunter(data, S.load_profile(data["tests"]))
+    sets = [("sample", R / "kit" / "sample", R / "kit" / "sample" / "answers.json")]
+    for d in a.set:
+        d = Path(d)
+        sets.append((d.name, d / "data", d / "answers.json"))
+    for name, data_dir, ans_path in sets:
+        cat = json.loads((data_dir / "tests.json").read_text(encoding="utf-8"))["tests"]
+        num_of = {t["id"]: t["number"] for t in cat}
+        ms = {t["number"]: math.floor(t["seconds"] * 1000 + 0.5) for t in cat}
+        idx_to_num = [num_of.get(t) for t in data["tests"]]
+        known = {n for n in idx_to_num if n is not None}
+        unmapped = [n for n in num_of.values() if n not in known]
+        answers = json.loads(ans_path.read_text(encoding="utf-8"))["commits"]
+        total = misses = 0
+        for cid, ans in sorted(answers.items()):
+            text = (data_dir / "commits" / f"{cid}.patch").read_bytes().decode("utf-8", "surrogateescape")
+            mask, probe = h.analyze(text)
+            nums = {idx_to_num[i] for i in range(h.n) if mask >> i & 1} - {None}
+            if mask:
+                nums.update(unmapped)
+            res = "-"
+            if probe is not None:
+                res = S.run_probe(probe, S.PROBE_TIMEOUT_S)
+                if res != "ok":
+                    nums = set(num_of.values())
+            cost, _ = S.schedule([(x, ms[x]) for x in nums])
+            miss = set(ans["failing"]) - nums
+            total += cost + (300000 if miss else 0)
+            misses += bool(miss)
+            if miss or a.v:
+                print(f"{'MISS' if miss else 'ok  '} {name} {cid} {ans.get('kind', '')}: failing {len(ans['failing'])} "
+                      f"selected {len(nums)} cost {cost / 1000:.3f}s probe {res}" + (f" missed {sorted(miss)[:8]}" if miss else ""))
+        print(f"{name}: n={len(answers)} misses={misses} simulated={total / 1000:.3f}s")
 
 
-cat = json.loads(read(os.path.join(R, "kit/sample/tests.json")))["tests"]
-num_of = {t["id"]: t["number"] for t in cat}
-ms = {t["number"]: math.floor(t["seconds"] * 1000 + 0.5) for t in cat}
-h = S.Hunter(d)
-idx_to_num = [num_of.get(tid) for tid in d["tests"]]
-known = {n for n in idx_to_num if n is not None}
-unmapped = [n for n in num_of.values() if n not in known]
-
-nums_in_file = {}
-for t in cat:
-    nums_in_file.setdefault(t["file"], set()).add(t["number"])
-
-
-def label_numbers(mid, labels):
-    """Failing test ids -> numbers. A module that fails to collect fails every test in it."""
-    out = set()
-    for x in labels:
-        if x.startswith("COLLECT::"):
-            path = x[len("COLLECT::"):].split("::")[0]
-            hit = {n for f, ns in nums_in_file.items() if f == path or f.startswith(path.rstrip("/") + "/") for n in ns}
-            if not hit:
-                print("WARN", mid, "collection failure matches no catalogued test:", x)
-            out |= hit
-        elif x in num_of:
-            out.add(num_of[x])
-        else:
-            print("WARN", mid, "labelled test not in catalogue:", x)
-    return out
-
-
-cases = []   # (group, id, patch text, failing numbers)
-answers = json.loads(read(os.path.join(R, "kit/sample/answers.json")))["commits"]
-for cid, a in sorted(answers.items()):   # sample answers already hold test numbers
-    cases.append(("sample", cid, read(os.path.join(R, f"kit/sample/commits/{cid}.patch")), set(a["failing"])))
-for lf in sorted(glob.glob(os.path.join(R, "work/mutants/*.json"))):
-    mid = os.path.basename(lf)[:-5]
-    pf = lf[:-5] + ".patch"
-    if not os.path.exists(pf):
-        print("WARN", mid, "has labels but no patch; skipped")
-        continue
-    cases.append(("mutant", mid, read(pf), label_numbers(mid, json.loads(read(lf))["failing"])))
-
-totals = {}
-for group, cid, text, failing in cases:
-    mask = h.analyze(text)
-    nums = {idx_to_num[i] for i in range(h.n) if mask >> i & 1} - {None}
-    if mask:
-        nums.update(unmapped)
-    miss = failing - nums
-    cost, _ = S.schedule([(x, ms[x]) for x in nums])
-    t = totals.setdefault(group, [0, 0, 0, 0])
-    t[0] += 1
-    t[1] += cost + (300000 if miss else 0)
-    t[2] += bool(miss)
-    t[3] += bool(failing)
-    if miss:
-        print("MISS", group, cid, "failing", len(failing), "selected", len(nums), "missed", sorted(miss)[:10])
-for g, (n, cost, misses, breaking) in totals.items():
-    print(f"{g}: n={n} breaking={breaking} misses={misses} simulated={cost / 1000:.3f}s avg={cost / 1000 / n:.2f}s")
+if __name__ == "__main__":
+    main()

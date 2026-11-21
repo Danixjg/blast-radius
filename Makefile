@@ -5,6 +5,8 @@ OUTPUT := $(CURDIR)/output.jsonl
 WORK ?= $(CURDIR)/work
 SQLGLOT_SHA := eb11aec4be8cb2122afe713a4816662c3f0fb2fa
 PY := $(WORK)/venv/bin/python
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -ec
 
 RUN_FLAGS := --rm --platform linux/amd64 --network none --cpus 2 \
 	--memory 4096m --memory-swap 4096m --pids-limit 256 --read-only \
@@ -13,7 +15,7 @@ RUN_FLAGS := --rm --platform linux/amd64 --network none --cpus 2 \
 	--volume $(SAMPLE)/commits:/data/commits:ro \
 	--volume $(SAMPLE)/tests.json:/data/tests.json:ro
 
-.PHONY: build sample check kit map local
+.PHONY: build sample measure check kit map profile local test checkout venv holdout
 
 $(KIT)/score.py:
 	mkdir -p $(KIT) && tar xzf blast-radius-sample.tar.gz -C $(KIT)
@@ -23,30 +25,51 @@ kit: $(KIT)/score.py
 build:
 	docker build --platform linux/amd64 --tag $(IMAGE) .
 
+# One official-limits run, scored by the kit's own scorer (simulated seconds and misses).
 sample: kit build
 	docker run $(RUN_FLAGS) $(IMAGE) > $(OUTPUT)
 	python3 $(KIT)/score.py $(SAMPLE) $(SAMPLE)/answers.json $(OUTPUT)
+
+# Three fresh official-limits containers with whole-container CPU from the cgroup; median total.
+measure: kit build
+	bash build/docker_bench.sh $(IMAGE) $(SAMPLE) $(SAMPLE)/answers.json 3
 
 check: kit build
 	docker run $(RUN_FLAGS) $(IMAGE) > $(OUTPUT)
 	python3 $(KIT)/score.py $(SAMPLE) $(SAMPLE)/answers.json $(OUTPUT) > /dev/null && echo "format ok"
 
-# Without docker: run the selector on the sample from a packaged copy, then score.
-local: kit
-	bash build/simulate.sh $(SAMPLE)
-	python3 $(KIT)/score.py $(SAMPLE) $(SAMPLE)/answers.json $(WORK)/sim.jsonl
+# The pinned checkout everything local uses (LF line endings regardless of git settings).
+checkout:
+	test -d $(WORK)/sqlglot || git -c core.autocrlf=false clone -q https://github.com/tobymao/sqlglot.git $(WORK)/sqlglot
+	git -C $(WORK)/sqlglot config core.autocrlf false
+	git -C $(WORK)/sqlglot checkout -q $(SQLGLOT_SHA)
+	test -z "$$(git -C $(WORK)/sqlglot status --porcelain --untracked-files=no)"
 
-# Regenerate map.pkl and src.tar.gz from the pinned sqlglot.
-map: kit
-	test -d $(WORK)/sqlglot || git clone -q https://github.com/tobymao/sqlglot.git $(WORK)/sqlglot
-	cd $(WORK)/sqlglot && git checkout -q $(SQLGLOT_SHA)
+venv: kit
 	test -x $(PY) || (uv venv -q -p 3.13 $(WORK)/venv && VIRTUAL_ENV=$(WORK)/venv uv pip install -q -r $(KIT)/requirements.lock)
-	rm -rf $(WORK)/cov
-	for rev in 0 1; do \
-	  (cd $(WORK)/sqlglot && PATH=$(WORK)/venv/bin:$$PATH SKIP_INTEGRATION=0 PYTHONPATH=.:$(CURDIR)/build \
-	   COV_ROOT=$(WORK)/sqlglot COV_OUT=$(WORK)/cov COV_REVERSE=$$rev \
-	   python -m pytest -q -p no:cacheprovider -p covplugin -n auto tests | tail -1); \
-	done
-	$(PY) build/mkmap.py $(WORK)/cov $(WORK)/sqlglot $(SAMPLE)/tests.json map.pkl
-	cd $(WORK)/sqlglot && tar --owner=0 --group=0 --mode=a+rX --exclude=__pycache__ -czf $(CURDIR)/src.tar.gz \
-	  sqlglot $$(find tests -name "*.py" | sort)
+
+# Without docker: lay out /app like the image (from the pinned checkout), run 3 times with CPU
+# of the whole process tree measured, and score each run with the kit's scorer.
+local: kit checkout
+	$(PY) build/bench.py app $(WORK)/apps/candidate --src $(WORK)/sqlglot --profile profile.pkl
+	$(PY) build/bench.py run $(WORK)/apps/candidate $(SAMPLE) $(SAMPLE)/answers.json --runs 3 --label candidate --out $(WORK)/bench
+
+test: checkout venv
+	$(PY) -m unittest build/test_selector.py build/test_profiler.py -v
+	$(PY) -m unittest discover -s tests -v
+
+# Rebuild map.pkl / profile.pkl. Every coverage pass must exit 0 with every catalogued test
+# reporting and none failing, and every test must be traced, or nothing is replaced.
+map: kit checkout venv
+	$(PY) build/buildmaps.py --what map
+
+profile: kit checkout venv
+	$(PY) build/buildmaps.py --what profile
+	$(PY) build/fetch_sqlglot.py --make-manifest $(WORK)/sqlglot build/sqlglot.manifest
+
+# A fresh, independently labelled holdout (labels stay in work/, outside the image).
+holdout: kit checkout venv
+	$(PY) build/holdout.py $(WORK)/sqlglot $(WORK)/holdout
+	test -d $(WORK)/label-tree || git -C $(WORK)/sqlglot worktree add -q --detach ../label-tree $(SQLGLOT_SHA)
+	$(PY) build/label.py $(WORK)/label-tree $(SAMPLE)/tests.json $(WORK)/holdout/labels $(WORK)/holdout/commits/*.patch
+	$(PY) build/answers.py $(WORK)/holdout
