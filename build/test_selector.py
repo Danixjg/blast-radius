@@ -463,6 +463,42 @@ class Equality(Base):
         self.assertFalse(S.Hunter._swap_preserves((False, False, False), negated=True))
         self.assertTrue(S.Hunter._swap_preserves((False, False, False), negated=False))
 
+    def test_short_circuited_tests_dropped_only_behind_an_and_or(self):
+        """EQ_SHORT_CIRCUIT: a test that ran the line but was never seen evaluating a comparison
+        placed after the first operand of an and/or chain short-circuited before it. A standalone
+        comparison has no such excuse: unseen tests stay."""
+        old = S.EQ_SHORT_CIRCUIT
+        try:
+            rel = "sqlglot/tokenizer_core.py"
+            src = read(rel)
+            anchor = "if self._comments and token_type == TokenType.SEMICOLON and self.tokens:"
+            assert anchor in src
+            line = next(i for i, ln in enumerate(src.splitlines(), 1) if anchor in ln)
+            col = src.splitlines()[line - 1].index("token_type == TokenType.SEMICOLON")
+            ran = self.h.span_mask(rel, line, line)
+            low = ran & -ran
+            prof = {"cmp": {(rel, line, col): {"facts": {(True, True, True): low}, "imp": frozenset()}}}
+            p = edit(rel, anchor, anchor.replace("token_type == TokenType", "token_type is TokenType"))
+            S.EQ_SHORT_CIRCUIT = False
+            self.assertEqual(S.Hunter(DATA, prof).analyze(p)[0], ran & ~low, "off: unseen tests kept")
+            S.EQ_SHORT_CIRCUIT = True
+            self.assertEqual(S.Hunter(DATA, prof).analyze(p)[0], 0, "on: short-circuited tests dropped")
+            bad = dict(prof["cmp"][(rel, line, col)], facts={(False, None, False): low})
+            self.assertEqual(S.Hunter(DATA, {"cmp": {(rel, line, col): bad}}).analyze(p)[0], low,
+                             "a fact the swap changes still selects its tests")
+            # a standalone comparison (the first, always evaluated operand) keeps unseen tests
+            rel2 = "sqlglot/executor/context.py"
+            src2 = read(rel2)
+            line2 = next(i for i, ln in enumerate(src2.splitlines(), 1) if "if self._table is None:" in ln)
+            col2 = src2.splitlines()[line2 - 1].index("self._table")
+            ran2 = self.h.span_mask(rel2, line2, line2)
+            low2 = ran2 & -ran2
+            prof2 = {"cmp": {(rel2, line2, col2): {"facts": {(True, True, True): low2}, "imp": frozenset()}}}
+            p2 = edit(rel2, "if self._table is None:", "if self._table == None:")
+            self.assertEqual(S.Hunter(DATA, prof2).analyze(p2)[0], ran2 & ~low2)
+        finally:
+            S.EQ_SHORT_CIRCUIT = old
+
 
 class DictEntries(Base):
     REL = "sqlglot/parsers/singlestore.py"

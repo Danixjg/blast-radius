@@ -59,7 +59,7 @@ widens to a safe superset whenever that reasoning runs out.
 | `import os as _fresh` at module level, of a module every interpreter has loaded at start-up | nothing: a `sys.modules` hit binds a name nobody reads |
 | a `from X import *` line (added, removed, changed) | every test: it re-exports an open set of names looked up at run time (`exp.Properties`) |
 | any other class attribute / module constant / import | tests reading the names it binds that created the class (or a subclass/dialect), following import-time derivations; the import is probed unless the old and new values are constants, nothing that runs while modules import reads the name, and the class is a plain Dialect/Parser/Generator/Tokenizer-family class (no Enum, NamedTuple, TypedDict, dataclass or decorator processing its body) |
-| `is` ↔ `==` / `is not` ↔ `!=` only | tests with an operand fact the swap would change, tests that ran the line but were never seen evaluating it, and unobserved tests that ran it; without profile evidence for that exact comparison, line coverage |
+| `is` ↔ `==` / `is not` ↔ `!=` only | tests with an operand fact the swap would change, tests that ran the line but were never seen evaluating it (except, when the comparison follows the first operand of an `and`/`or` chain, tests that short-circuited before it), and unobserved tests that ran it; without profile evidence for that exact comparison, line coverage |
 | a fixture file | tests that opened it |
 | comments, blank lines (outside strings, file still compiles to the same text) | nothing |
 
