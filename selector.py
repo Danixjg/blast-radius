@@ -1718,6 +1718,23 @@ import importlib, importlib.abc, importlib.util, json, os, sys
 sys.dont_write_bytecode = True
 
 
+def _lazy_check():
+    # test_lazy_load runs `import sqlglot; assert len(sqlglot.Dialect._classes) == 1;
+    # print('Success')` in a fresh interpreter and asserts "Success" in its captured stdout (decoded
+    # as text). The count is checked here; 'Success' goes through this process's own print and
+    # stdout, which the patch may have rebound or redirected, and the end of that output is marked
+    # on fd 1 directly so the caller can apply the stdout assertion to exactly those bytes.
+    try:
+        if len(sys.modules["sqlglot"].Dialect._classes) != 1:
+            return False
+        print("Success")
+        sys.stdout.flush()
+        os.write(1, b"\n@@BR-LAZY-END@@\n")
+    except BaseException:
+        return False
+    return True
+
+
 def _probe(spec):
     src = spec["src"]
     if sys.path[:1] != [src]:
@@ -1770,10 +1787,7 @@ def _probe(spec):
         except BaseException as e:
             failed.append([m, (type(e).__name__ + ": " + str(e))[:300]])
         if m == "sqlglot" and fresh:
-            try:
-                lazy = len(sys.modules["sqlglot"].Dialect._classes) == 1
-            except BaseException:
-                lazy = False
+            lazy = _lazy_check()
     unserved = [m for m, (rel, pkg, text) in patched.items()
                 if text is not None and m in sys.modules and not isinstance(getattr(sys.modules[m], "__loader__", None), _Loader)]
     return "\n@@BR-PROBE@@" + json.dumps({"failed": failed, "unserved": unserved, "lazy": lazy}) + "\n"
@@ -2413,21 +2427,31 @@ def probe_report(files, timeout, server=None):
         _kill(p)
         log("probe failed:", repr(e))
         return "error", None
-    text = out.decode("utf-8", "replace")
-    res = _verdict(text)
-    return res, (_lazy_of(text) if res == "ok" else None)
+    res = _verdict(out.decode("utf-8", "replace"))
+    return res, (_lazy_of(out) if res == "ok" else None)
 
 
-def _lazy_of(text):
-    """The report's "lazy" field: True or False as the probe saw the assertion, None if it did not
-    import `sqlglot` itself."""
+def _lazy_of(raw):
+    """test_lazy_load's verdict from a fresh probe's stdout bytes: the report's "lazy" field (the
+    class count, and 'Success' printed without error), then the test's own stdout assertion on
+    the bytes printed up to the probe's end marker, decoded strictly as the test's text-mode
+    capture would. None if the probe did not import `sqlglot` itself."""
+    text = raw.decode("utf-8", "replace")
     k = text.rfind("\n@@BR-PROBE@@")
     try:
         rep = json.loads(text[k + len("\n@@BR-PROBE@@"):].strip()) if k >= 0 else None
     except ValueError:
         return None
     lazy = rep.get("lazy") if isinstance(rep, dict) else None
-    return lazy if isinstance(lazy, bool) else None
+    if lazy is not True:
+        return lazy if isinstance(lazy, bool) else None
+    j = raw.find(b"\n@@BR-LAZY-END@@\n")
+    if j < 0:
+        return False
+    try:
+        return "Success" in raw[:j].decode("utf-8")
+    except UnicodeDecodeError:
+        return False
 
 
 def run_probes(jobs, parallel=PROBE_PARALLEL, lazy=None):

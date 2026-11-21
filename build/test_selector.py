@@ -273,6 +273,20 @@ class SameProgram(unittest.TestCase):
         self.same(b, b.replace("    return v\n", "    return v  # same\n"), True, True)
         self.same(b, "# header\n" + b + "\n\n# trailer\n", True, True)
 
+    def test_docstring_and_annotation_readers_are_kept(self):
+        """The loose AST shortcut still selects tests that read the changed data as data."""
+        d = dict(DATA)
+        d["name_mask"] = dict(DATA["name_mask"])
+        rel = "sqlglot/helper.py"
+        src = read(rel)
+        old = '    """Returns the value in `seq` at position `index`, or `None` if `index` is out of bounds."""'
+        assert src.count(old) == 1
+        patch = diff(rel, src, src.replace(old, '    """Changed docstring."""'))
+        for name in ("__doc__", "__annotations__", "get_type_hints"):
+            d["name_mask"][name] = 1 << 2
+            m, probe = S.Hunter(d).analyze(patch)
+            self.assertTrue(m >> 2 & 1, name)
+
     def test_value_changes(self):
         b = self.BASE
         self.same(b, b.replace("b=16", "b=16.0"), False, False)
@@ -574,6 +588,18 @@ class Probe(unittest.TestCase):
         self.assertEqual(S.probe_report({rel: read(rel) + "\n_X = 1\n"}, 60), ("ok", True),
                          "a lazily loaded dialect never runs during `import sqlglot`")
         self.assertEqual(S.probe_report({rel: read(rel) + "\nraise RuntimeError\n"}, 60), ("broken", None))
+        init = "sqlglot/__init__.py"
+        silenced = {init: read(init) + "\nimport builtins\nbuiltins.print = lambda *a, **k: None\n"}
+        self.assertEqual(S.probe_report(silenced, 60), ("ok", False), "print no longer reaches stdout")
+        # redirecting stdout also fails the test's stdout assertion; replaying print into a fresh
+        # buffer would not notice (the probe's own report then has nowhere to go either)
+        redirected = {init: read(init) + "\nimport os as _o, sys as _s\n_s.stdout = open(_o.devnull, 'w')\n"}
+        self.assertNotEqual(S.probe_report(redirected, 60), ("ok", True))
+        # the test decodes its capture as text: bytes that are not UTF-8 make it error
+        undecodable = {init: read(init) + "\nimport sys as _s\n_s.stdout.buffer.write(b'\\xff\\xfe')\n"}
+        self.assertEqual(S.probe_report(undecodable, 60), ("ok", False))
+        noisy = {init: read(init) + "\nprint('hello from import')\n"}
+        self.assertEqual(S.probe_report(noisy, 60), ("ok", True), "other output is harmless")
 
     def test_server_served_probe_keeps_the_pristine_lazy_verdict(self):
         """A probe served by the probe server starts after a pristine `import sqlglot` (its patch
@@ -645,6 +671,16 @@ class LazyTest(unittest.TestCase):
         out, err = run_main(patches, {"BR_VERIFY": "0"})
         self.assertNotIn(lazy, out["quiet"], err[-3000:])
         self.assertIn(lazy, out["eager"], err[-3000:])
+
+    def test_silenced_print_keeps_the_lazy_test(self):
+        """The probe must replay the test's stdout assertion, not just the class count."""
+        lazy = number_of(S.LAZY_TEST)
+        rel = "sqlglot/__init__.py"
+        src = read(rel)
+        patches = {"silent": diff(rel, src,
+                                  src + "\nimport builtins\nbuiltins.print = lambda *a, **k: None\n")}
+        out, err = run_main(patches, {"BR_VERIFY": "0"})
+        self.assertIn(lazy, out["silent"], err[-3000:])
 
 
 class Verifier(unittest.TestCase):
