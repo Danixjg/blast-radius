@@ -144,6 +144,10 @@ limits; the other sets were measured with the Windows emulation of that image.
 | same-program edits (10, hand-built rule demos: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
 | unread additions (5, hand-built rule demos: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
 | independent holdout (66, seed 8675309, labelled after freeze) | - | - | 670.708 / 0 | 571.500 / 0 |
+| independent holdout (65, seed 271828, frozen merged artifact) | - | - | 619.830 / 0 | 491.085 / 0 |
+
+A third, pre-merge holdout (seed 42424242) scored 799.615 → 610.261 s with 0 misses; see
+[RESULTS.md](RESULTS.md).
 
 The two hand-built sets were constructed to contain the edit categories the new rules excuse. They
 show the rules fire, but they are **not held-out evidence**; the independent check is the fresh-
@@ -151,7 +155,7 @@ seed holdout in [RESULTS.md](RESULTS.md), labelled after the selector and profil
 
 Public sample with CPU: rev3 120.5 s total (2.2 s CPU) on Windows; this version 100.4 s (3.3 s CPU)
 on Windows and, in the real Docker image (`make sample` / `make measure`), 97.076 s / 0 misses with
-median total 99.75 s (2.67 s median cgroup CPU).
+median total 99.08 s (2.00 s median cgroup CPU) after merging PR #5; the pre-merge fix measured 99.75 s.
 
 ## Reproducing
 
