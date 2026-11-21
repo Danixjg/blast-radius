@@ -205,6 +205,6 @@ data = {
     "subproc": subproc,
 }
 import zlib
-blob = zlib.compress(pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL), 9)
+blob = zlib.compress(pickle.dumps(S.pack_map(data), protocol=pickle.HIGHEST_PROTOCOL), 9)
 open(out, "wb").write(blob)
 print("map bytes", len(blob), "files", len(lines), "classes", len(classes), "imp_opens", data["imp_opens"][:5], file=sys.stderr)
