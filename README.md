@@ -33,9 +33,13 @@ widens to a safe superset whenever that reasoning runs out.
     equality, and whether `!=` is side-effect free (`__eq__` and `__ne__` builtin on both types).
     The selector decides each incoming operator edit from these facts at run time; the profile
     holds no edit outcomes;
-  - **unobserved** tests: a plain and an instrumented run of the same serial order must execute
-    the same run-time lines per test; any test that diverges (one at the pin: a dispatch-cache
-    timing effect) is kept wherever the profile would narrow a selection.
+  - **unobserved** tests: a plain and an instrumented run of the same serial order are compared;
+    a test that executed a run-time line plainly but not instrumented took a path the recorder
+    never saw and is kept wherever the profile would narrow a selection (none at the pin). A test
+    whose instrumented run executed everything the plain run did plus more (the pin's one
+    divergence: a pool worker happened to build the generator's dispatch cache during
+    `test_tpcds`) was recorded on a superset of its path and stays observed; the divergence is
+    still written to `profile.pkl.divergence.json`.
 
   The instrumented suite must pass (the forward pass cleanly; a reverse pass may only show the
   documented order-dependent pristine failures, [build/order_dependent.txt](build/order_dependent.txt)).
@@ -48,9 +52,13 @@ widens to a safe superset whenever that reasoning runs out.
 | a statement inside a function | tests that ran it (compound statements: the header) |
 | a lambda | tests that ran the lambda |
 | a signature, decorator or new line in a function | tests that ran the function |
-| the value of an existing entry of a literal dict, with side-effect-free old and new values (constants, names, attribute chains, lambdas, closure-factory calls) | tests the profile saw reading that entry, plus the subprocess test and unobserved tests; the import is still probed |
+| the value of an existing entry of a literal dict, with side-effect-free old and new values (constants, names, attribute chains, lambdas, closure-factory calls) | tests the profile saw reading that entry (plus unobserved tests); the import is probed only when building the new value could raise (a name or attribute), since a trusted entry is read by nothing while modules import |
+| a file whose AST is unchanged (comments, layout, quoting, literal spelling `0x10`/`16`, parentheses, line breaks) | nothing: Python compiles the same program |
+| only docstrings, annotations of function arguments/returns or of non-class variables in a module with `from __future__ import annotations`, or the body of an unchanged `if TYPE_CHECKING:` | readers of `__doc__`/`__annotations__` (none at the pin); class-level annotations stay significant (dataclasses, NamedTuple, TypedDict read them) |
+| a whole new module-level function under a fresh name (not a builtin, not mentioned on any import-time or test-run line, not in the module; no decorators, import-safe defaults, postponed annotations; no dunder, `test*` or pytest/unittest hook names) | nothing: defining it cannot fail and nothing can look it up (sqlglot's namespace scans collect classes and `*_sql` methods only) |
+| `import os as _fresh` at module level, of a module every interpreter has loaded at start-up | nothing: a `sys.modules` hit binds a name nobody reads |
 | a `from X import *` line (added, removed, changed) | every test: it re-exports an open set of names looked up at run time (`exp.Properties`) |
-| any other class attribute / module constant / import | tests reading the names it binds that created the class (or a subclass/dialect), following import-time derivations |
+| any other class attribute / module constant / import | tests reading the names it binds that created the class (or a subclass/dialect), following import-time derivations; the import is probed unless the old and new values are constants, nothing that runs while modules import reads the name, and the class is a plain Dialect/Parser/Generator/Tokenizer-family class (no Enum, NamedTuple, TypedDict, dataclass or decorator processing its body) |
 | `is` ↔ `==` / `is not` ↔ `!=` only | tests with an operand fact the swap would change, tests that ran the line but were never seen evaluating it, and unobserved tests that ran it; without profile evidence for that exact comparison, line coverage |
 | a fixture file | tests that opened it |
 | comments, blank lines (outside strings, file still compiles to the same text) | nothing |
@@ -65,11 +73,31 @@ widens to a safe superset whenever that reasoning runs out.
   `pyproject.toml`, and new root modules that shadow stdlib/third-party names select their whole
   collection scope (added, modified, deleted or renamed). Module-level edits of a test module
   select the module and every test module that imports it; added, deleted and renamed test files
-  are handled the same way, and a new test module with side-effecting top-level code selects all.
+  are handled the same way, and a new test module with side-effecting top-level code, or one that
+  imports a `tests.*` module collection would not import anyway, selects all. The root
+  `pyproject.toml` counts only through its validity and its `tool.pytest` table.
 - **Import probe**: when import-time code changed, one fresh interpreter (`-I -S`) imports
   *every* sqlglot module with the *combined* patch served from memory through a meta-path finder
   (no overlay directory or symlinks; deleted modules raise). Any failure, a timeout, a probe that
   did not load the patched source, or a probe that could not start means: run every test.
+  The probe imports `sqlglot` first and replays `test_lazy_load`'s assertion (a fresh
+  `import sqlglot` creates exactly one dialect class); that test, which coverage cannot see
+  because it starts its own interpreter, is added only when the assertion fails or no probe runs.
+- **Verifier**: when a patch only edits existing sqlglot modules and its selection is small
+  (expected CPU `0.35 s + recorded seconds` below half the schedule cost: half of such edits
+  break nothing) and made only of tests that can run here (no `test_executor.py` /
+  `test_optimizer.py` process pools, no subprocesses, fixture files, source reads, global
+  registry rewrites or allocation-counting tests), one fresh interpreter runs exactly those tests
+  on the patched source with unittest (one suite in catalogue order, class/module fixtures as
+  under pytest). A test is dropped only if it started, raised nothing (no failure, error, failing
+  subtest, skip, expected failure or unexpected success) and finished within
+  `max(1 s, 5 × recorded + 0.5 s)`; everything else, including tests that never report, stays.
+  The image installs the labelling environment's exact `python-dateutil`, `tzdata`, `pytz`,
+  `mypy-extensions` and `typing-extensions` wheels (pinned by sha256,
+  [build/verify-requirements.txt](build/verify-requirements.txt)) because sqlglot's date folding
+  and some test modules take different paths without them; the verifier refuses to run unless
+  exactly those versions are importable. Checked against every labelled patch: no test it
+  reports as passing is labelled failing.
 - **Deadline**: the batch has one monotonic budget (150 s, inside both the 3 min practice and
   4.5 min final limits). Up to two probes run at a time, each bounded by `min(8 s, budget left
   minus a 5 s reserve)`; a probe that cannot start in time is skipped. Skipped or unfinished probes
@@ -86,14 +114,19 @@ Longest-processing-time packing for each worker count from 1 to 8, keeping the c
 ## Results
 
 See [RESULTS.md](RESULTS.md) for every number and how it was produced (Windows only; no Linux
-Docker run was possible). Simulated seconds / misses, official scorer, 3 runs each:
+Docker run was possible). Simulated seconds / misses, official scorer:
 
-| set | baseline+probes (`3fd38f7`, Windows copy-based probes) | frozen (`c8a81ea`) | this version |
-| --- | --- | --- | --- |
-| public sample (30) | 121.100 / 0 | 109.549 / 0 | 118.245 / 0 |
-| holdout 1 (66, independent labels) | 1795.553 / 4 | 701.636 / 0 | 776.358 / 0 |
-| holdout 2 unique (61) | 824.964 / 1 | 885.072 / 1 | 693.460 / 0 (its rescue is in-sample) |
-| validation (27, aimed at the last two fixes) | 3349.836 / 11 | 3349.836 / 11 | 868.992 / 0 |
+| set | baseline+probes (`3fd38f7`, Windows copy-based probes) | frozen (`c8a81ea`) | rev3 (`fcc7d3a`) | this version |
+| --- | --- | --- | --- | --- |
+| public sample (30, oracle 94.351) | 121.100 / 0 | 109.549 / 0 | 118.245 / 0 | 97.076 / 0 |
+| holdout 1 (66, independent labels) | 1795.553 / 4 | 701.636 / 0 | 776.358 / 0 | 654.997 / 0 |
+| holdout 2 unique (61) | 824.964 / 1 | 885.072 / 1 | 693.460 / 0 | 534.169 / 0 |
+| validation (27, aimed at rev3's two fixes) | 3349.836 / 11 | 3349.836 / 11 | 868.992 / 0 | 867.704 / 0 |
+| same-program edits (10: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
+| unread additions (5: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
+
+Public sample with CPU (Windows, whole process tree, median of 3): rev3 120.5 s total
+(2.2 s CPU), this version 100.4 s (3.3 s CPU, of which about 2 s are the verifier's test runs).
 
 ## Reproducing
 

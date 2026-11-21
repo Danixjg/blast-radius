@@ -16,13 +16,17 @@ cover that:
   * static: the rewriter records exact-type tests against dict in every instrumented module; any
     such site disables every dictionary entry (all masks None);
   * dynamic (--divergence): the same serial test order is run once plain and once instrumented;
-    every test whose executed sqlglot/tests lines differ is "unobserved" and the selector keeps
-    it wherever the profile would narrow a selection.
+    every test that executed a run-time sqlglot/tests line plainly but not instrumented is
+    "unobserved" (a path the recorder never saw) and the selector keeps it wherever the profile
+    would narrow a selection. A test whose instrumented run executed everything the plain run did
+    plus more lines (a pool worker that happened to build a cache during it) was recorded on a
+    superset of its plain path: every plain read and comparison was seen, so it stays observed.
 
 Output (zlib-compressed pickle), version 2:
   tests       catalogue ids in order (bit i of every mask is tests[i])
   complete    True
-  unobserved  tests whose instrumented run took a different path (kept by every narrowing)
+  unobserved  tests whose instrumented run missed run-time lines of their plain path (kept by
+              every narrowing)
   keys        {(file, line, col) of a dict display: {"n", "keysrc", "mask"}}
               mask[i] = tests that read the value of literal entry i, directly, through aliases or
               through dictionaries that inherit the entry; None when entry i cannot be trusted
@@ -270,8 +274,9 @@ def build(cov_dir, tests, markers, div=None):
         if absent:
             fail(f"divergence runs miss {len(absent)} tests, e.g. {[tests[i] for i in absent[:3]]}")
         for i, diff in bad.items():
-            unobserved |= 1 << i
             div_report[tests[i]] = diff
+            if diff[0]:   # plain-only run-time lines: the instrumented run missed part of the path
+                unobserved |= 1 << i
 
     res = Resolver(st["prov"])
     bad_entries = set(res.entries_of(st["imp"]))

@@ -4,7 +4,7 @@ usage (Docker build):   python fetch_sqlglot.py <dest_dir> <manifest>
 usage (maintainers):    python fetch_sqlglot.py --make-manifest <pinned_checkout> <manifest>
 
 The archive GitHub serves for a commit is not promised to be byte-identical over time, so the
-check is on content: every file the selector needs (sqlglot/**, tests/**/*.py, pyproject.toml and
+check is on content: every file the selector needs (sqlglot/**, tests/**/*.py, setup.cfg, pyproject.toml and
 the upstream LICENSE) must match the SHA-256 recorded in the committed manifest, and nothing else
 is extracted. Any mismatch, missing file or network failure after retries fails the build.
 Standard library only.
@@ -24,7 +24,7 @@ URLS = [f"https://codeload.github.com/tobymao/sqlglot/tar.gz/{SHA}",
 
 def wanted(rel):
     return (rel.startswith("sqlglot/") and "/__pycache__/" not in rel and not rel.endswith((".pyc", ".so"))) or \
-        (rel.startswith("tests/") and rel.endswith(".py")) or rel in ("LICENSE", "pyproject.toml")
+        (rel.startswith("tests/") and rel.endswith(".py")) or rel in ("LICENSE", "pyproject.toml", "setup.cfg")
 
 
 def make_manifest(tree, out):

@@ -51,6 +51,28 @@ RESERVE_S = float(os.environ.get("BR_RESERVE", "5"))          # kept back to sch
 PROBE_TIMEOUT_S = float(os.environ.get("BR_PROBE_TIMEOUT", "8"))
 MIN_PROBE_S = 1.0                                               # not worth starting below this
 PROBE_PARALLEL = max(1, min(2, os.cpu_count() or 1))
+# Verification: when a patch only edits existing sqlglot modules and its selection is small and
+# made only of tests that can run here (stdlib only: no process pools, subprocesses, fixture files
+# or source-file reads), those tests are run on the patched source and every test that ran and
+# passed is dropped (a harmless edit then runs nothing). The CPU this costs is charged, so a
+# selection is verified only when half its schedule cost (the share of edits that break nothing)
+# exceeds the expected CPU: a fixed start-up cost plus the tests' recorded seconds.
+VERIFY = os.environ.get("BR_VERIFY", "1") != "0"
+VERIFY_MAX_MS = int(float(os.environ.get("BR_VERIFY_MAX", "1.5")) * 1000)
+VERIFY_START_MS = int(float(os.environ.get("BR_VERIFY_START", "0.35")) * 1000)
+VERIFY_UNSAFE_FILES = {
+    "tests/test_executor.py", "tests/test_optimizer.py",   # duckdb/pandas, spawned process pools
+    "tests/test_typing.py",                               # reads package files from disk
+    "tests/test_sqlglotc.py", "tests/test_integration_loader.py",   # files outside the image
+    "tests/test_dialect_entry_points.py", "tests/test_dialect_imports.py",   # rewrite global registries
+}
+# tracemalloc counts every thread's allocations: under pytest-xdist the worker's I/O thread makes
+# this test fail whenever many other tests fail, which a run here cannot reproduce
+VERIFY_UNSAFE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
+# build/verify-requirements.txt installs exactly these (kit/requirements.lock versions); without
+# them sqlglot's date folding (dateutil) and pytz-importing test modules would run differently
+VERIFY_ENV = {"python-dateutil": "4.0.0", "tzdata": "2026.6", "pytz": "2026.6", "mypy-extensions": "1.2.0",
+              "typing-extensions": "4.16.0"}
 DIALECT_DIRS = ("dialects", "parsers", "generators", "typing", "tokenizers")
 CORE_MODULES = {"sqlglot", "sqlglot.tokens", "sqlglot.tokenizer_core", "sqlglot.parser", "sqlglot.generator",
                 "sqlglot.dialects.dialect", "sqlglot.expressions.core", "sqlglot.helper", "sqlglot.trie"}
@@ -60,8 +82,11 @@ COMPOUND = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.With, ast.AsyncWith, a
 if hasattr(ast, "TryStar"):
     COMPOUND = COMPOUND + (ast.TryStar,)
 # pytest reads these at start-up; a broken or changed one can fail every test
-PYTEST_CONFIG = {"pytest.ini", ".pytest.ini", "tox.ini", "setup.cfg"}
+PYTEST_CONFIG = {"pytest.ini", ".pytest.ini", "pytest.toml", ".pytest.toml", "pyproject.toml", "tox.ini", "setup.cfg"}
 TEST_FILE = re.compile(r"(^|/)(test_[^/]*|[^/]*_test)\.py$")
+# runs `python -c "import sqlglot; assert len(sqlglot.Dialect._classes) == 1; print('Success')"`;
+# the import probe performs the same import first, in a fresh interpreter, and reports the check
+LAZY_TEST = "tests/dialects/test_dialect.py::TestDialect::test_lazy_load"
 # top-level names a new file at the repository root (first on sys.path in the test run) shadows
 SHADOW_EXTRA = {"sitecustomize", "usercustomize", "pytest", "_pytest", "pluggy", "xdist", "execnet", "duckdb",
                 "pandas", "numpy", "dateutil", "pytz", "iniconfig", "packaging", "pytest_timeout", "sqlglot",
@@ -176,6 +201,122 @@ def apply_hunks(old_text, hunks):
                 out.append(s + "\n")
     out.extend(old[pos:])
     return "".join(out)
+
+
+def line_map(hunks):
+    """(old lines changed, new lines changed, old -> new line number of an unchanged line)."""
+    ochanged, nchanged, ctx, bounds = set(), set(), {}, []
+    for os_, ol, ns, nl, body in hunks:
+        o, n = (os_ if ol else os_ + 1), (ns if nl else ns + 1)
+        first = o
+        for b in body:
+            if b[0] == " ":
+                ctx[o] = n
+                o, n = o + 1, n + 1
+            elif b[0] == "-":
+                ochanged.add(o)
+                o += 1
+            else:
+                nchanged.add(n)
+                n += 1
+        bounds.append((first, o - 1, n - o))   # old lines after this hunk move by n - o
+
+    def to_new(line):
+        if line in ctx:
+            return ctx[line]
+        if line in ochanged:
+            return None
+        shift = 0
+        for lo, hi, after in bounds:
+            if line > hi:
+                shift = after
+            else:
+                break
+        return line + shift
+    return ochanged, nchanged, to_new
+
+
+_DOC_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def _without_docstring(body):
+    if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and \
+            isinstance(body[0].value.value, str):
+        return body[1:]
+    return body
+
+
+def runtime_facts(tree):
+    """(postponed annotations, names that mean typing.TYPE_CHECKING) of a module."""
+    future, tc = False, set()
+    for st in tree.body:
+        if isinstance(st, ast.ImportFrom) and st.level == 0:
+            if st.module == "__future__" and any(a.name == "annotations" for a in st.names):
+                future = True
+            if st.module == "typing":
+                tc.update(a.asname or a.name for a in st.names if a.name == "TYPE_CHECKING")
+        elif isinstance(st, ast.Import):
+            tc.update((a.asname or a.name) + ".TYPE_CHECKING" for a in st.names if a.name == "typing")
+    return future, frozenset(tc)
+
+
+def _tc_test(node, tc):
+    if isinstance(node, ast.Name):
+        return node.id in tc
+    return isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and \
+        f"{node.value.id}.{node.attr}" in tc
+
+
+def same_ast(a, b, changes, loose=None, in_class=False):
+    """True when old node a and new node b are the same program text-independently: equal ASTs
+    apart from positions. With loose=(future, tc) also apart from what never runs or is only stored
+    as data nobody in sqlglot reads: docstrings (__doc__), annotations of function arguments and
+    returns and of non-class variables when annotations are postponed (stored as strings; class-level
+    ones stay: dataclasses, NamedTuple and TypedDict read them), and the body of an unchanged
+    `if TYPE_CHECKING:` (False at run time). A pair of nodes lying wholly in unchanged lines at
+    matching places of the diff is equal by construction, so only the changed regions are compared."""
+    if type(a) is not type(b):
+        return False
+    if not isinstance(a, ast.AST):
+        if isinstance(a, list):
+            return len(a) == len(b) and all(same_ast(x, y, changes, loose, in_class) for x, y in zip(a, b))
+        if isinstance(a, (float, complex)):
+            return repr(a) == repr(b)
+        return a == b
+    ochanged, nchanged, to_new = changes
+    lo, hi = getattr(a, "lineno", None), getattr(a, "end_lineno", None)
+    if lo is not None and hi is not None and getattr(b, "end_lineno", None) is not None:
+        if to_new(lo) == b.lineno and to_new(hi) == b.end_lineno and a.col_offset == b.col_offset and \
+                a.end_col_offset == b.end_col_offset and not any(lo <= c <= hi for c in ochanged) and \
+                not any(b.lineno <= c <= b.end_lineno for c in nchanged):
+            return True
+    skip = ()
+    if loose is not None:
+        future, tc = loose
+        if future and isinstance(a, ast.arg):
+            skip = ("annotation", "type_comment")
+        elif future and isinstance(a, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            skip = ("returns", "type_comment")
+        elif future and isinstance(a, ast.AnnAssign) and not in_class:
+            skip = ("annotation",)
+        elif isinstance(a, ast.If) and _tc_test(a.test, tc) and same_ast(a.test, b.test, changes):
+            skip = ("body",)
+    for field in a._fields:
+        if field in skip:
+            continue
+        x, y = getattr(a, field, None), getattr(b, field, None)
+        if loose is not None and field == "body" and isinstance(a, _DOC_OWNERS):
+            x, y = _without_docstring(x), _without_docstring(y)
+        # class level reaches through if/try/with blocks of a class body and stops at functions
+        if isinstance(a, ast.ClassDef):
+            inner = in_class or field == "body"
+        elif isinstance(a, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            inner = False
+        else:
+            inner = in_class
+        if not same_ast(x, y, changes, loose, inner):
+            return False
+    return True
 
 
 def edits(hunks):
@@ -530,7 +671,29 @@ class Hunter:
         self.import_time = False
         self.probe_files = {}
         self.need_probe = False
+        self.lazy_pending = False
         self._kd_memo = {}
+        self._fresh_memo, self._nchanged = {}, set()
+        # the one fresh-interpreter test whose assertion the import probe replays exactly
+        self.lazy_mask = 0
+        for i, t in enumerate(data["tests"]):
+            if t == LAZY_TEST:
+                self.lazy_mask = 1 << i
+        # tests the verifier must not run here (see VERIFY_UNSAFE_FILES); untraced ones too
+        bad = data["subproc"]
+        for f, m in data["opens"].items():
+            # fixtures are not in the image; a sqlglot source read from disk would be unpatched
+            if f.startswith("tests/fixtures/") or not f.endswith((".py", ".pyc")) or \
+                    (f.startswith("sqlglot/") and not f.endswith(".pyc")):
+                bad |= m
+        for f, m in self.file_tests.items():
+            if f in VERIFY_UNSAFE_FILES:
+                bad |= m
+        for i, t in enumerate(data["tests"]):
+            if t in VERIFY_UNSAFE_TESTS:
+                bad |= 1 << i
+        self.unverifiable = bad
+        self.verify_files = None
 
     # ---------------------------------------------------------------- sources
     def source(self, rel):
@@ -719,6 +882,22 @@ class Hunter:
         otree = self.tree(rel)
         if otree is None:
             return self.ALL
+        changes = line_map(fp.hunks)
+        self._nchanged, self._fresh_memo = changes[1], {}
+        try:
+            # comments, layout, quoting, literal spelling, parentheses: Python compiles the same
+            # program (only line numbers move, which no test observes), nothing runs differently
+            if same_ast(otree, ntree, changes):
+                return 0
+            # docstrings, postponed annotations, TYPE_CHECKING-only code: what changes is data
+            # nothing in sqlglot reads (__doc__, __annotations__), so only code reading it can tell
+            (of, otc), (nf, ntc) = runtime_facts(otree), runtime_facts(ntree)
+            if same_ast(otree, ntree, changes, loose=(of and nf, otc & ntc)):
+                nm = self.d["name_mask"]
+                return nm.get("__doc__", 0) | nm.get("__annotations__", 0) | nm.get("get_type_hints", 0) | \
+                    nm.get("get_annotations", 0)
+        except RecursionError:
+            pass
         visited = set()
         m = 0
         before, self.import_time = self.import_time, False
@@ -778,8 +957,87 @@ class Hunter:
                 got = self.dict_entry_mask(rel, site, otree, ntree)
                 if got is not None:
                     return got
-            return self.resolve_stmt(rel, site.cls_path, assigned_names(st), site.span, is_docstring(st), visited)
+            before = self.import_time
+            got = self.resolve_stmt(rel, site.cls_path, assigned_names(st), site.span, is_docstring(st), visited)
+            if ntree is not None and self.quiet_constant_edit(rel, site.cls_path, st, otree, ntree):
+                self.import_time = before   # importing behaves exactly as before: nothing to probe
+            return got
         return 0
+
+    SAFE_BASE_SUFFIXES = ("Dialect", "Parser", "Generator", "Tokenizer")
+
+    def quiet_constant_edit(self, rel, cls_path, st, otree, ntree):
+        """`NAME = <constant>` -> `NAME = <constant>` in a sqlglot module or class body, where nothing
+        that runs while modules import reads NAME (no import-time function line mentions it, and
+        every import-time statement mentioning it only binds it). Building a constant cannot raise,
+        and the class-creation hooks sqlglot has (_Dialect, Expr and Tokenizer __init_subclass__)
+        read attributes by name, so the import does exactly what it did; only run-time readers,
+        which resolve_stmt selects, can tell. Classes on the path must have no decorators or
+        metaclass keywords and only Dialect/Parser/Generator/Tokenizer-family bases (Enum,
+        NamedTuple, TypedDict or dataclass bodies are processed generically at class creation)."""
+        if not rel.startswith("sqlglot/"):
+            return False
+        if isinstance(st, ast.Assign) and len(st.targets) == 1:
+            target = st.targets[0]
+        elif isinstance(st, ast.AnnAssign) and st.value is not None:
+            target = st.target
+        else:
+            return False
+        if not isinstance(target, ast.Name):
+            return False
+        nst = _body_stmt(ntree, cls_path, _dump(target))
+        if nst is None or type(nst) is not type(st) or nst.value is None or \
+                _body_stmt(otree, cls_path, _dump(target)) is not st:
+            return False
+        if isinstance(st, ast.AnnAssign) and _dump(st.annotation) != _dump(nst.annotation):
+            return False
+        if not (self.import_safe(rel, st.value, None) and self.import_safe(rel, nst.value, st.value)):
+            return False
+        if cls_path and not (self._plain_class_chain(otree, cls_path) and self._plain_class_chain(ntree, cls_path)):
+            return False
+        name = target.id
+        if name in self.d["name_imp"] or name in self.d["name_imp_cls"]:
+            return False
+        return all(self._pure_binding(urel, ln, name) for urel, ln, _ in self.d["uses"].get(name, ()))
+
+    def _plain_class_chain(self, tree, cls_path):
+        node = tree
+        for name in cls_path:
+            cls = next((c for c in node.body if isinstance(c, ast.ClassDef) and c.name == name), None)
+            if cls is None or cls.decorator_list or cls.keywords:
+                return False
+            for b in cls.bases:
+                last = b.id if isinstance(b, ast.Name) else b.attr if isinstance(b, ast.Attribute) else None
+                if last is None or not last.endswith(self.SAFE_BASE_SUFFIXES):
+                    return False
+            node = cls
+        return True
+
+    def _pure_binding(self, urel, line, name):
+        """The module- or class-level statement of urel holding this line only binds name (a
+        simple assignment whose value does not mention it)."""
+        node = self.tree(urel)
+        st = None
+        while node is not None:
+            nxt = None
+            for s in node.body:
+                if s.lineno <= line <= s.end_lineno:
+                    if isinstance(s, ast.ClassDef) and s.body and s.body[0].lineno <= line:
+                        nxt = s
+                    else:
+                        st = s
+                    break
+            node = nxt
+        if isinstance(st, ast.Assign) and len(st.targets) == 1:
+            target, value = st.targets[0], st.value
+        elif isinstance(st, ast.AnnAssign):
+            target, value = st.target, st.value
+        else:
+            return False
+        if not isinstance(target, ast.Name) or target.id != name:
+            return False
+        return value is None or not any((isinstance(n, ast.Name) and n.id == name) or
+                                        (isinstance(n, ast.Attribute) and n.attr == name) for n in ast.walk(value))
 
     def star_import_changed(self, rel):
         """`from X import *` re-exports an open set of names (sqlglot.expressions is built this
@@ -792,6 +1050,9 @@ class Hunter:
     def _added(self, rel, otree, ntree, ol, nl, nt, visited):
         c0, c1 = line_cols(nt)
         site = locate(ntree, nl, c0, c1, precise=False)
+        if site.kind == "func" and site.func_path and not site.cls_path and \
+                self.unread_new_function(rel, ntree, site.func_path[0]):
+            return 0
         if site.kind == "func" and not isinstance(site.fn, ast.Lambda):
             ofn = find_def(otree, site.func_path)
             if ofn is not None and isinstance(ofn, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -810,12 +1071,68 @@ class Hunter:
             st = site.stmt
             if star_import(st):
                 return self.star_import_changed(rel)
+            if not site.cls_path and self.unread_cached_import(rel, ntree, st):
+                return 0
             names = assigned_names(st)
             span = (max(1, ol - 1), ol)
             if isinstance(st, DEFS) and find_def(otree, site.func_path) is None:
                 return self.new_member(rel, st.name, site.cls_path[:-1] if isinstance(st, ast.ClassDef) else site.cls_path, visited)
             return self.resolve_stmt(rel, site.cls_path, names, span, is_docstring(st), visited)
         return 0
+
+    def unread_new_function(self, rel, ntree, name):
+        """A module-level def the patch adds whole, under a name nothing can look up: defining it
+        cannot fail (no decorators, import-safe defaults, postponed or no annotations) and no code
+        reaches it. sqlglot's namespace scans (helper.subclasses, Dialect lookup, *_sql dispatch)
+        only collect classes and methods, and a fresh name shadows nothing, also not through star
+        imports. Names collectors give meaning to (dunders, test*, pytest/unittest module hooks)
+        are excluded."""
+        key = (rel, name)
+        if key in self._fresh_memo:
+            return self._fresh_memo[key]
+        ok = False
+        fn = next((st for st in ntree.body if isinstance(st, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                   st.name == name), None)
+        if fn is not None and not fn.decorator_list and self.fresh_name(rel, name):
+            nchanged = self._nchanged
+            whole = all(ln in nchanged for ln in range(start_of(fn), fn.end_lineno + 1))
+            a = fn.args
+            safe_defaults = all(self.import_safe(rel, d, None) for d in a.defaults + [d for d in a.kw_defaults if d])
+            annotated = fn.returns is not None or any(x.annotation is not None for x in
+                                                      a.posonlyargs + a.args + a.kwonlyargs + [a.vararg, a.kwarg] if x)
+            ok = whole and safe_defaults and (not annotated or runtime_facts(ntree)[0]) and \
+                not getattr(fn, "type_params", None)
+        self._fresh_memo[key] = ok
+        return ok
+
+    MODULE_HOOKS = {"setUpModule", "tearDownModule", "setup_module", "teardown_module", "setup_function",
+                    "teardown_function", "setup", "teardown", "load_tests"}
+    # loaded by every interpreter that runs the suite (pytest, the subprocess test, spawned pool
+    # workers) before any test module: CPython's start-up with site enabled
+    STARTUP_MODULES = {"os", "os.path", "sys", "abc", "codecs", "io", "stat", "time", "errno", "builtins",
+                       "marshal", "genericpath", "posixpath", "zipimport", "site"}
+
+    def unread_cached_import(self, rel, ntree, st):
+        """`import os as _x` added at module level: importing a module that is already loaded runs
+        no code (a sys.modules hit), and a fresh name binds nothing anyone reads."""
+        if not isinstance(st, ast.Import) or not any(st is s for s in ntree.body):
+            return False
+        if not all(ln in self._nchanged for ln in range(st.lineno, st.end_lineno + 1)):
+            return False
+        for a in st.names:
+            bound = a.asname or a.name.split(".")[0]
+            if a.name not in self.STARTUP_MODULES or not self.fresh_name(rel, bound):
+                return False
+        return True
+
+    def fresh_name(self, rel, name):
+        import builtins
+        if name.startswith(("__", "test", "pytest")) or name in self.MODULE_HOOKS or hasattr(builtins, name):
+            return False
+        d = self.d
+        if name in d["name_mask"] or name in d["uses"] or name in d["name_imp"] or name in d["name_imp_cls"]:
+            return False
+        return re.search(r"\b%s\b" % re.escape(name), self.source(rel) or name) is None
 
     @staticmethod
     def _in_string(tree, line, whole=False):
@@ -925,6 +1242,7 @@ class Hunter:
         if not changed:
             return None
         mask = 0
+        quiet = rel.startswith("sqlglot/")
         for i in changed:
             if not (self.safe_value(rel, od.values[i]) and self.safe_value(rel, nd.values[i])):
                 return None
@@ -932,9 +1250,45 @@ class Hunter:
             if em is None:
                 return None   # entry not trusted (read at import time, dynamic, unknown key)
             mask |= em
-        # the new value is still evaluated when the class body runs: probe the import
-        self.import_time = True
-        return mask | self.d["subproc"] | self.unobserved
+            quiet = quiet and self.import_safe(rel, nd.values[i], od.values[i])
+        if not quiet:
+            # the new value is evaluated when the class body runs and could raise (a name or
+            # attribute that does not exist): probe the import (analyze() then decides the
+            # fresh-interpreter test from the probe, as for any import-time edit)
+            self.import_time = True
+        # else: building the new value cannot raise, and a trusted entry's value is read by nothing
+        # while modules import, so importing behaves exactly as before: no probe, and
+        # test_lazy_load (which only imports sqlglot) cannot notice the edit
+        return mask | self.unobserved
+
+    def import_safe(self, rel, node, old, depth=0):
+        """Evaluating node (a dictionary value in a class or module body) cannot raise and runs no
+        code beyond building it: constants and containers of them, unary signs on numbers, lambdas
+        whose defaults are such, and a closure-factory call with constant arguments to the very
+        name the old value called (bound at that point of the import, as the pristine import shows)."""
+        if depth > 12:
+            return False
+        if isinstance(node, ast.Constant):
+            return True
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            return all(not isinstance(e, ast.Starred) and self.import_safe(rel, e, None, depth + 1) for e in node.elts)
+        if isinstance(node, ast.Dict):
+            return all(k is not None and isinstance(k, ast.Constant) and self.import_safe(rel, v, None, depth + 1)
+                       for k, v in zip(node.keys, node.values))
+        if isinstance(node, ast.UnaryOp):
+            return isinstance(node.op, (ast.USub, ast.UAdd)) and isinstance(node.operand, ast.Constant) and \
+                type(node.operand.value) in (int, float, complex)
+        if isinstance(node, ast.Lambda):
+            a = node.args
+            return all(self.import_safe(rel, d, None, depth + 1)
+                       for d in a.defaults + [d for d in a.kw_defaults if d is not None])
+        if isinstance(node, ast.Call):
+            return isinstance(node.func, ast.Name) and isinstance(old, ast.Call) and \
+                isinstance(old.func, ast.Name) and old.func.id == node.func.id and \
+                all(self.import_safe(rel, x, None, depth + 1) for x in node.args) and \
+                all(k.arg is not None and self.import_safe(rel, k.value, None, depth + 1) for k in node.keywords) and \
+                self.closure_factory_call(rel, node, depth)
+        return False
 
     def safe_value(self, rel, node, depth=0):
         """Building this value cannot run code with side effects (beyond failing outright, which
@@ -1054,34 +1408,75 @@ class Hunter:
             return d
         return None
 
-    def comment_only(self, fp, rel):
-        """Every edit of a modified file is a blank or comment line outside strings, and the
-        patched file still compiles to the same meaning."""
+    def collection_source_unchanged(self, fp, rel):
+        """Check that a collection file still compiles and has the same positioned AST."""
         old = self.source(rel)
-        if old is None or fp.old != fp.new:
+        if old is None or not fp.hunks:
             return False
         new = apply_hunks(old, fp.hunks)
         if new is None:
             return False
         ntree, problem = compile_check(new.encode("utf-8", "surrogateescape"), rel)
         otree = self.tree(rel)
-        if problem or otree is None:
+        return not problem and otree is not None and ast.dump(otree, include_attributes=True) == \
+            ast.dump(ntree, include_attributes=True)
+
+    def fixture_only_conftest(self, rel):
+        """A test-package conftest that only registers ordinary opt-in fixtures."""
+        source = self.probe_files.get(rel)
+        if source is None:
             return False
-        for kind, ol, nl, ot, nt in edits(fp.hunks):
-            for text, tree, ln in ((ot, otree, ol), (nt, ntree, nl)):
-                if text is None:
-                    continue
-                s = text.strip()
-                if s and not s.startswith("#"):
+        tree, problem = compile_check(source.encode("utf-8", "surrogateescape"), rel)
+        if problem:
+            return False
+        # Existing empty package initializers ensure pytest importing the conftest neither imports
+        # a new package nor prepends a different root to sys.path.
+        directory = os.path.dirname(rel)
+        while directory:
+            init = self.source(directory + "/__init__.py")
+            if init is None or init.strip():
+                return False
+            directory = os.path.dirname(directory)
+        names = set()
+        body = tree.body[1:] if ast.get_docstring(tree) is not None else tree.body
+        if body:
+            first, *body = body
+            if not isinstance(first, ast.Import) or [(n.name, n.asname) for n in first.names] != [("pytest", None)]:
+                return False
+        for stmt in body:
+            if not isinstance(stmt, ast.FunctionDef) or stmt.name.startswith(("_", "pytest")) or stmt.name in names:
+                return False
+            args = stmt.args
+            if args.posonlyargs or args.args or args.kwonlyargs or args.vararg or args.kwarg or stmt.returns or stmt.type_params:
+                return False
+            if len(stmt.decorator_list) != 1:
+                return False
+            decorator = stmt.decorator_list[0]
+            if isinstance(decorator, ast.Call):
+                if decorator.args or any(k.arg != "autouse" or not isinstance(k.value, ast.Constant) or
+                                         k.value.value is not False for k in decorator.keywords):
                     return False
-                if self._in_string(tree, ln, True):
-                    return False
+                decorator = decorator.func
+            if not isinstance(decorator, ast.Attribute) or decorator.attr != "fixture" or \
+                    not isinstance(decorator.value, ast.Name) or decorator.value.id != "pytest":
+                return False
+            if stmt.name == "request":   # pytest reserves this name even for unused fixtures
+                return False
+            names.add(stmt.name)
+
+        # The pinned tests use unittest. Require evidence from all files, including helpers,
+        # that none integrates with pytest's fixture or plugin manager, or imports conftest.
+        # A mention may be harmless; it still disqualifies this shortcut.
+        if any(self.source(p) is None for p in self.test_files):
+            return False
+        for path in (SRC / "tests").rglob("*.py"):
+            text = self.source(path.relative_to(SRC).as_posix())
+            if text is None or any(word in text for word in ("pytest", "conftest", "getfixturevalue", *names)):
+                return False
         return True
 
     def analyze_root_file(self, fp, path):
         """A file outside sqlglot/ and tests/."""
-        if path == "pyproject.toml":
-            return self.pyproject_mask(fp)
         parts = path.split("/")
         name = None
         if len(parts) == 1 and path.endswith(".py"):
@@ -1092,25 +1487,56 @@ class Hunter:
             return self.ALL   # shadows a module every test imports (the root is on sys.path)
         return self.analyze_other(path)
 
-    def pyproject_mask(self, fp):
+    def collection_file_readers(self, rel):
+        return self.ALL if rel in self.d["imp_opens"] else self.d["opens"].get(rel, 0)
+
+    @staticmethod
+    def pytest_config_path(path):
+        directory, base = os.path.dirname(path), os.path.basename(path)
+        return base in PYTEST_CONFIG and (directory in ("", "tests") or directory.startswith("tests/"))
+
+    def pyproject_pytest_unchanged(self, fp):
+        """The root pyproject.toml still parses (pytest refuses to start otherwise) and its
+        tool.pytest table (ini_options, or pytest 9's native table) is unchanged in type and value:
+        nothing else in the file reaches a test run that imports sqlglot from the checkout."""
         try:
             import tomllib
         except ImportError:
-            return self.ALL
+            return False
         old = self.source("pyproject.toml")
-        if old is None or fp.old != fp.new or fp.old is None:
-            return self.ALL
-        new = apply_hunks(old, fp.hunks)
+        new = apply_hunks(old, fp.hunks) if old is not None else None
         if new is None:
-            return self.ALL
+            return False
         try:
             o, n = tomllib.loads(old), tomllib.loads(new)
-        except Exception:
-            return self.ALL   # pytest refuses to start on an invalid pyproject.toml
-        ot, nt = o.get("tool", {}), n.get("tool", {})
-        if ot.get("pytest") != nt.get("pytest"):
-            return self.ALL
-        return 0
+        except ValueError:
+            return False
+        return pickle.dumps(o.get("tool", {}).get("pytest")) == pickle.dumps(n.get("tool", {}).get("pytest"))
+
+    def pytest_config_unchanged(self, fp, rel):
+        """Compare same-path config edits, preserving anything pytest could interpret differently."""
+        old = self.source(rel)
+        if old is None or not fp.hunks:
+            return False
+        new = apply_hunks(old, fp.hunks)
+        if new is None:
+            return False
+        try:
+            old.encode("utf-8")
+            new.encode("utf-8")
+            if rel.endswith(".toml"):
+                import tomllib
+                # Compare typed values. Python equality alone would equate true/1 and 0.0/-0.0.
+                return pickle.dumps(tomllib.loads(old)) == pickle.dumps(tomllib.loads(new))
+        except (ImportError, ValueError):
+            return False
+
+        # iniconfig ignores whole comment lines. Preserve actual blank lines, which other
+        # consumers of setup.cfg or tox.ini may preserve inside multiline values.
+        def entries(text):
+            return [ln for ln in text.splitlines() if not ln.lstrip().startswith(("#", ";"))]
+
+        return entries(old) == entries(new)
 
     # ---------------------------------------------------------------- one patch
     def analyze(self, patch_text):
@@ -1120,24 +1546,39 @@ class Hunter:
         self.probe_files = {}
         files = parse_patch(patch_text)
         self.probe_files = self.combined(files)
+        # the verifier may run tests on this patch only when it just edits existing sqlglot modules
+        self.verify_files = None
+        if files and all(fp.old and fp.old == fp.new and fp.old.startswith("sqlglot/") and fp.old.endswith(".py")
+                         and self.probe_files.get(fp.old) is not None for fp in files):
+            self.verify_files = {fp.old: self.probe_files[fp.old] for fp in files}
         m = 0
         for fp in files:
             rel = fp.old or fp.new
             if rel is None:
                 continue
             try:
-                m |= self.analyze_file(fp)
+                m |= self.analyze_file(fp, isolated=len(files) == 1)
             except Exception as e:   # catcher: never crash, widen instead
                 log(rel, "analysis error, catcher takes all:", repr(e))
                 m |= self.ALL
             if m == self.ALL:
                 break
-        if self.import_time:
-            m |= self.d["subproc"]
         probe = None
         if self.need_probe and m != self.ALL:
             probe = {rel: text for rel, text in self.probe_files.items()
                      if rel.endswith(".py") and rel.startswith(("sqlglot/", "tests/"))}
+        # Tests that start their own interpreter (test_lazy_load: `import sqlglot` must create
+        # exactly one dialect class) are invisible to coverage, so any import-time edit used to
+        # select them. The probe replays that very import in a fresh interpreter with the patch and
+        # checks the assertion; such a test now waits for the probe's verdict (lazy_pending) and is
+        # added here only when no probe will run or the test is not one the probe can replay.
+        self.lazy_pending = False
+        if self.import_time:
+            sub = self.d["subproc"] & ~m
+            if sub and probe is not None and sub == self.lazy_mask:
+                self.lazy_pending = True
+            else:
+                m |= sub
         return m, probe
 
     def combined(self, files):
@@ -1156,21 +1597,25 @@ class Hunter:
                 out[fp.new] = text
         return out
 
-    def analyze_file(self, fp):
+    def analyze_file(self, fp, isolated=False):
         old, new = fp.old, fp.new
         rel = old or new
         paths = [p for p in (old, new) if p]
         # pytest configuration at the root or on the way down to tests/ decides rootdir and options
-        for p in paths:
-            d, base = os.path.dirname(p), os.path.basename(p)
-            if (base in PYTEST_CONFIG or (base == "pyproject.toml" and d)) and d in ("", "tests") or \
-                    (base in PYTEST_CONFIG or base == "pyproject.toml") and d.startswith("tests/"):
-                log(p, "pytest configuration: catcher takes all")
-                return self.ALL
+        if any(self.pytest_config_path(p) for p in paths):
+            if isolated and old == new and self.pytest_config_unchanged(fp, rel):
+                return self.collection_file_readers(rel)
+            if old == new == "pyproject.toml" and self.pyproject_pytest_unchanged(fp):
+                return self.collection_file_readers(rel)
+            log(rel, "pytest configuration: catcher takes all")
+            return self.ALL
         # pytest collection files govern every test below them
         scopes = {self.collection_scope(p) for p in paths} - {None}
         if scopes:
-            if old == new and self.comment_only(fp, rel):
+            if isolated and old == new and self.collection_source_unchanged(fp, rel):
+                return self.collection_file_readers(rel)
+            if isolated and old is None and rel.startswith("tests/") and os.path.basename(rel) == "conftest.py" and \
+                    self.fixture_only_conftest(rel):
                 return 0
             m = 0
             for s in scopes:
@@ -1234,17 +1679,34 @@ class Hunter:
                     continue
                 return self.scope_tests("tests")
             for st in tree.body:
-                if isinstance(st, ast.ImportFrom) and st.level == 0 and (st.module or "").startswith("tests"):
+                if isinstance(st, ast.ImportFrom) and st.level == 0 and (st.module or "").startswith("tests") and \
+                        not self.collected_anyway(st.module):
                     return self.scope_tests("tests")   # imports run other test modules' code
         return m
+
+    def collected_anyway(self, module):
+        """A tests.* module whose code pytest's collection runs whether or not a new file imports
+        it: an existing test module (collected), a package initializer, or a helper that an existing
+        test module imports at module level. Importing it again is a cache hit."""
+        rel = module.replace(".", "/")
+        for cand in (rel + ".py", rel + "/__init__.py"):
+            if self.source(cand) is None:
+                continue
+            if cand in self.file_tests or cand.endswith("/__init__.py"):
+                return True
+            pat = re.compile(r"^(from %s import |import %s\b)" % (re.escape(module), re.escape(module)), re.M)
+            return any(pat.search(self.source(f) or "") for f in self.test_files)
+        return False
 
 
 # ============================================================================ catcher: live import check
 
-# Runs in a fresh interpreter (-I -S). Reads {"src", "files", "modules"} from stdin, serves the
-# patched files from memory through a meta-path finder placed in front of the normal one (no
-# overlay directory, no symlinks), imports every sqlglot module, and reports what failed.
-PROBE_CODE = r'''
+# Both helpers below run in a fresh interpreter (-I -S). They read a JSON spec from stdin
+# ({"src", "files", ...}) and serve the patched files from memory through a meta-path finder placed
+# in front of the normal one (no overlay directory, no symlinks); unpatched modules load from src.
+PATCHED_IMPORTS = r'''
+import gc
+gc.disable()   # importing sqlglot creates many long-lived objects: collecting them only costs CPU
 import importlib, importlib.abc, importlib.util, json, os, sys
 sys.dont_write_bytecode = True
 spec = json.loads(sys.stdin.buffer.read().decode("utf-8", "surrogateescape"))
@@ -1284,16 +1746,125 @@ class _Finder(importlib.abc.MetaPathFinder):
         return s
 
 sys.meta_path.insert(0, _Finder())
+'''
+
+# The import probe: imports every sqlglot module ({"modules"}) and reports what failed.
+PROBE_CODE = PATCHED_IMPORTS + r'''
 failed = []
-for m in spec["modules"]:
+lazy = None
+mods = spec["modules"]
+if "sqlglot" in mods:
+    # first, alone, as test_lazy_load's fresh interpreter does: then its assertion
+    mods = ["sqlglot"] + [m for m in mods if m != "sqlglot"]
+for m in mods:
     try:
         importlib.import_module(m)
     except BaseException as e:
         failed.append([m, (type(e).__name__ + ": " + str(e))[:300]])
+    if m == "sqlglot":
+        try:
+            lazy = len(sys.modules["sqlglot"].Dialect._classes) == 1
+        except BaseException:
+            lazy = False
 unserved = [m for m, (rel, pkg, text) in patched.items()
             if text is not None and m in sys.modules and not isinstance(getattr(sys.modules[m], "__loader__", None), _Loader)]
-sys.stdout.write("\n@@BR-PROBE@@" + json.dumps({"failed": failed, "unserved": unserved}) + "\n")
+sys.stdout.write("\n@@BR-PROBE@@" + json.dumps({"failed": failed, "unserved": unserved, "lazy": lazy}) + "\n")
 sys.stdout.flush()
+os._exit(0)   # no interpreter teardown: it only costs CPU
+'''
+
+# The verifier: runs catalogue tests ({"tests": [[id, limit_s], ...]}, catalogue order) on the
+# patched source with unittest, as one suite in one process (class and module fixtures run once,
+# in order, as under pytest), and reports each test's outcome: "pass" only for a test that started,
+# raised nothing (no failure, error, failing subtest, skip, expected failure or unexpected success)
+# and finished within its limit. The caller drops "pass" tests and keeps everything else, including
+# tests that never reported.
+VERIFY_CODE = PATCHED_IMPORTS + r'''
+import time, unittest
+try:
+    # the labelling environment's packages that change sqlglot's or the tests' code paths (checked
+    # by the first run of a batch; the image does not change between runs)
+    if spec["env"]:
+        from importlib.metadata import version as _version
+        for _name, _want in spec["env"].items():
+            if _version(_name) != _want:
+                raise RuntimeError("%s %s != %s" % (_name, _version(_name), _want))
+        import dateutil.relativedelta, pytz  # noqa: F401
+except BaseException as e:
+    sys.stdout.write("\n@@BR-VERIFY@@" + json.dumps({"__env__": repr(e)[:300]}) + "\n")
+    sys.stdout.flush()
+    os._exit(0)
+os.chdir(src)
+report, by_test = {}, {}
+
+def mark(test, value):
+    key = by_test.get(id(test))
+    if key is not None and report.get(key[0], "pass") == "pass":
+        report[key[0]] = value
+
+class _Result(unittest.TestResult):
+    def startTest(self, test):
+        super().startTest(test)
+        self._t = time.perf_counter()
+    def stopTest(self, test):
+        super().stopTest(test)
+        key = by_test.get(id(test))
+        if key is not None:
+            report.setdefault(key[0], "slow" if time.perf_counter() - self._t > key[1] else "pass")
+    def addError(self, test, err):
+        super().addError(test, err)
+        mark(test, "error")
+    def addFailure(self, test, err):
+        super().addFailure(test, err)
+        mark(test, "fail")
+    def addSubTest(self, test, subtest, err):
+        super().addSubTest(test, subtest, err)
+        if err is not None:
+            mark(test, "fail")
+    def addSkip(self, test, reason):
+        super().addSkip(test, reason)
+        mark(test, "skip")
+    def addExpectedFailure(self, test, err):
+        super().addExpectedFailure(test, err)
+        mark(test, "xfail")
+    def addUnexpectedSuccess(self, test):
+        super().addUnexpectedSuccess(test)
+        mark(test, "xpass")
+
+try:
+    import sqlglot  # noqa: F401  (every test module starts here; a failure shows up per module)
+except BaseException:
+    pass
+suite, mods, keep = unittest.TestSuite(), {}, []
+for tid, limit in spec["tests"]:
+    parts = tid.split("::")
+    if len(parts) != 3 or not parts[0].endswith(".py"):
+        report[tid] = "unknown"
+        continue
+    name = parts[0][:-3].replace("/", ".")
+    if name not in mods:
+        try:
+            mods[name] = importlib.import_module(name)
+        except BaseException:
+            mods[name] = None
+    klass = getattr(mods[name], parts[1], None) if mods[name] is not None else None
+    if not (isinstance(klass, type) and issubclass(klass, unittest.TestCase) and
+            callable(getattr(klass, parts[2], None))):
+        report[tid] = "uncollected"
+        continue
+    test = klass(parts[2])
+    by_test[id(test)] = (tid, float(limit))
+    keep.append(test)
+    suite.addTest(test)
+gc.freeze()   # what the imports built stays; the tests run with the collector on, as usual
+gc.enable()
+try:
+    suite.run(_Result())
+except BaseException:
+    pass
+sys.stdout.write("\n@@BR-VERIFY@@" + json.dumps(report) + "\n")
+sys.stdout.flush()
+os._exit(0)
 '''
 
 _MODULES = None
@@ -1334,6 +1905,12 @@ def _kill(p):
 
 def run_probe(files, timeout):
     """'ok' | 'broken' | 'timeout' | 'error' for importing every sqlglot module with the patch."""
+    return probe_report(files, timeout)[0]
+
+
+def probe_report(files, timeout):
+    """(outcome, lazy): run_probe's outcome, and whether test_lazy_load's assertion held right
+    after the fresh interpreter imported the patched `sqlglot` (None when not observed)."""
     mods = list(all_modules())
     for rel, text in files.items():
         if rel.startswith("sqlglot/"):
@@ -1354,7 +1931,7 @@ def run_probe(files, timeout):
                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd, **kw)
     except Exception as e:
         log("probe could not start:", repr(e))
-        return "error"
+        return "error", None
     try:
         out, _ = p.communicate(payload, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -1363,33 +1940,35 @@ def run_probe(files, timeout):
             p.communicate(timeout=5)
         except Exception:
             pass
-        return "timeout"
+        return "timeout", None
     except Exception as e:
         _kill(p)
         log("probe failed:", repr(e))
-        return "error"
+        return "error", None
     text = out.decode("utf-8", "replace")
     k = text.rfind("\n@@BR-PROBE@@")
     if k < 0:
         log("probe produced no report, rc", p.returncode)
-        return "error"
+        return "error", None
     try:
         rep = json.loads(text[k + len("\n@@BR-PROBE@@"):].strip())
     except ValueError:
-        return "error"
+        return "error", None
+    if not isinstance(rep, dict):
+        return "error", None
     if rep.get("unserved"):
         log("probe did not load patched modules:", rep["unserved"][:3])
-        return "error"
+        return "error", None
     if rep.get("failed"):
         log("probe: patched import fails:", rep["failed"][0])
-        return "broken"
-    return "ok"
+        return "broken", None
+    return "ok", rep.get("lazy") is True
 
 
 def run_probes(jobs, parallel=PROBE_PARALLEL):
-    """jobs: {key: files}. Returns {key: outcome}. Every probe gets at most what is left of the
-    batch budget (minus the reserve for scheduling and output); one that cannot start in time is
-    'skipped'. The caller treats anything but 'ok' as "run every test"."""
+    """jobs: {key: files}. Returns {key: (outcome, lazy)} (see probe_report). Every probe gets at
+    most what is left of the batch budget (minus the reserve for scheduling and output); one that
+    cannot start in time is 'skipped'. The caller treats anything but 'ok' as "run every test"."""
     results = {}
     order = list(jobs)
     lock = threading.Lock()
@@ -1402,9 +1981,9 @@ def run_probes(jobs, parallel=PROBE_PARALLEL):
                 key = order.pop(0)
             left = remaining() - RESERVE_S
             if left < MIN_PROBE_S:
-                res = "skipped"
+                res = ("skipped", None)
             else:
-                res = run_probe(jobs[key], min(PROBE_TIMEOUT_S, left))
+                res = probe_report(jobs[key], min(PROBE_TIMEOUT_S, left))
             with lock:
                 results[key] = res
 
@@ -1415,8 +1994,86 @@ def run_probes(jobs, parallel=PROBE_PARALLEL):
         # never wait past the budget: a stuck probe is abandoned (and its commit runs everything)
         t.join(max(0.0, remaining() - RESERVE_S + PROBE_TIMEOUT_S + 6))
     for key in jobs:
-        results.setdefault(key, "skipped")
+        results.setdefault(key, ("skipped", None))
     return results
+
+
+def verify_report(files, tests, timeout):
+    """{catalogue id: outcome} from running tests ([(id, limit_s)]) on the patched source in a
+    fresh interpreter (VERIFY_CODE), or None when the run did not finish and report."""
+    global _ENV_CONFIRMED
+    payload = json.dumps({"src": str(SRC), "files": files, "tests": tests,
+                          "env": {} if _ENV_CONFIRMED else VERIFY_ENV}).encode("utf-8", "surrogateescape")
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("PYTHON", "BR_"))}
+    env["SKIP_INTEGRATION"] = "0"   # as the suite was labelled
+    kw = {"start_new_session": True} if os.name != "nt" else {}
+    cwd = os.environ.get("TMPDIR") or ("/tmp" if os.path.isdir("/tmp") else None)
+    try:
+        # site-packages on (no -S): the pinned VERIFY_ENV packages live there
+        p = subprocess.Popen([sys.executable, "-I", "-c", VERIFY_CODE], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd, **kw)
+    except Exception as e:
+        log("verifier could not start:", repr(e))
+        return None
+    try:
+        out, _ = p.communicate(payload, timeout=timeout)
+    except Exception:
+        _kill(p)
+        try:
+            p.communicate(timeout=5)
+        except Exception:
+            pass
+        return None
+    text = out.decode("utf-8", "replace")
+    k = text.rfind("\n@@BR-VERIFY@@")
+    if k < 0:
+        return None
+    try:
+        rep = json.loads(text[k + len("\n@@BR-VERIFY@@"):].strip())
+    except ValueError:
+        return None
+    if not isinstance(rep, dict):
+        return None
+    if "__env__" not in rep:
+        _ENV_CONFIRMED = True
+    return rep
+
+
+_ENV_CONFIRMED = False   # a verifier run of this batch found exactly the VERIFY_ENV packages
+
+
+def run_verifications(jobs, parallel=PROBE_PARALLEL):
+    """jobs: {key: (files, tests, timeout)} -> {key: report or None}, inside the batch budget."""
+    results = {}
+    order = list(jobs)
+    lock = threading.Lock()
+    unavailable = []
+
+    def worker():
+        while True:
+            with lock:
+                if not order:
+                    return
+                key = order.pop(0)
+            files, tests, limit = jobs[key]
+            left = remaining() - RESERVE_S
+            rep = None
+            if left >= limit and not unavailable:
+                rep = verify_report(files, tests, min(limit, left))
+                if rep is not None and "__env__" in rep:
+                    log("verifier environment differs from the labelled one, verification off:", rep["__env__"])
+                    unavailable.append(True)
+                    rep = None
+            with lock:
+                results[key] = rep
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(min(parallel, len(order)))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(max(0.0, remaining() - RESERVE_S + 6))
+    with lock:   # a verifier still running past the budget counts as no report
+        return {key: results.get(key) for key in jobs}
 
 
 # ============================================================================ scheduling
@@ -1476,6 +2133,34 @@ def load_profile(tests):
         return None
 
 
+def verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num):
+    """Run the selections worth running here (see VERIFY) and drop the tests that passed."""
+    id_of = {t["number"]: t["id"] for t in catalog}
+    idx_of = {n: i for i, n in enumerate(idx_to_num) if n is not None}
+    jobs = {}
+    for cid, files in verify_files.items():
+        nums = selected.get(cid)
+        if not nums or any(n not in idx_of or hunter.unverifiable >> idx_of[n] & 1 for n in nums):
+            continue
+        ms = sum(ms_by_num[n] for n in nums)
+        cost = schedule([(n, ms_by_num[n]) for n in nums])[0]
+        if ms > VERIFY_MAX_MS or cost < 2 * (VERIFY_START_MS + ms):
+            continue
+        # a test far slower than recorded may time out where the suite is labelled: kept
+        tests = [(id_of[n], max(1.0, 5 * ms_by_num[n] / 1000 + 0.5)) for n in sorted(nums)]
+        jobs[cid] = (files, tests, 3.0 + sum(lim for _, lim in tests))
+    if not jobs:
+        return
+    for cid, rep in run_verifications(jobs).items():
+        if rep is None:
+            log(cid, "verifier: no report, selection kept")
+            continue
+        kept = {n for n in selected[cid] if rep.get(id_of[n]) != "pass"}
+        log(cid, f"verifier: ran {len(selected[cid])} tests on the patch, {len(kept)} kept",
+            sorted({v for v in rep.values() if v != "pass"}) or "")
+        selected[cid] = kept
+
+
 def main():
     catalog = json.loads((DATA / "tests.json").read_text(encoding="utf-8"))["tests"]
     patches = sorted((DATA / "commits").glob("*.patch"))
@@ -1492,7 +2177,7 @@ def main():
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
 
-    selected, probes = {}, {}
+    selected, probes, lazy_pending, verify_files = {}, {}, set(), {}
     for p in patches:
         cid = p.stem
         try:
@@ -1502,27 +2187,60 @@ def main():
                 raise RuntimeError("out of time")
             text = p.read_bytes().decode("utf-8", "surrogateescape")
             mask, probe = hunter.analyze(text)
-            nums = {idx_to_num[i] for i in range(hunter.n) if (mask >> i) & 1} - {None}
-            if mask:
-                nums.update(unmapped)   # tests the map never saw: keep them
-            selected[cid] = nums
+            if mask and mask == hunter.ALL:
+                selected[cid] = None
+            else:
+                nums = set(unmapped) if mask else set()
+                bits = mask & hunter.ALL
+                while bits:
+                    bit = bits & -bits
+                    num = idx_to_num[bit.bit_length() - 1]
+                    if num is not None:
+                        nums.add(num)
+                    bits ^= bit
+                selected[cid] = nums
             if probe is not None:
                 probes[cid] = probe
+                if hunter.lazy_pending:
+                    lazy_pending.add(cid)
+            if hunter.verify_files is not None:
+                verify_files[cid] = hunter.verify_files
         except Exception as e:
             log(cid, "hunter failed, catcher runs everything:", repr(e))
-            selected[cid] = set(all_nums)
+            selected[cid] = None
 
     if probes:
         outcome = run_probes(probes)
-        for cid, res in outcome.items():
+        for cid, (res, lazy) in outcome.items():
             if res != "ok":
                 log(cid, f"import probe {res}: catcher takes all")
-                selected[cid] = set(all_nums)
+                selected[cid] = None
+            elif cid in lazy_pending and selected.get(cid) is not None:
+                if lazy:
+                    log(cid, "probe: fresh `import sqlglot` still creates one dialect class")
+                else:
+                    log(cid, "probe: fresh `import sqlglot` changed: keeping", LAZY_TEST)
+                    selected[cid].update(n for n in (idx_to_num[i] for i in range(hunter.n)
+                                                     if hunter.lazy_mask >> i & 1) if n is not None)
+                    selected[cid].update(unmapped)
+
+    if VERIFY and hunter is not None and verify_files:
+        try:
+            verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num)
+        except Exception as e:   # the selections stand as they are
+            log("verification failed, selections kept:", repr(e))
 
     out, total = [], 0
+    all_schedule = None
     for p in patches:
         cid = p.stem
-        cost, workers = schedule([(n, ms_by_num[n]) for n in selected.get(cid, all_nums)])
+        nums = selected.get(cid)
+        if nums is None:
+            if all_schedule is None:
+                all_schedule = schedule(list(ms_by_num.items()))
+            cost, workers = all_schedule
+        else:
+            cost, workers = schedule([(n, ms_by_num[n]) for n in nums])
         total += cost
         log(f"{cid}: {sum(map(len, workers))} tests, {len(workers)} workers, {cost / 1000:.3f}s")
         out.append(json.dumps({"commit": cid, "workers": workers}, separators=(",", ":")))

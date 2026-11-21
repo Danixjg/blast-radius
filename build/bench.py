@@ -59,8 +59,9 @@ def _copy_tree_filtered(src_root, dst_root):
         rel = p.relative_to(src_root)
         (dst_root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(p, dst_root / rel)
-    if (src_root / "LICENSE").exists():
-        shutil.copyfile(src_root / "LICENSE", dst_root / "LICENSE")
+    for name in ("LICENSE", "pyproject.toml", "setup.cfg"):
+        if (src_root / name).is_file():
+            shutil.copyfile(src_root / name, dst_root / name)
 
 
 def make_app(app, src=None, tar=None, selector=None, map_=None, python=None, profile=None):
@@ -93,7 +94,8 @@ def make_app(app, src=None, tar=None, selector=None, map_=None, python=None, pro
     else:
         _copy_tree_filtered(src or R / "work" / "sqlglot", app / "src")
     py = python or sys.executable
-    subprocess.run([py, "-m", "compileall", "-q", str(app / "src" / "sqlglot"), str(app / "selector.py")], check=True)
+    subprocess.run([py, "-m", "compileall", "-q", str(app / "src" / "sqlglot"), str(app / "src" / "tests"),
+                    str(app / "selector.py")], check=True)
     # read-only like the image's runtime filesystem
     for p in app.rglob("*"):
         if p.is_file():

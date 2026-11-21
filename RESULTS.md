@@ -8,6 +8,56 @@ environment, three runs per (version, set). Each run's stdout is scored by the k
 `score.py`. CPU is user+system time of the whole process tree (Job Object accounting, including
 exited probe processes). "Total" is simulated + CPU of the middle run, as the board computes it.
 
+## This round: selection cost (`fcc7d3a` → this version)
+
+Changes, each in [README.md](README.md): the import probe decides `test_lazy_load`; the
+profile's "unobserved" rule only flags tests whose instrumented run missed plain lines
+(`profile.pkl` re-merged from the saved coverage passes: identical apart from `unobserved`, now
+empty); a verifier runs small, stdlib-only selections on the patched source and drops tests that
+pass; AST-equal edits, docstring/postponed-annotation/`TYPE_CHECKING`-only edits, whole new
+functions under fresh names and `import <start-up module> as <fresh name>` select nothing; dict
+edits whose new values cannot raise skip the probe; the root `pyproject.toml` counts only through
+its validity and `tool.pytest` table; a renamed or new test module importing a module collection
+imports anyway no longer selects everything.
+
+Simulated seconds / misses (official scorer; selection is deterministic, so one run per set):
+
+| set | rev3 (`fcc7d3a`) | this version | oracle |
+| --- | --- | --- | --- |
+| public sample (30) | 118.245 / 0 | 97.076 / 0 | 94.351 |
+| holdout 1 (66) | 776.358 / 0 | 654.997 / 0 | 309.807 |
+| holdout 2 (65) | 741.078 / 0 | 545.397 / 0 | 234.161 |
+| holdout 2 unique (61) | 693.460 / 0 | 534.169 / 0 | 222.933 |
+| validation 3 (27) | 868.992 / 0 | 867.704 / 0 | 365.754 |
+| feature (4) | 18.411 / 0 | 4.007 / 0 | 4.007 |
+| fresh (6, labelled earlier, never used for tuning) | 100.086 / 0 | 99.718 / 0 | 64.381 |
+| same-program edits (10, new) | 266.486 / 0 | 0.000 / 0 | 0.000 |
+| unread additions (5, new) | 130.542 / 0 | 0.000 / 0 | 0.000 |
+| **all** | **3713.658** / 0 | **2803.068** / 0 | |
+
+The two new sets were labelled here like the holdouts (`build/label.py`, whole suite, 4 workers,
+capped pools; a pristine run first): every patch `complete` with zero failures. Same-program:
+in-line spacing, parentheses and line splits (`helper.ensure_list`), `0x0`/`0b0`/`0o1` spellings
+(`tokenizer_core`), quote style (Snowflake `STRING_ESCAPES`), a function and a class docstring
+(the latter read by `expressions/core.py` at class creation), a return annotation
+(`parser._parse_statement`), a `TYPE_CHECKING` import, a module variable annotation, a comment and
+reformatting inside a test. Unread additions: a new annotated function (`helper`), a new async
+function (`parser`), argument annotations (`generator.sql`), a `TYPE_CHECKING` import
+(`expressions/core`), `pyproject.toml` `line-length`.
+
+Public sample with CPU (Windows, `build/bench.py`, whole process tree, 3 runs each): rev3 median
+total 120.5 s (CPU 2.2 s), this version 100.4 s (CPU 3.3 s: 5 verifier runs of about 0.4 s
+each; 2 probes instead of 4). On Linux, process start-up and imports are cheaper.
+
+**Verifier fidelity.** For every labelled patch that only edits existing sqlglot modules, all
+verifiable selected tests plus all verifiable labelled failures were run by the verifier (no cost
+policy) and compared with the labels: sample 20 agreeing failures / 21 agreeing passes, holdout 1
+1148 / 1438, holdout 2 165 / 806, validation 3 1046 / 32, feature 2 / 1, fresh 177 / 55, with
+**0 false passes and 0 false failures**. Two environment gaps found on the way are closed: without
+`dateutil` sqlglot's simplifier stops folding date arithmetic (a pristine Postgres test failed),
+and `test_generator_memory` (tracemalloc counts pytest-xdist's I/O thread) fails in labels whenever
+many tests fail, which an isolated run cannot reproduce; it is never verified.
+
 ## Versions
 
 ### Comparison with merged PR #3
@@ -177,3 +227,8 @@ No Docker or WSL was available, so none of these ran: `docker build` of this rep
 official-limits container runs (`--cpus 2 --memory 4096m --read-only --network none
 --user 65534`, `/tmp` 64 MB), the container's cgroup CPU (`make measure`), timings on linux/amd64.
 All CPU numbers are Windows process-tree CPU; the scorer's Linux CPU will differ.
+In particular the verifier's runs under the image's real conditions (`nobody`, read-only `/app`,
+site-packages installed by the hash-pinned `pip install`) were only emulated: `emulate_build.py`
+ran the Dockerfile's `pip install` (hash checks included) into a scratch target, and the verifier
+was exercised with the labelling environment's packages from the local venv. If the image's
+packages differ, the verifier refuses to run (version check) and selections stand.
