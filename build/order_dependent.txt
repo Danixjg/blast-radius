@@ -1,0 +1,9 @@
+# Pristine sqlglot tests that fail only when the suite runs in reverse order (COV_REVERSE=1),
+# with or without instrumentation: state left behind by another test, not the coverage tools.
+# Verified on eb11aec4 with a plain reverse pass (no profiling): the same subtests fail.
+# A reverse coverage pass may fail exactly these and nothing else; the forward pass must be clean.
+tests/dialects/test_starrocks.py::TestStarrocks::test_time_slice_origin_roundtrip
+# tests/test_dialect_entry_points.py clears Dialect._classes; when it runs first in a worker the
+# base dialect (registered only at class creation) is gone. Verified with plain pytest, no plugins:
+#   pytest tests/test_dialect_entry_points.py tests/dialects/test_dialect.py  -> test_enum fails
+tests/dialects/test_dialect.py::TestDialect::test_enum

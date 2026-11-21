@@ -10,7 +10,31 @@ import sys
 ROOT = os.path.realpath(os.environ.get("COV_ROOT", os.getcwd())) + os.sep
 OUT = os.environ["COV_OUT"]
 REVERSE = os.environ.get("COV_REVERSE") == "1"
+PROFILE = os.environ.get("COV_PROFILE") == "1"
 mon = sys.monitoring
+if PROFILE:
+    # before any sqlglot import in this process (pytest main, or a spawned pool worker that is
+    # unpickling a task: the task's wrapper lives in this module, so it is imported first)
+    import brprofile
+    brprofile.install(os.environ.get("COV_ROOT", os.getcwd()))
+
+
+def _prof_new():
+    if PROFILE:
+        brprofile.STATE.cur = brprofile.Rec()
+
+
+def _prof_take():
+    """The running record, detached."""
+    if not PROFILE:
+        return None
+    r, brprofile.STATE.cur = brprofile.STATE.cur, None
+    return r
+
+
+def _relpath(fn):
+    return fn[len(ROOT):].replace(os.sep, "/")
+
 TOOL = mon.COVERAGE_ID
 
 _files = {}          # filename -> index
@@ -20,6 +44,10 @@ _cur_types = None
 _imp_lines = set()
 _mod_lines = {}       # test module nodeid -> lines executed while collecting it
 _mod_opens = {}
+_mod_prof = {}
+_prof_results = {}   # nodeid -> (record, setup record)
+_cur_setup_prof = None
+_child_static_sig = None
 _in_collect = None
 _imp_opens = set()
 _results = {}        # nodeid -> (lines, opens, classes)
@@ -54,7 +82,7 @@ def _audit(event, args):
             except Exception:
                 return
             if p.startswith(ROOT):
-                (_cur_opens if _cur_opens is not None else _imp_opens).add(p[len(ROOT):])
+                (_cur_opens if _cur_opens is not None else _imp_opens).add(_relpath(p))
 
 
 def _wrap_init(cls):
@@ -101,12 +129,14 @@ def pytest_make_collect_report(collector):
         yield
         return
     _cur_lines, _cur_opens = set(), set()
+    _prof_new()
     mon.restart_events()
     try:
         yield
     finally:
         _mod_lines[collector.nodeid] = _cur_lines
         _mod_opens[collector.nodeid] = _cur_opens
+        _mod_prof[collector.nodeid] = _prof_take()
         _cur_lines = _cur_opens = None
 
 
@@ -144,6 +174,7 @@ def _child_record(test_id, fn, args, kwargs):
     global _cur_lines, _cur_opens, _cur_types
     _child_setup()
     _cur_lines, _cur_opens, _cur_types = set(), set(), set()
+    _prof_new()
     mon.restart_events()
     try:
         result = fn(*args, **kwargs)
@@ -154,8 +185,9 @@ def _child_record(test_id, fn, args, kwargs):
         return result
     finally:
         lines, opens, types = _cur_lines, _cur_opens, _cur_types
+        prof = _prof_take()
         _cur_lines = _cur_opens = _cur_types = None
-        files = {i: fn_[len(ROOT):] for fn_, i in _files.items()}
+        files = {i: _relpath(fn_) for fn_, i in _files.items()}
         classes = set()
         for tp in types:
             classes |= _mro_names(tp)
@@ -163,6 +195,14 @@ def _child_record(test_id, fn, args, kwargs):
         os.makedirs(OUT, exist_ok=True)
         with open(os.path.join(OUT, f"child-{os.getpid()}.pkl"), "ab") as f:
             pickle.dump(rec, f)
+        if prof is not None:
+            global _child_static_sig
+            st = brprofile.static_dump()
+            sig = (len(st["owners"]), sum(map(len, st["prov"].values())), len(st["sites"]), len(st["dynamic"]),
+                   len(st["uninstrumented"]), sum(map(len, st["imp"])))
+            with open(os.path.join(OUT, f"prof-child-{os.getpid()}.pkl"), "ab") as f:
+                pickle.dump((test_id, prof.dump(), st if sig != _child_static_sig else None), f)
+            _child_static_sig = sig
 
 
 def _traced_call(test_id, fn, *args, **kwargs):
@@ -234,16 +274,25 @@ def pytest_runtest_protocol(item, nextitem):
     _cur_lines, _cur_opens, _cur_types = set(), set(), set()
     _cur_setup = None
     _cur_test = item.nodeid
+    global _cur_setup_prof
+    _cur_setup_prof = None
+    _prof_new()
     mon.restart_events()
     try:
         yield
     finally:
         lines, opens, types = _cur_lines, _cur_opens, _cur_types
+        prof = _prof_take()
         _cur_lines = _cur_opens = _cur_types = None
         classes = set()
         for tp in types:
             classes |= _mro_names(tp)
         mod = item.nodeid.split("::")[0]
+        if prof is not None:
+            mp = _mod_prof.get(mod)
+            if mp is not None:
+                prof.merge(mp)
+            _prof_results[item.nodeid] = (prof.dump(), (_cur_setup_prof or brprofile.Rec()).dump())
         lines |= _mod_lines.get(mod, set())
         opens |= _mod_opens.get(mod, set())
         sl, so, st = _cur_setup or (set(), set(), set())
@@ -262,6 +311,9 @@ def pytest_runtest_setup(item):
         yield
     finally:
         _cur_setup = (set(_cur_lines or ()), set(_cur_opens or ()), set(_cur_types or ()))
+        global _cur_setup_prof
+        if PROFILE and brprofile.STATE.cur is not None:
+            _cur_setup_prof = brprofile.STATE.cur.copy()
 
 
 pytest_runtest_setup.hookwrapper = True
@@ -274,6 +326,9 @@ def pytest_unconfigure(config):
     os.makedirs(OUT, exist_ok=True)
     files = [None] * len(_files)
     for fn, i in _files.items():
-        files[i] = fn[len(ROOT):]
+        files[i] = _relpath(fn)
+    out = {"files": files, "imp_classes": _IMP_CLASSES, "imp_lines": _IMP_DONE, "imp_opens": _imp_opens, "results": _results}
+    if PROFILE:
+        out["prof"] = {"results": _prof_results, "static": brprofile.static_dump()}
     with open(os.path.join(OUT, f"cov-{wid}-{'r' if REVERSE else 'f'}.pkl"), "wb") as f:
-        pickle.dump({"files": files, "imp_classes": _IMP_CLASSES, "imp_lines": _IMP_DONE, "imp_opens": _imp_opens, "results": _results}, f)
+        pickle.dump(out, f)

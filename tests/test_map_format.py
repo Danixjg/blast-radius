@@ -2,22 +2,22 @@
 
 Run: python3 -m unittest discover -s tests
 The end-to-end checks need the sample kit (make kit) and the sqlglot sources
-(work/appsim/app/src after make local, or BR_SRC); they are skipped without them.
+(work/sqlglot after make checkout, or BR_SRC); they are skipped without them.
 """
-import json
 import os
 import pickle
 import sys
 import unittest
 import zlib
 from pathlib import Path
+from unittest.mock import patch
 
 R = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(R))
 import selector as S  # noqa: E402
 
 SAMPLE = R / "kit" / "sample"
-SRC = Path(os.environ.get("BR_SRC", R / "work" / "appsim" / "app" / "src"))
+SRC = Path(os.environ.get("BR_SRC", R / "work" / "sqlglot"))
 
 
 def plain_map():
@@ -79,20 +79,26 @@ class PackTest(unittest.TestCase):
 
 @unittest.skipUnless((SAMPLE / "tests.json").exists() and SRC.is_dir(), "needs kit and sqlglot sources")
 class SampleParityTest(unittest.TestCase):
-    """Every sample patch selects exactly the same tests under both formats."""
+    """Both map formats yield the same masks and import probes on the sample."""
 
-    def masks(self, data):
-        S.SRC = SRC
+    def analyze_sample(self, data, profile):
         out = {}
-        h = S.Hunter(data)   # one hunter for every patch, as in main()
+        h = S.Hunter(data, profile)   # one hunter for every patch, as in main()
         for p in sorted((SAMPLE / "commits").glob("*.patch")):
-            out[p.stem] = h.analyze(p.read_text(encoding="utf-8", errors="replace"))
+            out[p.stem] = h.analyze(p.read_bytes().decode("utf-8", "surrogateescape"))
         return out
 
     def test_identical_selection(self):
         d = plain_map()
         packed = pickle.loads(pickle.dumps(S.pack_map(d), 5))
-        self.assertEqual(self.masks(packed), self.masks(d))
+        with patch.object(S, "PROFILE", R / "profile.pkl"):
+            profile = S.load_profile(d["tests"])
+        self.assertIsNotNone(profile, "the committed profile must load for this map")
+        with patch.object(S, "SRC", SRC):
+            for active_profile in (None, profile):
+                with self.subTest(profile=active_profile is not None):
+                    self.assertEqual(self.analyze_sample(packed, active_profile),
+                                     self.analyze_sample(d, active_profile))
 
 
 if __name__ == "__main__":
