@@ -67,6 +67,28 @@ policy) and compared with the labels: sample 20 agreeing failures / 21 agreeing 
 and `test_generator_memory` (tracemalloc counts pytest-xdist's I/O thread) fails in labels whenever
 many tests fail, which an isolated run cannot reproduce; it is never verified.
 
+## Independent holdout (frozen artifact)
+
+To check that the gains above are not fitted to the sets used while writing the rules, the selector
+and profile were frozen first: `selector.py` SHA-256
+`068f644a9f0302aef1d59eb555fafd6a8e2c00327ca02006ba98404e9a3c5b3e`, `profile.pkl` SHA-256
+`d306c5b42d9767fbef629f12dbb1922c030dec4b7dde75b2154d961ba120967b`. Neither file changed after
+the labels were made. `build/holdout.py --seed 8675309 --n 66` then generated 66 patches (a seed
+used by neither the earlier holdouts nor the parity sets); `build/label.py` ran the full suite on a
+pristine worktree with 4 workers: pristine `complete` with 0 failures, all 66 labels `complete`,
+43 breaking. The selector's output was scored against those labels by the kit's `score.py`:
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 670.708 | 0 |
+| this version (frozen) | 571.500 | 0 |
+| this version with PR #5's probe server merged | 574.340 | 0 |
+
+So the independent set shows a 14.8 % reduction with no misses, rather than the near-zero change on
+the small earlier "fresh" set. The merge with PR #5 costs 2.84 s here: a forked probe does not
+report the `test_lazy_load` observation, so that test is kept conservatively. If both PRs ship, that
+interaction should be handled explicitly rather than assumed free.
+
 ## Versions
 
 ### Comparison with merged PR #3

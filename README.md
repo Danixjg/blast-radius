@@ -125,6 +125,7 @@ limits; the other sets were measured with the Windows emulation of that image.
 | validation (27, aimed at rev3's two fixes) | 3349.836 / 11 | 3349.836 / 11 | 868.992 / 0 | 867.704 / 0 |
 | same-program edits (10, hand-built rule demos: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
 | unread additions (5, hand-built rule demos: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
+| independent holdout (66, seed 8675309, labelled after freeze) | - | - | 670.708 / 0 | 571.500 / 0 |
 
 The two hand-built sets were constructed to contain the edit categories the new rules excuse. They
 show the rules fire, but they are **not held-out evidence**; the independent check is the fresh-
@@ -132,7 +133,7 @@ seed holdout in [RESULTS.md](RESULTS.md), labelled after the selector and profil
 
 Public sample with CPU: rev3 120.5 s total (2.2 s CPU) on Windows; this version 100.4 s (3.3 s CPU)
 on Windows and, in the real Docker image (`make sample` / `make measure`), 97.076 s / 0 misses with
-median total 100.5 s (3.75 s cgroup CPU).
+median total 100.5 s (3.45 s median cgroup CPU).
 
 ## Reproducing
 
