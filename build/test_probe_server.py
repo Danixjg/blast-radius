@@ -231,6 +231,28 @@ class Fallback(unittest.TestCase):
             self.assertIsNone(S.ProbeServer.start())
 
 
+class ParityTool(unittest.TestCase):
+    """build/probe_parity.py argument checks (no probes run)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("probe_parity", R / "build" / "probe_parity.py")
+        cls.tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.tool)
+
+    def test_non_positive_repeat_is_rejected(self):
+        for bad in ("0", "-1"):
+            with self.subTest(repeat=bad), patch("sys.stderr"):
+                with self.assertRaises(SystemExit) as cm:
+                    self.tool.parse_args(["some/dir", "--repeat", bad])
+                self.assertEqual(cm.exception.code, 2, "argparse usage error")
+
+    def test_defaults(self):
+        a = self.tool.parse_args(["some/dir"])
+        self.assertEqual((a.dirs, a.repeat, a.checkpoints), (["some/dir"], 1, S.PROBE_CHECKPOINTS))
+
+
 class Dedupe(unittest.TestCase):
     def test_identical_jobs_probe_once(self):
         calls = []

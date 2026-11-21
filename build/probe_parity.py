@@ -27,13 +27,24 @@ def child_cpu():
     return r.ru_utime + r.ru_stime
 
 
-def main():
+def positive_int(text):
+    n = int(text)
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {n}")
+    return n
+
+
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("dirs", nargs="+")
     ap.add_argument("--timeout", type=float, default=S.PROBE_TIMEOUT_S)
-    ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--repeat", type=positive_int, default=1)
     ap.add_argument("--checkpoints", type=int, default=S.PROBE_CHECKPOINTS)
-    a = ap.parse_args()
+    return ap.parse_args(argv)
+
+
+def main():
+    a = parse_args()
     S.SRC = Path(os.environ.get("BR_SRC", R / "work" / "sqlglot")).resolve()
     data = S.load_map()
     h = S.Hunter(data, S.load_profile(data["tests"]))
@@ -69,7 +80,7 @@ def main():
 
     print("verdicts (fresh):", dict(collections.Counter(fresh.values())))
     print(f"eligible for the server: {eligible}/{len(jobs)}, forked: {forked}, per checkpoint: {per_stage}")
-    n = max(1, a.repeat)
+    n = a.repeat
     print(f"CPU per pass: fresh {cpu_fresh / n:.3f} s, server {cpu_server / n:.3f} s, "
           f"saving {(cpu_fresh - cpu_server) / n:.3f} s ({(cpu_fresh - cpu_server) / max(cpu_fresh, 1e-9):.0%})")
     for k, f, s in bad:
