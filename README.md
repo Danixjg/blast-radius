@@ -133,7 +133,7 @@ seed holdout in [RESULTS.md](RESULTS.md), labelled after the selector and profil
 
 Public sample with CPU: rev3 120.5 s total (2.2 s CPU) on Windows; this version 100.4 s (3.3 s CPU)
 on Windows and, in the real Docker image (`make sample` / `make measure`), 97.076 s / 0 misses with
-median total 99.18 s (2.10 s median cgroup CPU).
+median total 99.75 s (2.67 s median cgroup CPU).
 
 ## Reproducing
 

@@ -1764,6 +1764,18 @@ for m in mods:
     if m == "sqlglot":
         try:
             lazy = len(sys.modules["sqlglot"].Dialect._classes) == 1
+            if lazy:
+                # test_lazy_load also asserts that print('Success') reaches stdout. A patch can
+                # silence print or redirect stdout without changing the class count, so replay
+                # that part of the assertion before dropping the test.
+                import builtins, io
+                buf, saved = io.StringIO(), sys.stdout
+                sys.stdout = buf
+                try:
+                    builtins.print("Success")
+                finally:
+                    sys.stdout = saved
+                lazy = "Success" in buf.getvalue()
         except BaseException:
             lazy = False
 unserved = [m for m, (rel, pkg, text) in patched.items()

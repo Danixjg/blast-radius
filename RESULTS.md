@@ -54,8 +54,8 @@ function (`parser`), argument annotations (`generator.sql`), a `TYPE_CHECKING` i
 Public sample with CPU (Windows, `build/bench.py`, whole process tree, 3 runs each): rev3 median
 total 120.5 s (CPU 2.2 s), this version 100.4 s (CPU 3.3 s: 5 verifier runs of about 0.4 s
 each; 2 probes instead of 4). In the real Docker image (`make sample`, then `make measure` with three
-fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 2.08, 2.12 and
-2.10 s across the three runs (median total 99.18 s). The simulated reduction is confirmed under the
+fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 2.67, 2.70 and
+2.64 s across the three runs (median total 99.75 s). The simulated reduction is confirmed under the
 official limits; the CPU figure is the container's, not a Windows process-tree estimate. An earlier
 measurement of 3.45/3.75/2.98 s was taken while the independent holdout was being labelled on the
 same machine and is not comparable.
@@ -73,9 +73,13 @@ many tests fail, which an isolated run cannot reproduce; it is never verified.
 
 To check that the gains above are not fitted to the sets used while writing the rules, the selector
 and profile were frozen first: `selector.py` SHA-256
-`068f644a9f0302aef1d59eb555fafd6a8e2c00327ca02006ba98404e9a3c5b3e`, `profile.pkl` SHA-256
-`d306c5b42d9767fbef629f12dbb1922c030dec4b7dde75b2154d961ba120967b`. Neither file changed after
-the labels were made. `build/holdout.py --seed 8675309 --n 66` then generated 66 patches (a seed
+`068f644a9f0302aef1d59eb555fafd6a8e2c00327ca02006ba98404e9a3c5b3e` at the time of generation,
+and `profile.pkl` SHA-256
+`d306c5b42d9767fbef629f12dbb1922c030dec4b7dde75b2154d961ba120967b`. An adversarial test later
+found a false negative in the lazy-test rule (below); the one-line fix changed the selector to
+`9a95adfba9c68605ccb940f3a8ff749d32800098fb25a96ea5af3836124d2d72`. The fix came from that test,
+not from holdout results, and both holdouts were re-scored with the corrected selector.
+`build/holdout.py --seed 8675309 --n 66` then generated 66 patches (a seed
 used by neither the earlier holdouts nor the parity sets); `build/label.py` ran the full suite on a
 pristine worktree with 4 workers: pristine `complete` with 0 failures, all 66 labels `complete`,
 43 breaking. The selector's output was scored against those labels by the kit's `score.py`:
@@ -90,6 +94,27 @@ the small earlier "fresh" set. A temporary merge with PR #5 was measured and dis
 574.340 s with 0 misses here, 2.84 s worse, because a forked probe cannot report the
 `test_lazy_load` observation and keeps that test. On the public sample the two were tied in Docker
 (97.076 s / 0 misses; median totals 99.18 s and 99.23 s). The merge is not part of this PR.
+
+## Adversarial checks
+
+Targeted tests were added for the three rules most likely to be overfitted:
+
+- **AST-equal shortcuts.** When a test reads `__doc__`, `__annotations__` or calls
+  `get_type_hints`, a docstring/annotation change still selects it; existing cases cover eager
+  annotations, class-level annotations, decorators, `TYPE_CHECKING` switches, shadowed builtins and
+  side-effecting defaults.
+- **Lazy-test rule.** A probe that only counted dialect classes was a false negative: appending
+  `builtins.print = lambda *a, **k: None` to `sqlglot/__init__.py` keeps one class but makes the
+  test's `assert "Success" in stdout` fail. The probe now replays that output assertion too. With
+  the fix, the patch selects the test; before the fix it selected nothing. This is the one change to
+  `selector.py` after the first holdout was generated.
+- **`unobserved` narrowing.** `test_profiler.py` checks that a plain-only run-time line marks a test
+  unobserved, and that a superset instrumented path stays observed while still being reported as a
+  divergence. The profile tracks value provenance, so equal line sets are not proof of equal value
+  reads; this remains a documented limitation rather than a validated guarantee.
+
+After the fix, the first holdout still scores 571.500 s / 0 misses and the public sample still
+scores 97.076 s / 0 misses in Docker (median total 99.75 s).
 
 ## Versions
 

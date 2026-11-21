@@ -588,6 +588,9 @@ class Probe(unittest.TestCase):
         self.assertEqual(S.probe_report({rel: read(rel) + "\n_X = 1\n"}, 60), ("ok", True),
                          "a lazily loaded dialect never runs during `import sqlglot`")
         self.assertEqual(S.probe_report({rel: read(rel) + "\nraise RuntimeError\n"}, 60), ("broken", None))
+        init = "sqlglot/__init__.py"
+        silenced = {init: read(init) + "\nimport builtins\nbuiltins.print = lambda *a, **k: None\n"}
+        self.assertEqual(S.probe_report(silenced, 60), ("ok", False), "print no longer reaches stdout")
 
 
 def run_main(patches, env_extra=None):
@@ -635,6 +638,16 @@ class LazyTest(unittest.TestCase):
         out, err = run_main(patches, {"BR_VERIFY": "0"})
         self.assertNotIn(lazy, out["quiet"], err[-3000:])
         self.assertIn(lazy, out["eager"], err[-3000:])
+
+    def test_silenced_print_keeps_the_lazy_test(self):
+        """The probe must replay the test's stdout assertion, not just the class count."""
+        lazy = number_of(S.LAZY_TEST)
+        rel = "sqlglot/__init__.py"
+        src = read(rel)
+        patches = {"silent": diff(rel, src,
+                                  src + "\nimport builtins\nbuiltins.print = lambda *a, **k: None\n")}
+        out, err = run_main(patches, {"BR_VERIFY": "0"})
+        self.assertIn(lazy, out["silent"], err[-3000:])
 
 
 class Verifier(unittest.TestCase):
