@@ -83,6 +83,21 @@ widens to a safe superset whenever that reasoning runs out.
   The probe imports `sqlglot` first and replays `test_lazy_load`'s assertion (a fresh
   `import sqlglot` creates exactly one dialect class); that test, which coverage cannot see
   because it starts its own interpreter, is added only when the assertion fails or no probe runs.
+- **Probe server**: when two or more probes patch only sqlglot modules, a chain of checkpoint
+  processes starts. The first, started like a probe, imports `sqlglot` (the first module every
+  probe imports); two more are forks that keep importing in the probe's own order up to evenly
+  spaced points of the `sqlglot.dialects.*` block, where most import time goes. Each records every
+  module loaded or looked for so far and forks one child per probe. A probe goes to the deepest
+  checkpoint whose recorded modules its patch does not touch, so the child starts from exactly the
+  state a fresh probe reaches after importing that prefix, and runs the same code from there (exit
+  hooks and non-daemon threads included). Anything else, or any trouble with a checkpoint, uses a
+  fresh probe. Probes with identical files run once. `build/probe_parity.py` checks verdict parity
+  against fresh probes on any patch directories: 117/117 identical on the sample plus five generated
+  66-patch sets. Whole-run CPU fell 2.1-2.3 s per 66-patch set (0.7 s of it from the two extra
+  checkpoints) and 0.14 s on the sample, with identical output. `BR_PROBE_SERVER=0` turns it off;
+  `BR_PROBE_CHECKPOINTS` sets the number of extra checkpoints (default 2). A probe the
+  server serves needs no `test_lazy_load` verdict of its own: its patch touches nothing the
+  pristine `import sqlglot` loaded or looked for, so that import behaves exactly as pristine.
 - **Verifier**: when a patch only edits existing sqlglot modules and its selection is small
   (expected CPU `0.35 s + recorded seconds` below half the schedule cost: half of such edits
   break nothing) and made only of tests that can run here (no `test_executor.py` /

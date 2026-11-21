@@ -575,6 +575,30 @@ class Probe(unittest.TestCase):
                          "a lazily loaded dialect never runs during `import sqlglot`")
         self.assertEqual(S.probe_report({rel: read(rel) + "\nraise RuntimeError\n"}, 60), ("broken", None))
 
+    def test_server_served_probe_keeps_the_pristine_lazy_verdict(self):
+        """A probe served by the probe server starts after a pristine `import sqlglot` (its patch
+        touches nothing that import loaded or looked for), so the assertion holds as pristine."""
+        class FakeServer:
+            def __init__(self, res):
+                self.res = res
+
+            def eligible(self, files):
+                return True
+
+            def run(self, files, timeout):
+                return self.res
+
+        self.assertEqual(S.probe_report({"sqlglot/dialects/druid.py": "x = 1\n"}, 5, FakeServer("ok")), ("ok", True))
+        self.assertEqual(S.probe_report({}, 5, FakeServer("broken")), ("broken", None))
+        self.assertEqual(S.probe_report({}, 60, FakeServer(None)), ("ok", True), "no verdict: probed fresh")
+
+    def test_run_probes_reports_lazy_verdicts(self):
+        rel = "sqlglot/__init__.py"
+        eager = {rel: read(rel) + "\nfrom sqlglot.dialects.duckdb import DuckDB as _DuckDB\n"}
+        lazy = {}
+        self.assertEqual(S.run_probes({"a": {}, "b": eager, "c": dict(eager)}, lazy=lazy), {"a": "ok", "b": "ok", "c": "ok"})
+        self.assertEqual(lazy, {"a": True, "b": False, "c": False}, "identical jobs share one probe")
+
 
 def run_main(patches, env_extra=None):
     """Run selector.main() on {cid: patch} with the sample catalogue; {cid: set of test numbers}."""
