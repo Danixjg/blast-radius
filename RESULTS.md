@@ -54,9 +54,11 @@ function (`parser`), argument annotations (`generator.sql`), a `TYPE_CHECKING` i
 Public sample with CPU (Windows, `build/bench.py`, whole process tree, 3 runs each): rev3 median
 total 120.5 s (CPU 2.2 s), this version 100.4 s (CPU 3.3 s: 5 verifier runs of about 0.4 s
 each; 2 probes instead of 4). In the real Docker image (`make sample`, then `make measure` with three
-fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 3.45, 3.75 and
-2.98 s across the three runs (median total 100.5 s). The simulated reduction is confirmed under the
-official limits; the CPU figure is the container's, not a Windows process-tree estimate.
+fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 2.08, 2.12 and
+2.10 s across the three runs (median total 99.18 s). The simulated reduction is confirmed under the
+official limits; the CPU figure is the container's, not a Windows process-tree estimate. An earlier
+measurement of 3.45/3.75/2.98 s was taken while the independent holdout was being labelled on the
+same machine and is not comparable.
 
 **Verifier fidelity.** For every labelled patch that only edits existing sqlglot modules, all
 verifiable selected tests plus all verifiable labelled failures were run by the verifier (no cost
@@ -86,8 +88,10 @@ pristine worktree with 4 workers: pristine `complete` with 0 failures, all 66 la
 
 So the independent set shows a 14.8 % reduction with no misses, rather than the near-zero change on
 the small earlier "fresh" set. The merge with PR #5 costs 2.84 s here: a forked probe does not
-report the `test_lazy_load` observation, so that test is kept conservatively. If both PRs ship, that
-interaction should be handled explicitly rather than assumed free.
+report the `test_lazy_load` observation, so that test is kept conservatively. On the public sample
+the two versions are effectively tied in Docker (97.076 s / 0 misses; median totals 99.18 s for
+this PR and 99.23 s for the merge, CPU 2.10 and 2.15 s). If both PRs ship, the holdout interaction
+should be handled explicitly rather than assumed free.
 
 ## Versions
 
@@ -258,7 +262,7 @@ Verified in Docker for this version: `docker build`, `make sample` (official lim
 --memory 4096m --read-only --network none --user 65534`, `/tmp` 64 MB, 256 pids) and `make measure`
 (three fresh containers, cgroup CPU), including the verifier's runs as `nobody` with the hash-pinned
 site-packages installed by the Dockerfile. The simulated score is 97.076 s / 0 misses and the median
-total is 100.5 s; the verifier did run inside the image (five test batches on the sample).
+total is 99.18 s; the verifier did run inside the image (five test batches on the sample).
 
 Still emulated rather than run in Docker: the holdouts, validation, feature and demo sets, and the
 Windows comparison versions. Their CPU figures are Windows process-tree CPU and are not comparable
