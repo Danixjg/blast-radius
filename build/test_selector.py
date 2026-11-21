@@ -273,6 +273,20 @@ class SameProgram(unittest.TestCase):
         self.same(b, b.replace("    return v\n", "    return v  # same\n"), True, True)
         self.same(b, "# header\n" + b + "\n\n# trailer\n", True, True)
 
+    def test_docstring_and_annotation_readers_are_kept(self):
+        """The loose AST shortcut still selects tests that read the changed data as data."""
+        d = dict(DATA)
+        d["name_mask"] = dict(DATA["name_mask"])
+        rel = "sqlglot/helper.py"
+        src = read(rel)
+        old = '    """Returns the value in `seq` at position `index`, or `None` if `index` is out of bounds."""'
+        assert src.count(old) == 1
+        patch = diff(rel, src, src.replace(old, '    """Changed docstring."""'))
+        for name in ("__doc__", "__annotations__", "get_type_hints"):
+            d["name_mask"][name] = 1 << 2
+            m, probe = S.Hunter(d).analyze(patch)
+            self.assertTrue(m >> 2 & 1, name)
+
     def test_value_changes(self):
         b = self.BASE
         self.same(b, b.replace("b=16", "b=16.0"), False, False)

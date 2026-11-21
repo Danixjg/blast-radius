@@ -113,8 +113,9 @@ Longest-processing-time packing for each worker count from 1 to 8, keeping the c
 
 ## Results
 
-See [RESULTS.md](RESULTS.md) for every number and how it was produced (Windows only; no Linux
-Docker run was possible). Simulated seconds / misses, official scorer:
+See [RESULTS.md](RESULTS.md) for every number and how it was produced. Simulated seconds / misses,
+official scorer. The public sample was also run in the real linux/amd64 image under the official
+limits; the other sets were measured with the Windows emulation of that image.
 
 | set | baseline+probes (`3fd38f7`, Windows copy-based probes) | frozen (`c8a81ea`) | rev3 (`fcc7d3a`) | this version |
 | --- | --- | --- | --- | --- |
@@ -122,11 +123,16 @@ Docker run was possible). Simulated seconds / misses, official scorer:
 | holdout 1 (66, independent labels) | 1795.553 / 4 | 701.636 / 0 | 776.358 / 0 | 654.997 / 0 |
 | holdout 2 unique (61) | 824.964 / 1 | 885.072 / 1 | 693.460 / 0 | 534.169 / 0 |
 | validation (27, aimed at rev3's two fixes) | 3349.836 / 11 | 3349.836 / 11 | 868.992 / 0 | 867.704 / 0 |
-| same-program edits (10: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
-| unread additions (5: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
+| same-program edits (10, hand-built rule demos: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
+| unread additions (5, hand-built rule demos: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
 
-Public sample with CPU (Windows, whole process tree, median of 3): rev3 120.5 s total
-(2.2 s CPU), this version 100.4 s (3.3 s CPU, of which about 2 s are the verifier's test runs).
+The two hand-built sets were constructed to contain the edit categories the new rules excuse. They
+show the rules fire, but they are **not held-out evidence**; the independent check is the fresh-
+seed holdout in [RESULTS.md](RESULTS.md), labelled after the selector and profile were frozen.
+
+Public sample with CPU: rev3 120.5 s total (2.2 s CPU) on Windows; this version 100.4 s (3.3 s CPU)
+on Windows and, in the real Docker image (`make sample` / `make measure`), 97.076 s / 0 misses with
+median total 100.5 s (3.75 s cgroup CPU).
 
 ## Reproducing
 

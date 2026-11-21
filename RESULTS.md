@@ -1,7 +1,8 @@
 # Results
 
-Every number below was measured on **Windows 11** (no Docker or Linux runner was available; see
-"Not verified"). Runs use `build/bench.py`/`build/compare.py`: the selector runs from an `/app`
+Simulated numbers were measured on **Windows 11** and are exact; the public sample of this round was
+also run in the real linux/amd64 Docker image under the official limits (see below). Windows runs use
+`build/bench.py`/`build/compare.py`: the selector runs from an `/app`
 laid out like the image (for rev2/rev3 the `/app` produced by running the Dockerfile's own
 COPY/RUN chain, `build/emulate_build.py --worktree`), in a fresh empty temp dir with a clean
 environment, three runs per (version, set). Each run's stdout is scored by the kit's own
@@ -31,12 +32,17 @@ Simulated seconds / misses (official scorer; selection is deterministic, so one 
 | validation 3 (27) | 868.992 / 0 | 867.704 / 0 | 365.754 |
 | feature (4) | 18.411 / 0 | 4.007 / 0 | 4.007 |
 | fresh (6, labelled earlier, never used for tuning) | 100.086 / 0 | 99.718 / 0 | 64.381 |
-| same-program edits (10, new) | 266.486 / 0 | 0.000 / 0 | 0.000 |
-| unread additions (5, new) | 130.542 / 0 | 0.000 / 0 | 0.000 |
+| same-program edits (10, hand-built rule demos) | 266.486 / 0 | 0.000 / 0 | 0.000 |
+| unread additions (5, hand-built rule demos) | 130.542 / 0 | 0.000 / 0 | 0.000 |
 | **all** | **3713.658** / 0 | **2803.068** / 0 | |
 
-The two new sets were labelled here like the holdouts (`build/label.py`, whole suite, 4 workers,
-capped pools; a pristine run first): every patch `complete` with zero failures. Same-program:
+The two hand-built sets are **rule demonstrations, not held-out evidence**: their patches were
+written to contain exactly the edit categories the new rules excuse, then labelled with no failures.
+Zero seconds on them shows the rules fire, not that they generalize. The independent check is a
+fresh-seed holdout generated and labelled only after the selector and profile were frozen; see the
+next section. Both demo sets were labelled like the holdouts (`build/label.py`, whole suite, 4
+workers, capped pools; a pristine run first): every patch `complete` with zero failures.
+Same-program:
 in-line spacing, parentheses and line splits (`helper.ensure_list`), `0x0`/`0b0`/`0o1` spellings
 (`tokenizer_core`), quote style (Snowflake `STRING_ESCAPES`), a function and a class docstring
 (the latter read by `expressions/core.py` at class creation), a return annotation
@@ -47,7 +53,10 @@ function (`parser`), argument annotations (`generator.sql`), a `TYPE_CHECKING` i
 
 Public sample with CPU (Windows, `build/bench.py`, whole process tree, 3 runs each): rev3 median
 total 120.5 s (CPU 2.2 s), this version 100.4 s (CPU 3.3 s: 5 verifier runs of about 0.4 s
-each; 2 probes instead of 4). On Linux, process start-up and imports are cheaper.
+each; 2 probes instead of 4). In the real Docker image (`make sample`, then `make measure` with three
+fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 3.45, 3.75 and
+2.98 s across the three runs (median total 100.5 s). The simulated reduction is confirmed under the
+official limits; the CPU figure is the container's, not a Windows process-tree estimate.
 
 **Verifier fidelity.** For every labelled patch that only edits existing sqlglot modules, all
 verifiable selected tests plus all verifiable labelled failures were run by the verifier (no cost
@@ -223,12 +232,13 @@ unobserved tests`. Committed tree about 1.8 MB.
 
 ## Not verified
 
-No Docker or WSL was available, so none of these ran: `docker build` of this repository, the
-official-limits container runs (`--cpus 2 --memory 4096m --read-only --network none
---user 65534`, `/tmp` 64 MB), the container's cgroup CPU (`make measure`), timings on linux/amd64.
-All CPU numbers are Windows process-tree CPU; the scorer's Linux CPU will differ.
-In particular the verifier's runs under the image's real conditions (`nobody`, read-only `/app`,
-site-packages installed by the hash-pinned `pip install`) were only emulated: `emulate_build.py`
-ran the Dockerfile's `pip install` (hash checks included) into a scratch target, and the verifier
-was exercised with the labelling environment's packages from the local venv. If the image's
-packages differ, the verifier refuses to run (version check) and selections stand.
+Verified in Docker for this version: `docker build`, `make sample` (official limits: `--cpus 2
+--memory 4096m --read-only --network none --user 65534`, `/tmp` 64 MB, 256 pids) and `make measure`
+(three fresh containers, cgroup CPU), including the verifier's runs as `nobody` with the hash-pinned
+site-packages installed by the Dockerfile. The simulated score is 97.076 s / 0 misses and the median
+total is 100.5 s; the verifier did run inside the image (five test batches on the sample).
+
+Still emulated rather than run in Docker: the holdouts, validation, feature and demo sets, and the
+Windows comparison versions. Their CPU figures are Windows process-tree CPU and are not comparable
+to the container's cgroup CPU. If the image's packages ever differ from the pinned versions, the
+verifier refuses to run (version check) and selections stand.
