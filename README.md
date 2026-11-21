@@ -70,16 +70,19 @@ widens to a safe superset whenever that reasoning runs out.
   *every* sqlglot module with the *combined* patch served from memory through a meta-path finder
   (no overlay directory or symlinks; deleted modules raise). Any failure, a timeout, a probe that
   did not load the patched source, or a probe that could not start means: run every test.
-- **Probe server**: when two or more probes patch only sqlglot modules, one interpreter starts
-  like a probe, imports `sqlglot` (the first module every probe imports), records every module
-  that import loaded or tried to find, and forks one child per probe. A probe goes there only
-  when its patch touches none of those modules, so the child starts from exactly the state a fresh
-  probe reaches after its first import, and runs the same code from there (exit hooks and
-  non-daemon threads included). Anything else, or any trouble with the server, uses a fresh probe.
-  Probes with identical files run once. `build/probe_parity.py` checks verdict parity against
-  fresh probes on any patch directories: 117/117 identical on the sample plus five generated
-  66-patch sets; whole-run CPU fell 1.1–1.6 s per 66-patch set with identical output, and was
-  unchanged on the sample. `BR_PROBE_SERVER=0` turns it off.
+- **Probe server**: when two or more probes patch only sqlglot modules, a chain of checkpoint
+  processes starts. The first, started like a probe, imports `sqlglot` (the first module every
+  probe imports); two more are forks that keep importing in the probe's own order up to evenly
+  spaced points of the `sqlglot.dialects.*` block, where most import time goes. Each records every
+  module loaded or looked for so far and forks one child per probe. A probe goes to the deepest
+  checkpoint whose recorded modules its patch does not touch, so the child starts from exactly the
+  state a fresh probe reaches after importing that prefix, and runs the same code from there (exit
+  hooks and non-daemon threads included). Anything else, or any trouble with a checkpoint, uses a
+  fresh probe. Probes with identical files run once. `build/probe_parity.py` checks verdict parity
+  against fresh probes on any patch directories: 117/117 identical on the sample plus five generated
+  66-patch sets. Whole-run CPU fell 2.1-2.3 s per 66-patch set (0.7 s of it from the two extra
+  checkpoints) and 0.14 s on the sample, with identical output. `BR_PROBE_SERVER=0` turns it off;
+  `BR_PROBE_CHECKPOINTS` sets the number of extra checkpoints (default 2).
 - **Deadline**: the batch has one monotonic budget (150 s, inside both the 3 min practice and
   4.5 min final limits). Up to two probes run at a time, each bounded by `min(8 s, budget left
   minus a 5 s reserve)`; a probe that cannot start in time is skipped. Skipped or unfinished probes

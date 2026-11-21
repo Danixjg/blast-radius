@@ -130,8 +130,87 @@ class Parity(unittest.TestCase):
         self.both({LEAF: read(LEAF) + "\nprint('noise')\n"}, "ok")
 
 
+class StagePlan(unittest.TestCase):
+    MODS = (["sqlglot", "sqlglot.errors", "sqlglot.dialects"]
+            + [f"sqlglot.dialects.d{i:02}" for i in range(30)] + ["sqlglot.executor", "sqlglot.parsers.x"])
+
+    def test_no_extra_checkpoints_is_the_single_first_module(self):
+        self.assertEqual(S.probe_stages(self.MODS, 0), [["sqlglot"]])
+
+    def test_stages_are_consecutive_slices_of_the_probe_order(self):
+        stages = S.probe_stages(self.MODS, 2)
+        self.assertEqual(len(stages), 3)
+        self.assertEqual(stages[0], ["sqlglot"])
+        flat = [m for s in stages for m in s]
+        self.assertEqual(flat, self.MODS[:len(flat)], "a prefix of the order, nothing skipped or repeated")
+        self.assertTrue(all(stages), "no empty stage")
+
+    def test_checkpoints_fall_inside_the_dialect_block(self):
+        stages = S.probe_stages(self.MODS, 2)
+        ends = [m for m in (s[-1] for s in stages[1:])]
+        self.assertTrue(all(m.startswith("sqlglot.dialects.") for m in ends), ends)
+
+    def test_no_dialects_means_one_stage(self):
+        self.assertEqual(S.probe_stages(["sqlglot", "sqlglot.errors"], 2), [["sqlglot"]])
+
+
+@unittest.skipUnless(hasattr(os, "fork") and (S.SRC / "sqlglot").is_dir(), "needs fork and sqlglot sources")
+class Checkpoints(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = S.ProbeServer.start(extra=2)
+        assert cls.server is not None
+        assert cls.server.wait_ready(30), "every checkpoint becomes ready"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.close()
+
+    def rel_for_stage(self, want):
+        for m in S.all_modules():
+            rel = m.replace(".", "/") + ".py"
+            if (S.SRC / rel).is_file() and self.server.stage_for({rel: ""}) == want:
+                return rel
+        self.fail(f"no module is served by stage {want}")
+
+    def test_three_stages_with_growing_preloads(self):
+        self.assertEqual(len(self.server.stages), 3)
+        sizes = [len(s.loaded) for s in self.server.stages]
+        self.assertEqual(sizes, sorted(sizes))
+        self.assertLess(sizes[0], sizes[-1])
+
+    def test_each_stage_matches_fresh_probes(self):
+        for want in range(3):
+            rel = self.rel_for_stage(want)
+            for tail, expected in (("\n_UNUSED = 1\n", "ok"), ("\nraise RuntimeError('patched')\n", "broken")):
+                with self.subTest(stage=want, rel=rel, expected=expected):
+                    files = {rel: read(rel) + tail}
+                    before = self.server.stages[want].forked
+                    self.assertEqual(S.run_probe(files, 30, server=self.server), expected)
+                    self.assertEqual(self.server.stages[want].forked, before + 1, "served by that stage")
+                    self.assertEqual(S.run_probe(files, 30), expected)
+
+    def test_hang_in_deepest_stage(self):
+        rel = self.rel_for_stage(2)
+        t = time.monotonic()
+        self.assertEqual(S.run_probe({rel: read(rel) + "\nimport time\ntime.sleep(60)\n"}, 3, server=self.server),
+                         "timeout")
+        self.assertLess(time.monotonic() - t, 10)
+
+
 @unittest.skipUnless(hasattr(os, "fork") and (S.SRC / "sqlglot").is_dir(), "needs fork and sqlglot sources")
 class Fallback(unittest.TestCase):
+    def test_dead_deep_stage_falls_back_to_fresh(self):
+        server = S.ProbeServer.start(extra=2)
+        self.assertTrue(server.wait_ready(30))
+        rel = next(m.replace(".", "/") + ".py" for m in S.all_modules()
+                   if (S.SRC / (m.replace(".", "/") + ".py")).is_file()
+                   and server.stage_for({m.replace(".", "/") + ".py": ""}) == 2)
+        os.kill(server.stages[2].pid, 9)
+        server.stages[2].reader.join(timeout=5)
+        self.assertEqual(S.run_probe({rel: read(rel) + "\nraise RuntimeError('x')\n"}, 30, server=server), "broken")
+        server.close()
+
     def test_dead_server_falls_back_to_fresh(self):
         server = S.ProbeServer.start()
         self.assertIsNotNone(server)

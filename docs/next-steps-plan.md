@@ -110,15 +110,14 @@ measured breakdown and a proposal, not code.
 
 ## Step 4 — Probe CPU (safe, ~0.15–0.25 s per probe)
 
-**Status (4.1 and a safe form of 4.2 done):** identical jobs are probed once, and a probe server
-forks probes from the state after `import sqlglot` for patches that touch none of the modules that
-import loaded or tried to find. Equivalent by construction; 117/117 identical verdicts on the
-sample plus five generated 66-patch sets (`build/probe_parity.py`); 1.1–1.6 s less CPU per
-66-patch set end to end, no change on the sample. Measured remaining cost of a probe: startup
-0.04 s and core import 0.065 s (both now saved for eligible probes), the other imports 0.127 s,
-interpreter shutdown 0.062 s. Open options: skip module teardown after the report (~0.06 s per
-probe, one narrow semantic difference: a finalizer that hangs at shutdown), and more preload
-checkpoints along the import order (~0.035 s per probe). Option 3 below is not started.
+**Status (4.1 and a safe form of 4.2 done, with checkpoints):** identical jobs are probed once,
+and a chain of probe-server checkpoints (after `import sqlglot`, then two evenly spaced points of
+the dialect block) forks each probe from the deepest prefix of the probe's own import order that
+its patch does not touch. Equivalent by construction; 117/117 identical verdicts on the sample plus
+five generated 66-patch sets (`build/probe_parity.py`); probe CPU -26% on that corpus; whole-run CPU
+-2.1 to -2.3 s per 66-patch set and -0.14 s on the sample, identical output. Not taken: skipping a
+probe child's interpreter teardown (~0.06 s per probe), because a finalizer that hangs at shutdown
+would then pass where a fresh probe times out. Option 3 below is not started.
 
 All three options keep the probe's verdict semantics. Compare them at equal outcomes:
 

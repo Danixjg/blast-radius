@@ -51,6 +51,8 @@ RESERVE_S = float(os.environ.get("BR_RESERVE", "5"))          # kept back to sch
 PROBE_TIMEOUT_S = float(os.environ.get("BR_PROBE_TIMEOUT", "8"))
 MIN_PROBE_S = 1.0                                               # not worth starting below this
 PROBE_PARALLEL = max(1, min(2, os.cpu_count() or 1))
+# extra probe-server checkpoints inside the dialect block (see probe_stages); 0 = after `sqlglot` only
+PROBE_CHECKPOINTS = int(os.environ.get("BR_PROBE_CHECKPOINTS", "2"))
 DIALECT_DIRS = ("dialects", "parsers", "generators", "typing", "tokenizers")
 CORE_MODULES = {"sqlglot", "sqlglot.tokens", "sqlglot.tokenizer_core", "sqlglot.parser", "sqlglot.generator",
                 "sqlglot.dialects.dialect", "sqlglot.expressions.core", "sqlglot.helper", "sqlglot.trie"}
@@ -1307,13 +1309,16 @@ sys.stdout.write(_probe(_spec))
 sys.stdout.flush()
 '''
 
-# The probe server: one interpreter, started like a probe, imports the first module of the probe
-# order (`sqlglot`) exactly as every probe does first, records every module that import loaded or
-# tried to find, and then forks one child per request. A child continues with _probe from that
-# point. For a patch that touches none of those modules, a fresh probe would have reached the very
-# same state after its first import, so the verdict is the same; anything else is not sent here.
-# Protocol (JSON lines): in {"src", "preload"}, then {"id", "spec"}; out {"ready", "loaded",
-# "attempted"}, then {"id", "pid"} when a child starts and {"id", "out"} when it has exited.
+# The probe server: a chain of checkpoint processes. The first, started like a probe, imports
+# the first module of the probe order (`sqlglot`) exactly as every probe does first. Each later
+# checkpoint is a fork of the previous one that keeps importing, in the probe's own order, up to
+# its boundary. Every checkpoint records every module loaded or looked for so far, then forks one
+# child per request; a child continues with _probe from that point. A probe is sent to a checkpoint
+# only when its patch touches none of those modules: a fresh probe would have reached the very same
+# state after importing that prefix, so the verdict is the same. Anything else is not sent here.
+# Protocol (JSON lines): config on stdin {"src", "stages", "fds"}; per checkpoint, requests
+# {"id", "spec"} on its own pipe; replies {"ready", "pid", "loaded", "attempted"}, then
+# {"id", "pid"} when a child starts and {"id", "out"} when it has exited.
 SERVER_CODE = PROBE_LIB + r'''
 import select
 
@@ -1327,34 +1332,50 @@ class _Seen(importlib.abc.MetaPathFinder):
         return None
 
 
-def _emit(obj):
+def _emit(fd, obj):
     data = (json.dumps(obj) + "\n").encode("utf-8", "surrogateescape")
     while data:
-        data = data[os.write(1, data):]
+        data = data[os.write(fd, data):]
 
 
-_IN = 0
-_buf = b""
-while b"\n" not in _buf:
-    _chunk = os.read(_IN, 1 << 16)
+_cfg = b""
+while True:
+    _chunk = os.read(0, 1 << 16)
     if not _chunk:
-        raise SystemExit(0)
-    _buf += _chunk
-_line, _buf = _buf.split(b"\n", 1)
-_cfg = json.loads(_line.decode("utf-8", "surrogateescape"))
+        break
+    _cfg += _chunk
+os.close(0)
+_cfg = json.loads(_cfg.decode("utf-8", "surrogateescape"))
+_fds = _cfg["fds"]
 sys.path.insert(0, _cfg["src"])
 _seen = _Seen()
 sys.meta_path.insert(0, _seen)
-_bad = []
-for _m in _cfg["preload"]:
-    try:
-        importlib.import_module(_m)
-    except BaseException:
-        _bad.append(_m)
+_stage, _next_pid = 0, None
+while True:
+    _bad = []
+    for _m in _cfg["stages"][_stage]:
+        try:
+            importlib.import_module(_m)
+        except BaseException:
+            _bad.append(_m)
+    _IN, _OUT = _fds[_stage]
+    _emit(_OUT, {"ready": not _bad, "pid": os.getpid(), "loaded": sorted(sys.modules),
+                 "attempted": sorted(_seen.names)})
+    if _bad:
+        os._exit(1)
+    if _stage + 1 < len(_fds):
+        _pid = os.fork()
+        if _pid == 0:
+            os.close(_IN)
+            os.close(_OUT)
+            _stage += 1
+            continue
+        _next_pid = _pid
+        for _a, _b in _fds[_stage + 1:]:
+            os.close(_a)
+            os.close(_b)
+    break
 sys.meta_path.remove(_seen)
-_emit({"ready": not _bad, "loaded": sorted(sys.modules), "attempted": sorted(_seen.names)})
-if _bad:
-    raise SystemExit(1)
 
 
 def _child(req, rfd, wfd):
@@ -1366,6 +1387,7 @@ def _child(req, rfd, wfd):
     for fd in list(_children):
         os.close(fd)
     os.close(_IN)
+    os.close(_OUT)
     os.dup2(wfd, 1)
     os.close(wfd)
     sys.stdout.write(_probe(req["spec"]))
@@ -1373,13 +1395,16 @@ def _child(req, rfd, wfd):
     sys.exit(0)
 
 
+_buf = b""
 _children = {}     # read fd -> [id, pid, bytes]
 _exited = []       # [id, pid, bytes] whose stdout closed, waiting for the process to exit
 _open = True
 while _open or _children or _exited:
-    _fds = ([_IN] if _open else []) + list(_children)
-    _ready = select.select(_fds, [], [], 0.02 if _exited else None)[0] if _fds else []
-    if not _fds and _exited:
+    _wait = ([_IN] if _open else []) + list(_children)
+    if _wait:
+        _ready = select.select(_wait, [], [], 0.02 if _exited else None)[0]
+    else:
+        _ready = []
         select.select([], [], [], 0.02)
     for _fd in _ready:
         if _fd == _IN:
@@ -1397,7 +1422,7 @@ while _open or _children or _exited:
                     _child(_req, _r, _w)
                 os.close(_w)
                 _children[_r] = [_req["id"], _pid, b""]
-                _emit({"id": _req["id"], "pid": _pid})
+                _emit(_OUT, {"id": _req["id"], "pid": _pid})
         else:
             _chunk = os.read(_fd, 1 << 16)
             if _chunk:
@@ -1412,8 +1437,17 @@ while _open or _children or _exited:
             _done = True
         if _done:
             _exited.remove(_job)
-            _emit({"id": _job[0], "out": _job[2].decode("utf-8", "replace")})
+            _emit(_OUT, {"id": _job[0], "out": _job[2].decode("utf-8", "replace")})
+# a checkpoint gives no verdict of its own: wait for the next one (so its CPU is accounted to us)
+# and leave without the interpreter's teardown
+if _next_pid is not None:
+    try:
+        os.waitpid(_next_pid, 0)
+    except ChildProcessError:
+        pass
+os._exit(0)
 '''
+
 
 _MODULES = None
 
@@ -1490,21 +1524,80 @@ def _verdict(text):
     return "ok"
 
 
+def probe_stages(mods, extra):
+    """Checkpoint stages for the probe server: consecutive slices of the probe order. The first is
+    the first module alone; `extra` more end at evenly spaced points of the sqlglot.dialects.*
+    block, where most import time goes (each dialect builds its tokenizer, parser and generator)."""
+    stages = [list(mods[:1])]
+    block = [i for i, m in enumerate(mods) if m.startswith("sqlglot.dialects.")]
+    if extra <= 0 or not block:
+        return stages
+    first, last = block[0], block[-1] + 1
+    ends = sorted({first + (last - first) * i // (extra + 1) for i in range(1, extra + 1)})
+    start = 1
+    for end in ends:
+        if end > start:
+            stages.append(list(mods[start:end]))
+            start = end
+    return stages
+
+
+class _Stage:
+    """The client end of one checkpoint process."""
+
+    def __init__(self, idx, wfile, rfile):
+        self.idx, self.wfile, self.rfile = idx, wfile, rfile
+        self.loaded, self.attempted = set(), set()
+        self.pid = None
+        self.ok = False
+        self.dead = False
+        self.forked = 0
+        self.ready = threading.Event()
+        self.lock = threading.Lock()
+        self.waiters = {}
+        self.reader = threading.Thread(target=self._read, daemon=True)
+        self.reader.start()
+
+    def usable(self):
+        return self.ready.is_set() and self.ok and not self.dead
+
+    def _read(self):
+        try:
+            first = self.rfile.readline()
+            if first:
+                msg = json.loads(first)
+                self.loaded, self.attempted = set(msg["loaded"]), set(msg["attempted"])
+                self.pid, self.ok = msg["pid"], bool(msg["ready"])
+            self.ready.set()
+            for line in self.rfile:
+                msg = json.loads(line)
+                with self.lock:
+                    q = self.waiters.get(msg.get("id"))
+                if q is not None:
+                    q.put(msg)
+        except Exception as e:
+            log(f"probe server stage {self.idx} reader:", repr(e))
+        self.dead = True
+        self.ready.set()
+        with self.lock:
+            for q in self.waiters.values():
+                q.put({"dead": True})
+
+
 class ProbeServer:
-    """Client for SERVER_CODE. Any trouble with the server itself makes run() return None, and the
+    """Client for SERVER_CODE. Any trouble with a checkpoint makes run() return None, and the
     caller falls back to a fresh probe; a probe child that times out is killed with its group."""
 
     START_TIMEOUT_S = 10.0
 
-    def __init__(self, proc, loaded, attempted):
-        self.proc, self.loaded, self.attempted = proc, loaded, attempted
-        self.forked = 0
-        self.dead = False
+    def __init__(self, proc, stages):
+        self.proc, self.stages = proc, stages
         self._lock = threading.Lock()
-        self._waiters = {}
         self._next = 0
-        self._reader = threading.Thread(target=self._read, daemon=True)
-        self._reader.start()
+
+    @property
+    def forked(self):
+        return sum(s.forked for s in self.stages)
 
     @staticmethod
     def eligible_for(files, loaded, attempted):
@@ -1516,75 +1609,89 @@ class ProbeServer:
                 return False
         return True
 
+    def stage_for(self, files):
+        """Index of the deepest usable checkpoint that may serve these files, or None."""
+        for s in reversed(self.stages):
+            if s.usable() and self.eligible_for(files, s.loaded, s.attempted):
+                return s.idx
+        return None
+
     def eligible(self, files):
-        return not self.dead and self.eligible_for(files, self.loaded, self.attempted)
+        return self.stage_for(files) is not None
+
+    def wait_ready(self, timeout):
+        deadline = time.monotonic() + timeout
+        for s in self.stages:
+            s.ready.wait(max(0.0, deadline - time.monotonic()))
+        return all(s.usable() for s in self.stages)
 
     @classmethod
-    def start(cls):
+    def start(cls, extra=None):
         if os.environ.get("BR_PROBE_SERVER", "1") == "0" or not hasattr(os, "fork") or os.name == "nt":
             return None
+        if extra is None:
+            extra = PROBE_CHECKPOINTS
+        stages = probe_stages(all_modules(), extra)
         env, cwd = _probe_env()
+        parent_ends, child_ends = [], []
         try:
+            for _ in stages:
+                req_r, req_w = os.pipe()
+                rep_r, rep_w = os.pipe()
+                parent_ends.append((req_w, rep_r))
+                child_ends.append((req_r, rep_w))
             proc = subprocess.Popen([sys.executable, "-I", "-S", "-c", SERVER_CODE], stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd,
-                                    start_new_session=True)
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env, cwd=cwd,
+                                    start_new_session=True, pass_fds=[fd for pair in child_ends for fd in pair])
         except Exception as e:
             log("probe server could not start:", repr(e))
+            for pair in parent_ends + child_ends:
+                for fd in pair:
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass
             return None
-        box = []
-        t = threading.Thread(target=lambda: box.append(proc.stdout.readline()), daemon=True)
+        for a, b in child_ends:
+            os.close(a)
+            os.close(b)
+        clients = [_Stage(i, os.fdopen(w, "wb"), os.fdopen(r, "rb")) for i, (w, r) in enumerate(parent_ends)]
+        server = cls(proc, clients)
         try:
-            proc.stdin.write((json.dumps({"src": str(SRC), "preload": all_modules()[:1]}) + "\n").encode())
-            proc.stdin.flush()
-            t.start()
-            t.join(cls.START_TIMEOUT_S)
-            msg = json.loads(box[0]) if box and box[0] else {}
+            proc.stdin.write(json.dumps({"src": str(SRC), "stages": stages,
+                                         "fds": [list(p) for p in child_ends]}).encode())
+            proc.stdin.close()
         except Exception as e:
             log("probe server failed:", repr(e))
-            msg = {}
-        if not msg.get("ready"):
+        clients[0].ready.wait(cls.START_TIMEOUT_S)
+        if not clients[0].usable():
             log("probe server not ready; fresh probes only")
-            _kill(proc)
-            try:
-                proc.wait(timeout=5)
-            except Exception:
-                pass
+            server.close()
             return None
-        return cls(proc, set(msg["loaded"]), set(msg["attempted"]))
-
-    def _read(self):
-        try:
-            for line in self.proc.stdout:
-                msg = json.loads(line)
-                with self._lock:
-                    q = self._waiters.get(msg.get("id"))
-                if q is not None:
-                    q.put(msg)
-        except Exception as e:
-            log("probe server reader:", repr(e))
-        self.dead = True
-        with self._lock:
-            for q in self._waiters.values():
-                q.put({"dead": True})
+        return server
 
     def run(self, files, timeout):
-        """Verdict, or None when the server cannot serve (the caller probes fresh)."""
+        """Verdict, or None when no checkpoint can serve (the caller probes fresh)."""
         import queue
-        if self.dead:
+        idx = self.stage_for(files)
+        if idx is None:
             return None
+        st = self.stages[idx]
         deadline = time.monotonic() + timeout
         q = queue.Queue()
         with self._lock:
             self._next += 1
             rid = self._next
-            self._waiters[rid] = q
+        with st.lock:
+            st.waiters[rid] = q
             try:
                 spec = {"src": str(SRC), "files": files, "modules": _probe_modules(files)}
-                self.proc.stdin.write((json.dumps({"id": rid, "spec": spec}) + "\n").encode("utf-8", "surrogateescape"))
-                self.proc.stdin.flush()
+                st.wfile.write((json.dumps({"id": rid, "spec": spec}) + "\n").encode("utf-8", "surrogateescape"))
+                st.wfile.flush()
             except Exception as e:
-                log("probe server write failed:", repr(e))
-                self.dead = True
+                log(f"probe server stage {idx} write failed:", repr(e))
+                st.dead = True
+                st.waiters.pop(rid, None)
                 return None
         try:
             pid = None
@@ -1593,52 +1700,55 @@ class ProbeServer:
                     msg = q.get(timeout=max(0.0, deadline - time.monotonic()))
                 except queue.Empty:
                     if pid is None:
-                        log("probe server did not start a child in time")
-                        self.dead = True
+                        log(f"probe server stage {idx} did not start a child in time")
+                        st.dead = True
                         return None
                     try:
                         os.killpg(pid, 9)
                     except OSError:
                         pass
-                    with self._lock:
-                        self.forked += 1
+                    with st.lock:
+                        st.forked += 1
                     return "timeout"
                 if msg.get("dead"):
                     return None
                 if "pid" in msg:
                     pid = msg["pid"]
                 elif "out" in msg:
-                    with self._lock:
-                        self.forked += 1
+                    with st.lock:
+                        st.forked += 1
                     return _verdict(msg["out"])
         finally:
-            with self._lock:
-                self._waiters.pop(rid, None)
+            with st.lock:
+                st.waiters.pop(rid, None)
 
     def close(self):
+        for s in self.stages:
+            try:
+                s.wfile.close()
+            except Exception:
+                pass
         try:
-            self.proc.stdin.close()
-        except Exception:
-            pass
-        try:
-            self.proc.wait(timeout=2)
+            self.proc.wait(timeout=3)
         except Exception:
             _kill(self.proc)
             try:
                 self.proc.wait(timeout=5)
             except Exception:
                 pass
-        self._reader.join(timeout=2)
-        try:
-            self.proc.stdout.close()
-        except Exception:
-            pass
+        for s in self.stages:
+            s.reader.join(timeout=2)
+            try:
+                s.rfile.close()
+            except Exception:
+                pass
 
     def kill_for_test(self):
         _kill(self.proc)
         self.proc.wait(timeout=5)
-        self._reader.join(timeout=5)
-        self.dead = True
+        for s in self.stages:
+            s.reader.join(timeout=5)
+            s.dead = True
 
 
 def run_probe(files, timeout, server=None):

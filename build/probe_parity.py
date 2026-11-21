@@ -1,6 +1,6 @@
 """Probe parity: every import probe the selector would run, fresh and through the probe server.
 
-usage: probe_parity.py <commits_dir> [<commits_dir> ...] [--timeout S] [--repeat N]
+usage: probe_parity.py <commits_dir> [<commits_dir> ...] [--timeout S] [--repeat N] [--checkpoints K]
 
 For each patch the hunter decides whether it needs an import probe. Every such probe runs as a
 fresh interpreter and through the probe server; the verdicts must be identical (exit status 1
@@ -32,6 +32,7 @@ def main():
     ap.add_argument("dirs", nargs="+")
     ap.add_argument("--timeout", type=float, default=S.PROBE_TIMEOUT_S)
     ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--checkpoints", type=int, default=S.PROBE_CHECKPOINTS)
     a = ap.parse_args()
     S.SRC = Path(os.environ.get("BR_SRC", R / "work" / "sqlglot")).resolve()
     data = S.load_map()
@@ -53,12 +54,13 @@ def main():
         c0 = child_cpu()
         fresh = {k: S.run_probe(f, a.timeout) for k, f in jobs.items()}
         c1 = child_cpu()
-        server = S.ProbeServer.start()
+        server = S.ProbeServer.start(extra=a.checkpoints)
         if server is None:
             sys.exit("probe server unavailable")
         served = {k: S.run_probe(f, a.timeout, server=server) for k, f in jobs.items()}
         eligible = sum(server.eligible(f) for f in jobs.values())
         forked = server.forked
+        per_stage = [st.forked for st in server.stages]
         server.close()
         c2 = child_cpu()
         cpu_fresh += c1 - c0
@@ -66,7 +68,7 @@ def main():
         bad += [(k, fresh[k], served[k]) for k in jobs if fresh[k] != served[k]]
 
     print("verdicts (fresh):", dict(collections.Counter(fresh.values())))
-    print(f"eligible for the server: {eligible}/{len(jobs)}, forked: {forked}")
+    print(f"eligible for the server: {eligible}/{len(jobs)}, forked: {forked}, per checkpoint: {per_stage}")
     n = max(1, a.repeat)
     print(f"CPU per pass: fresh {cpu_fresh / n:.3f} s, server {cpu_server / n:.3f} s, "
           f"saving {(cpu_fresh - cpu_server) / n:.3f} s ({(cpu_fresh - cpu_server) / max(cpu_fresh, 1e-9):.0%})")
