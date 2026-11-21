@@ -365,11 +365,70 @@ def find_def(tree, path):
     return node
 
 
+# ============================================================================ map format
+
+# A packed map stores its two big sections as one pickle per key, so a run decodes only the
+# files and names its patches touch. Unpickling all ~200k coverage masks and ~150k use tuples
+# up front was most of the map's load time. Plain (unpacked) maps still load unchanged.
+LAZY_KEY = "lazy"
+LAZY_SECTIONS = ("lines", "uses")
+
+
+class LazyView:
+    """Read-only mapping over {key: pickled value}; decodes each value once, on first use."""
+
+    __slots__ = ("_raw", "_done")
+
+    def __init__(self, raw):
+        self._raw, self._done = raw, {}
+
+    def get(self, key, default=None):
+        try:
+            return self._done[key]
+        except KeyError:
+            blob = self._raw.get(key)
+            if blob is None:
+                return default
+            v = self._done[key] = pickle.loads(blob)
+            return v
+
+    def __contains__(self, key):
+        return key in self._raw
+
+    def __len__(self):
+        return len(self._raw)
+
+
+def pack_map(data):
+    """Plain map -> packed map (new dict; the input is left alone). Packing twice is a no-op."""
+    if LAZY_KEY in data:
+        return data
+    out = dict(data)
+    for k in LAZY_SECTIONS:
+        out[k] = {key: pickle.dumps(v, protocol=pickle.HIGHEST_PROTOCOL) for key, v in data[k].items()}
+    out[LAZY_KEY] = LAZY_SECTIONS
+    return out
+
+
+def unpack_map(data):
+    """Packed map -> plain map, for tools that want every section decoded."""
+    if LAZY_KEY not in data:
+        return data
+    out = {k: v for k, v in data.items() if k != LAZY_KEY}
+    for k in data[LAZY_KEY]:
+        out[k] = {key: pickle.loads(b) for key, b in data[k].items()}
+    return out
+
+
 # ============================================================================ hunter
 
 
 class Hunter:
     def __init__(self, data):
+        if LAZY_KEY in data:
+            data = dict(data)
+            for k in data[LAZY_KEY]:
+                data[k] = LazyView(data[k])
         self.d = data
         self.n = len(data["tests"])
         self.ALL = (1 << self.n) - 1

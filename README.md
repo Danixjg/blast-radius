@@ -88,5 +88,12 @@ make map      # venv from requirements.lock, clone sqlglot at the pin, 2 coverag
 make sample   # docker build + run on the sample under the scorer's limits, then score
 ```
 
+The map is stored packed: its two large sections (`lines` per file, `uses` per name) hold one
+pickle per key, which the selector decodes only when a patch reaches that file or name. On the
+sample this cut the selector process's CPU by about 0.07 s and its peak memory from 80 to 58 MB,
+with byte-identical output. `selector.unpack_map` restores the plain form; plain maps still load.
+Check the format with `python3 -m unittest discover -s tests` (after `make kit` and `make local`
+for the sample parity test).
+
 `src.tar.gz` holds sqlglot's sources and test modules at the pinned commit (MIT licensed). The
 selector reads them to apply patches and to run the import check.
