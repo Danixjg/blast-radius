@@ -127,6 +127,24 @@ Most of the remaining 221.9 s is structural:
 - `is`/`==` swaps and code edits whose selection includes the 21 s `test_execute_tpcds`;
 - class-attribute string edits read by many tests.
 
+## Third independent holdout (frozen follow-up artifact)
+
+PR #7's code was frozen before this set existed: commit `209864a`, `selector.py` SHA-256
+`2647cb4306b4f68e27a9375ad24f8f2bdb673c2361b5745356b5e794818a9a13`, same `profile.pkl` as above.
+Then `build/holdout.py --seed 314159 --n 66` generated the set, and `build/label.py` ran the full
+suite per patch. The pristine run had 0 failures, and all 66 patches were `complete` (39 breaking):
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 644.613 | 0 |
+| #6 (`caa13a4`) | 501.325 | 0 |
+| #7, short-circuit rule and compile skip (`209864a`) | 501.325 | 0 |
+
+That is a 22.2 % reduction with no misses. The oracle is 210.215 s. No swap in this set sits behind
+an `and`/`or`, so the follow-up's rule leaves it unchanged. Across the three independent holdouts
+(seeds 8675309, 271828, 314159, all frozen first), the reduction against rev3 is 14.8 %, 20.8 % and
+22.2 %, with zero misses on each.
+
 ## Short-circuited `is`/`==` swaps (follow-up to the frozen branch)
 
 For an `is`↔`==` swap with profile evidence, the selector keeps three groups:
