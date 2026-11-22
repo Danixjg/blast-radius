@@ -195,6 +195,117 @@ test caught a first version where unchanged lines were assumed to mean unchanged
 selector process's own CPU on the sample (Windows, median of 5) went from 0.312 to 0.281 s, with
 identical selections on every set.
 
+## Import time and coverage: four rules (follow-up to #7)
+
+None of these edits occurs in the public sample, which stays at 97.076 / 0. Each rule was
+validated on 30 fresh, structure-chosen patches labelled by full-suite runs after the selector was
+frozen by SHA-256. Two first attempts failed; they were fixed by general rules and re-validated on
+new sets with new seeds.
+
+### One-line lambdas (a correctness fix for main)
+
+A call of a lambda reports no `sys.monitoring` line event for the lambda's first line, because its
+RESUME instruction sits there. The coverage map therefore never sees who calls a lambda written on
+one line, such as `"ISNULL": lambda args: build_coalesce(args=args, is_null=True)` in `FUNCTIONS`,
+`TRANSFORMS` entries and closure factories. It only sees whoever created the lambda, which for a
+dict entry is the import. On main, an edit inside such a lambda selected almost nothing. An edit on
+a lambda's first line is now judged by what encloses it: per-entry dict readers, attribute readers
+and instances, or the import-time function analysis. sqlglot has 716 such mutation sites.
+
+Validation (`work/lam`, frozen `7cf5db09…` = `5a211a2`): token mutations of build/holdout.py's
+kinds inside one-line lambdas, a seeded sample of 30, at most 2 per file. 30 labels `complete`, 29
+breaking, 46 failing tests in all.
+
+| selector | simulated seconds | misses | failing tests omitted |
+| --- | ---: | ---: | ---: |
+| main (`08aeb05`) | 8656.711 | 28 | 43 of 46 |
+| this version | 520.328 | 0 | 0 |
+
+### Tests that only imported a module (deferred runs)
+
+`pushdown_predicates` imports Athena and Presto inside the function for an `isinstance` check. The
+pool workers of TPC-DS/TPC-H execution and of the optimizer fixture checks import those modules,
+plus Hive, Trino and MySQL, while a test runs. Coverage therefore shows `test_execute_tpcds`
+(21.45 s) running every class attribute of those dialects. For a plain `NAME = value` edit in a
+sqlglot module whose values build without side effects, tests that only ran the statement while
+their process imported the module are no longer selected. Readers and instances are selected as
+before.
+
+Validation (`work/dfr`, frozen `31ff5286…`): value mutations on plain assignments where the rule
+changes the selection, 30 of 78 candidates. 30 `complete`, 14 breaking. Every patch drops 2-4 pool
+tests, and none of the dropped tests fails.
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| main | 764.184 | 0 |
+| this version | 292.756 | 0 |
+
+### Failed imports: the tests that can reach the module
+
+A probe that finds modules failing to import used to mean "run everything". Now only a failing
+`import sqlglot` does. For other modules (the probe lists each one, including those that fail only
+because they import a failing one), the selection is:
+
+- tests that ran their code, imported them while running, or created their classes or their
+  dialect's (dialect, parser, generator, tokenizer and typing modules of one name);
+- tests that execute an import statement naming them: module level in a test module or helper means
+  the whole file and its importers; inside a function, whoever ran it; `if TYPE_CHECKING:` is
+  ignored;
+- lazy package attributes: `from sqlglot.dialects import Snowflake`, and the `sqlglot.optimizer`
+  `_LAZY_ATTRS` table;
+- imports by computed name: `importlib.import_module`, `__import__`, runpy and `exec_module`, by
+  constant name, by constant prefix, or with any target;
+- bulk dialect loaders: tests that ran `Dialect._try_load` or created classes of at least 80 % of
+  the dialects.
+
+A failing module never runs, so its own edits add nothing more. The verifier is not used on such
+commits.
+
+| validation set | main | frozen candidate | misses |
+| --- | ---: | ---: | ---: |
+| `work/impval` (30, frozen `40a40883…`), **failed** | 1104.510 | 1962.916 | 0 / **4** |
+| `work/impval2` (30, 29 breaking, frozen `e0536360…` = `e67b7c2`) | 1104.510 | 546.717 | 0 / 0 |
+
+The four misses in the first set were all `test_typing`. It walks `sqlglot.typing` with
+`pkgutil.iter_modules` and imports each module by name. That led to the computed-name rule.
+
+### Removed import lines: the module's own readers
+
+A removed one-line module-level import of a standard-library module, or of a module that
+`import sqlglot` loads anyway, selects the tests that ran a line of that module reading the removed
+names. It falls back in four cases: the names are bound elsewhere; another file takes them from the
+module (`from M import name`, `M.name`, `from M import *`); something scans its namespace
+(`subclasses(__name__, …)`, `getmembers`, `vars`, `dir`); or a read sits on a lambda's first line.
+The import is probed.
+
+| validation set | main | frozen candidate | misses |
+| --- | ---: | ---: | ---: |
+| `work/rmimp` (30, frozen `1586b06f…`), **failed** | 1016.319 | 1166.308 | 0 / **3** |
+| `work/rmimp2` (30, 21 breaking, frozen `7cf5db09…` = `5a211a2`) | 1019.419 | 341.554 | 0 / 0 |
+
+The three misses in the first set were reads inside one-line `FUNCTIONS` lambdas. Investigating
+them uncovered the lambda blind spot above.
+
+### All labelled sets
+
+| set | main (`08aeb05`) | this version | misses |
+| --- | ---: | ---: | ---: |
+| public sample (30) | 97.076 | 97.076 | 0 / 0 |
+| holdout 1 (66) | 618.608 | 551.231 | 0 / 0 |
+| holdout 2 (65) | 545.397 | 464.316 | 0 / 0 |
+| holdout 2 unique (61) | 534.169 | 453.088 | 0 / 0 |
+| independent holdout seed 271828 (65) | 491.085 | 434.951 | 0 / 0 |
+| independent holdout seed 314159 (66) | 501.325 | 465.185 | 0 / 0 |
+| validation 3 (27) | 867.704 | 858.341 | 0 / 0 |
+| fresh (6) | 99.718 | 75.587 | 0 / 0 |
+| short-circuit swaps (24), same-program (10), unread additions (5), feature (4) | unchanged | unchanged | 0 / 0 |
+
+The holdouts (1, 2, and the seed 271828 and 314159 sets) were examined while these rules were
+designed, so here they are regression checks; the fresh evidence is the four validation sets
+above. Selector CPU on the sample is unchanged within timer
+resolution. A commit whose probe fails spends extra CPU reading the source tree; the build-time
+import index in the follow-up PR removes most of that.
+
 ## Adversarial checks
 
 Targeted tests were added for the three rules most likely to be overfitted:
@@ -351,6 +462,26 @@ of the memory exhaustion, not of the edit, but this cannot be confirmed here.
   selected nothing (right only by luck); now the existing conservative rule for a new module-level
   name without readers selects the tests that ran the file. The same blindness is what made every
   earlier version miss `h33749` and 11 of 27 validation patches.
+
+## Review fix: failed-import narrowing (Linux rescore)
+
+Rescoring this PR on Linux against `main` (`build/evalsets.py`, 3 runs) found one miss: seed 314159,
+h15941 removes `import typing as t` from `optimizer/qualify_columns.py`. The module then fails at
+import time and 733 tests fail. The narrowed selection (909 tests) left out
+`test_generator_memory`, which fails under xdist once that many tests fail. Before this PR, a
+broken probe ran everything, so that test was always included. Two changes:
+
+- `mass_failure_mask`: a narrowed failed-import selection always keeps `test_generator_memory`.
+- `dialect_name_sites`: a failed dialect module also selects the tests that ran a line of sqlglot
+  code holding its name as a string constant. For example, `parsers/presto.py` runs
+  `Dialect["teradata"]` through `build_formatted_time(exp.TimeToStr, "teradata")` without
+  creating any Teradata class. Without this, those tests were caught only because the coverage
+  run happened to hit the registry's loader.
+
+Simulated seconds / misses after the fix, `main` → this PR: sample 97.076 → 97.076, holdout 1
+618.608 → 563.268, holdout 2 545.397 → 466.316, holdout 2 unique 534.169 → 455.088, mutants
+1065.357 → 924.094, seed 314159 501.325 → 466.097, seed 8675309 571.500 → 508.965, seed 42424242
+610.261 → 539.162. Every set has 0 misses.
 
 ## Profiler regressions (counterexamples that reproduced on c8a81ea)
 

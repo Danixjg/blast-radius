@@ -624,6 +624,242 @@ class DictEntries(Base):
         self.assertNotEqual(m, DATA["subproc"])
 
 
+class ImportOnlyRuns(Base):
+    """deferred_runs: a test whose coverage holds a class attribute's lines only because its
+    process imported the module during the test (pool workers import Hive, Presto, Trino, MySQL
+    and Athena through pushdown_predicates) is not selected for a change to that attribute."""
+
+    TPCDS = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
+
+    def bit(self, test_id):
+        return 1 << DATA["tests"].index(test_id)
+
+    def stmt(self, rel, old, new, line_text):
+        import ast
+        src = read(rel)
+        assert src.count(old) == 1, (rel, old)
+        otree, ntree = ast.parse(src), ast.parse(src.replace(old, new))
+        line = src[:src.index(line_text)].count("\n") + 1
+        site = S.locate(otree, line, 0, 10 ** 9, precise=False)
+        return site, otree, ntree
+
+    def test_class_attribute_value_drops_tests_that_only_imported_the_module(self):
+        rel = "sqlglot/dialects/hive.py"
+        self.assertTrue(self.h.span_mask(rel, 1, 1) & self.bit(self.TPCDS), "TPC-DS's pool imports hive.py")
+        m, probe = self.mask(edit(rel, '        "E": "%a",\n', '        "E": "%a_",\n'))
+        self.assertFalse(m & self.bit(self.TPCDS), "TPC-DS never reads Hive.TIME_MAPPING")
+        self.assertTrue(m & self.bit("tests/dialects/test_hive.py::TestHive::test_time"), "readers stay")
+        self.assertIsNotNone(probe, "TIME_MAPPING is read while the class is created: the import is probed")
+
+    def test_lambda_lines_keep_their_runners(self):
+        # a one-line lambda's body shares its line with the dict entry: running that line can mean
+        # calling the lambda, so whoever ran it stays (here TPC-DS, which only imported the module)
+        rel = "sqlglot/parsers/hive.py"
+        old = '        "BASE64": exp.ToBase64.from_arg_list,\n'
+        site, otree, ntree = self.stmt(rel, old, old.replace("ToBase64", "FromBase64"), old)
+        keep = self.h.deferred_runs(rel, site.cls_path, site.stmt, otree, ntree)
+        self.assertIsNotNone(keep, "a plain binding whose value builds quietly")
+        src = read(rel).splitlines()
+        lam1 = src.index('        "COLLECT_LIST": lambda args: exp.ArrayAgg(this=seq_get(args, 0), nulls_excluded=True),') + 1
+        lam2 = src.index('        "CONCAT_WS": lambda args, dialect: exp.ConcatWs(') + 1
+        lambdas = self.h.span_mask(rel, lam1, lam1) | self.h.span_mask(rel, lam2, lam2 + 5)
+        self.assertTrue(lambdas & self.bit(self.TPCDS), "TPC-DS's import ran the one-line lambda's line")
+        self.assertEqual(keep & lambdas, lambdas, "every lambda body line keeps its runners")
+        # whoever imported the module also ran the one-line lambdas' lines: nothing is dropped here
+        self.assertEqual(keep, self.h.span_mask(rel, site.span[0], site.span[1]))
+
+    def test_only_plain_bindings_with_quiet_values(self):
+        rel = "sqlglot/dialects/hive.py"
+        old = "    COERCES_TO = defaultdict(set, deepcopy(TypeAnnotator.COERCES_TO))\n"
+        site, otree, ntree = self.stmt(rel, old, old.replace("set", "list"), old)
+        self.assertIsNone(self.h.deferred_runs(rel, site.cls_path, site.stmt, otree, ntree),
+                          "building it calls code that is not a closure factory")
+        old = '        "E": "%a",\n'
+        site, otree, ntree = self.stmt(rel, old, '        "E": print("x"),\n', old)
+        self.assertIsNone(self.h.deferred_runs(rel, site.cls_path, site.stmt, otree, ntree), "new value runs code")
+        site, otree, ntree = self.stmt(rel, old, '        "E": "%a_",\n', old)
+        self.assertEqual(self.h.deferred_runs(rel, site.cls_path, site.stmt, otree, ntree), 0)
+        self.assertIsNone(self.h.deferred_runs("tests/x.py", site.cls_path, site.stmt, otree, ntree),
+                          "test modules run at collection: other rules decide")
+
+
+class FailedImports(Base):
+    """import_failure_mask: when the probe reports modules whose patched import fails (but not
+    sqlglot itself), the tests that can reach them instead of every test."""
+
+    def ids(self, m):
+        return {t for i, t in enumerate(DATA["tests"]) if t and m >> i & 1}
+
+    def test_verdict_carries_the_failed_modules(self):
+        rep = {"failed": [["sqlglot.dialects.oracle", "ModuleNotFoundError: x"], ["sqlglot.parsers.oracle", "E"]],
+               "unserved": [], "lazy": True}
+        res = S._verdict("noise\n@@BR-PROBE@@" + json.dumps(rep) + "\n")
+        self.assertEqual(res, "broken")
+        self.assertEqual(res.failed, ("sqlglot.dialects.oracle", "sqlglot.parsers.oracle"))
+        rep["failed"].append("garbled")
+        self.assertEqual(S._verdict("\n@@BR-PROBE@@" + json.dumps(rep)).failed, (), "unreadable: nothing to narrow on")
+
+    def test_unbounded_failures(self):
+        self.assertIsNone(self.h.import_failure_mask(["sqlglot", "sqlglot.dialects.oracle"]), "sqlglot itself: all")
+        self.assertIsNone(self.h.import_failure_mask([]))
+        self.assertIsNone(self.h.import_failure_mask(["tests.helpers"]))
+
+    def test_dialect_failure(self):
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.dialects.oracle", "sqlglot.parsers.oracle"]))
+        self.assertIn("tests/dialects/test_oracle.py::TestOracle::test_oracle", ids)
+        for t in ("tests/dialects/test_dialect.py::TestDialect::test_enum",                 # Dialect.classes
+                  "tests/test_generator.py::TestGenerator::test_generator_memory"):         # every Dialects member
+            self.assertIn(t, ids, "bulk dialect loaders reach any dialect module")
+        self.assertLess(len(ids), len(DATA["tests"]) // 4)
+
+    def test_module_level_import_in_a_test_module_fails_its_importers(self):
+        # tests/dialects/test_dialect.py does `from sqlglot.dialects import BigQuery, Hive, Snowflake,
+        # Spark2` at module level, and every dialect test module imports its Validator
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.dialects.snowflake"]))
+        self.assertIn("tests/dialects/test_athena.py::TestAthena::test_athena", ids)
+
+    def test_function_level_import_fails_its_runners(self):
+        # pushdown_predicates imports Athena inside the function
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.dialects.athena"]))
+        self.assertIn("tests/test_optimizer.py::TestOptimizer::test_pushdown_predicates", ids)
+
+    def test_mass_failure_tests_stay_with_any_failed_import(self):
+        # removing `import typing as t` from qualify_columns breaks ~730 tests; with that many
+        # failures under xdist test_generator_memory fails too (seed 314159, h15941)
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.optimizer.qualify_columns"]))
+        self.assertIn("tests/test_generator.py::TestGenerator::test_generator_memory", ids)
+
+    def test_dialect_looked_up_by_name_in_sqlglot_code(self):
+        # parsers/presto.py: build_formatted_time(exp.TimeToStr, "teradata") runs Dialect["teradata"]
+        # without importing or instantiating anything of teradata's
+        ids = self.ids(self.h.dialect_name_sites({"sqlglot.dialects.teradata"}))
+        self.assertIn("tests/dialects/test_presto.py::TestPresto::test_to_char", ids)
+        self.assertEqual(self.h.dialect_name_sites({"sqlglot.optimizer.qualify_columns"}), 0)
+
+    def test_selector_narrows_a_broken_probe(self):
+        tmp = Path(tempfile.mkdtemp(prefix="br-failed-import-"))
+        try:
+            (tmp / "commits").mkdir()
+            shutil.copyfile(R / "kit" / "sample" / "tests.json", tmp / "tests.json")
+            for cid, rel in (("dialect", "sqlglot/dialects/oracle.py"), ("core", "sqlglot/helper.py")):
+                src = read(rel)
+                (tmp / "commits" / f"{cid}.patch").write_text(
+                    diff(rel, src, src + "\nimport sqlglot_does_not_exist_xyz\n"), encoding="utf-8")
+            env = dict(os.environ, BR_DATA=str(tmp), BR_SRC=str(S.SRC), BR_MAP=str(S.MAP), BR_PROFILE=str(tmp / "none"),
+                       BR_VERIFY="0")
+            code = f"import sys; sys.path.insert(0, {str(R)!r}); import selector; selector.main()"
+            r = subprocess.run([sys.executable, "-S", "-c", code], env=env, capture_output=True, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stderr.decode()[-2000:])
+            catalog = json.loads((tmp / "tests.json").read_text())["tests"]
+            by_id = {t["id"]: t["number"] for t in catalog}
+            got = {}
+            for ln in r.stdout.decode().splitlines():
+                v = json.loads(ln)
+                got[v["commit"]] = {x for w in v["workers"] for x in w}
+            self.assertEqual(len(got["core"]), len(catalog), "sqlglot itself fails to import: everything")
+            self.assertLess(len(got["dialect"]), len(catalog) // 4)
+            for t in ("tests/dialects/test_oracle.py::TestOracle::test_oracle",
+                      "tests/test_generator.py::TestGenerator::test_generator_memory"):
+                self.assertIn(by_id[t], got["dialect"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_imports_by_computed_name(self):
+        import ast
+        # test_typing walks sqlglot/typing with pkgutil and imports each module by name
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.typing.sqlite", "sqlglot.dialects.sqlite"]))
+        self.assertIn("tests/test_typing.py::TestTyping::test_no_redundant_expression_metadata", ids)
+        src = ("import importlib\n\ndef f(n, m):\n    importlib.import_module(f'sqlglot.typing.{n}')\n"
+               "    importlib.import_module(m)\n    __import__('sqlglot.lineage')\n"
+               "    importlib.import_module(f'{__name__}.{n}')\n")
+        got = [(c.lineno, scope, tgt) for c, scope, tgt in S._dynamic_imports(ast.parse(src), "sqlglot.optimizer")]
+        self.assertEqual(sorted(got), [(4, "function", ("prefix", "sqlglot.typing.")), (5, "function", ("any",)),
+                                       (6, "function", ("exact", "sqlglot.lineage")),
+                                       (7, "function", ("prefix", "sqlglot.optimizer."))])
+
+    def test_import_scopes(self):
+        import ast
+        src = ("import typing as t\nimport sqlglot.a\nif t.TYPE_CHECKING:\n    from sqlglot import b\n"
+               "def f():\n    from sqlglot.dialects import Snowflake\nclass C:\n    import sqlglot.c\n")
+        got = [(st.lineno, scope) for st, scope in S._imports(ast.parse(src))]
+        self.assertEqual(got, [(1, "module"), (2, "module"), (4, "type_checking"), (6, "function"), (8, "module")])
+        st = ast.parse("from sqlglot.dialects import Snowflake as S\n").body[0]
+        self.assertTrue({"sqlglot", "sqlglot.dialects", "sqlglot.dialects.snowflake"} <=
+                        S._imported_modules(st, "tests/x.py"))
+
+
+class OneLineLambdas(Base):
+    """A call of a lambda reports no line event for its first line (sys.monitoring, CPython 3.12+),
+    so coverage of that line only names whoever created the lambda."""
+
+    def test_monitoring_reports_no_first_line_of_a_called_lambda(self):
+        import sys as _sys
+        if not hasattr(_sys, "monitoring"):
+            self.skipTest("no sys.monitoring")
+        mon = _sys.monitoring
+        tool = next(i for i in range(6) if mon.get_tool(i) is None)
+        code = compile("F = {'a': lambda x: x + 1}\n", "lam_probe.py", "exec")
+        ns = {}
+        exec(code, ns)
+        hits = []
+        mon.use_tool_id(tool, "lam-probe")
+        try:
+            mon.register_callback(tool, mon.events.LINE,
+                                  lambda c, ln: hits.append(ln) if c.co_filename == "lam_probe.py" else None)
+            mon.set_events(tool, mon.events.LINE)
+            ns["F"]["a"](1)
+        finally:
+            mon.set_events(tool, 0)
+            mon.register_callback(tool, mon.events.LINE, None)
+            mon.free_tool_id(tool)
+        self.assertEqual(hits, [], "the premise of locate()'s lambda rule")
+
+    def test_edit_on_a_dict_entry_lambda_selects_its_readers(self):
+        rel = "sqlglot/parsers/tsql.py"
+        old = '"ISNULL": lambda args: build_coalesce(args=args, is_null=True),'
+        m, _ = self.mask(edit(rel, old, old.replace("is_null=True", "is_null=False")))
+        self.assertTrue(m & (1 << DATA["tests"].index("tests/dialects/test_tsql.py::TestTSQL::test_isnull")),
+                        "the parser test calling FUNCTIONS['ISNULL'] (line coverage shows only the import)")
+
+
+class RemovedImports(Base):
+    """removed_import_mask: a removed module-level import line whose names nothing else binds or
+    takes from the module selects the module's own readers of those names."""
+
+    def test_stdlib_import_selects_the_modules_readers(self):
+        rel = "sqlglot/generators/tsql.py"
+        m, probe = self.mask(edit(rel, "from functools import reduce\n", ""))
+        src = read(rel).splitlines()
+        line = next(i for i, ln in enumerate(src, 1) if "reduce(" in ln)
+        readers = self.h.span_mask(rel, line, line)
+        self.assertTrue(readers)
+        self.assertEqual(m & readers, readers)
+        self.assertLess(self.popcount(m), 3 * self.popcount(readers) + 10, "only the module's own readers")
+        self.assertIsNotNone(probe, "a read while the module imports would fail the import: probed")
+
+    def test_namespace_scans_and_reexports_fall_back(self):
+        import ast
+        for rel, line in (
+                # sqlglot.expressions builds its registries with subclasses(__name__, ...)
+                ("sqlglot/expressions/__init__.py", "from sqlglot.expressions.array import _ExplodeOuter  # noqa: F401,E402\n"),
+                # sqlglot.planner is not loaded by `import sqlglot`: dropping this import loads less
+                ("sqlglot/executor/python.py", "from sqlglot import exp, planner, tokens\n")):
+            src = read(rel)
+            otree, ntree = ast.parse(src), ast.parse(src.replace(line, ""))
+            st = next(s for s in otree.body if isinstance(s, (ast.Import, ast.ImportFrom)) and
+                      ast.get_source_segment(src, s) == line.split("  #")[0].rstrip("\n"))
+            self.assertIsNone(self.h.removed_import_mask(rel, st, otree, ntree), rel)
+
+    def test_name_still_bound_falls_back(self):
+        import ast
+        rel = "sqlglot/generators/tsql.py"
+        src = read(rel)
+        new = src.replace("from functools import reduce\n", "").replace("\n\ndef ", "\n\nreduce = None\n\n\ndef ", 1)
+        otree, ntree = ast.parse(src), ast.parse(new)
+        st = next(s for s in otree.body if isinstance(s, ast.ImportFrom) and s.module == "functools")
+        self.assertIsNone(self.h.removed_import_mask(rel, st, otree, ntree))
+
+
 class Probe(unittest.TestCase):
     def test_pristine_imports(self):
         self.assertEqual(S.run_probe({}, 60), "ok")

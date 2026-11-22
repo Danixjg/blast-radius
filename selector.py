@@ -75,6 +75,8 @@ EQ_SHORT_CIRCUIT = os.environ.get("BR_EQ_SHORT_CIRCUIT", "1") == "1"
 # tracemalloc counts every thread's allocations: under pytest-xdist the worker's I/O thread makes
 # this test fail whenever many other tests fail, which a run here cannot reproduce
 VERIFY_UNSAFE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
+# tests that fail once enough of the run fails (see Hunter.mass_failure_mask)
+MASS_FAILURE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
 # build/verify-requirements.txt installs exactly these (kit/requirements.lock versions); without
 # them sqlglot's date folding (dateutil) and pytz-importing test modules would run differently
 VERIFY_ENV = {"python-dateutil": "4.0.0", "tzdata": "2026.6", "pytz": "2026.6", "mypy-extensions": "1.2.0",
@@ -514,6 +516,113 @@ def star_import(st):
     return any(isinstance(n, ast.ImportFrom) and any(a.name == "*" for a in n.names) for n in ast.walk(st))
 
 
+def _imports(tree):
+    """(statement, scope) for every import statement of a module. scope: 'module' (runs while
+    the module imports, class bodies included), 'function' (runs when the function does) or
+    'type_checking' (under `if TYPE_CHECKING:`, never runs)."""
+    tc = runtime_facts(tree)[1] | {"TYPE_CHECKING", "typing.TYPE_CHECKING", "t.TYPE_CHECKING"}
+    out = []
+
+    def visit(node, scope):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.Import, ast.ImportFrom)):
+                out.append((child, scope))
+            elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                visit(child, "function" if scope != "type_checking" else scope)
+            elif isinstance(child, ast.If) and _tc_test(child.test, tc):
+                for st in child.body:
+                    visit(ast.Module(body=[st], type_ignores=[]), "type_checking")
+                for st in child.orelse:
+                    visit(ast.Module(body=[st], type_ignores=[]), scope)
+            else:
+                visit(child, scope)
+
+    visit(tree, "module")
+    return out
+
+
+DYNAMIC_IMPORTS = ("import_module", "__import__", "reload", "run_path", "run_module", "exec_module")
+
+
+def _dynamic_imports(tree, module):
+    """(call, scope, target) for calls that import or execute a module by computed name
+    (importlib.import_module, __import__, importlib.reload, runpy, loader.exec_module), scoped as in
+    _imports. target: ('exact', name) for a constant, ('prefix', p) when the name starts with a
+    constant (an f-string or a concatenation; `__name__` stands for this module), else ('any',)."""
+    calls = {id(c): c for c in ast.walk(tree) if isinstance(c, ast.Call) and (
+        (isinstance(c.func, ast.Name) and c.func.id in DYNAMIC_IMPORTS) or
+        (isinstance(c.func, ast.Attribute) and c.func.attr in DYNAMIC_IMPORTS))}
+    if not calls:
+        return []
+    scope_of = {}
+    tc = runtime_facts(tree)[1] | {"TYPE_CHECKING", "typing.TYPE_CHECKING", "t.TYPE_CHECKING"}
+
+    def visit(node, scope):
+        for child in ast.iter_child_nodes(node):
+            if id(child) in calls:
+                scope_of[id(child)] = scope
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                visit(child, "function" if scope != "type_checking" else scope)
+            elif isinstance(child, ast.If) and _tc_test(child.test, tc):
+                for st in child.body:
+                    visit(ast.Module(body=[st], type_ignores=[]), "type_checking")
+                for st in child.orelse:
+                    visit(ast.Module(body=[st], type_ignores=[]), scope)
+            else:
+                visit(child, scope)
+
+    visit(tree, "module")
+
+    def target(arg):
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            return ("exact", arg.value)
+        if isinstance(arg, ast.JoinedStr) and arg.values:
+            head = ""
+            for v in arg.values:
+                if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                    head += v.value
+                elif isinstance(v, ast.FormattedValue) and isinstance(v.value, ast.Name) and v.value.id == "__name__" \
+                        and v.conversion == -1 and v.format_spec is None:
+                    head += module
+                else:
+                    break
+            return ("prefix", head) if head else ("any",)
+        if isinstance(arg, ast.BinOp) and isinstance(arg.op, ast.Add) and isinstance(arg.left, ast.Constant) and \
+                isinstance(arg.left.value, str):
+            return ("prefix", arg.left.value)
+        return ("any",)
+
+    out = []
+    for c in calls.values():
+        name = c.func.id if isinstance(c.func, ast.Name) else c.func.attr
+        arg = c.args[0] if c.args else None
+        tgt = target(arg) if name in ("import_module", "__import__") and arg is not None else ("any",)
+        out.append((c, scope_of.get(id(c), "module"), tgt))
+    return out
+
+
+def _imported_modules(st, rel):
+    """Module names an import statement imports (or may: `from P import N` imports P.N when N is
+    a submodule, and sqlglot.dialects maps a dialect name N to the module P.<n lowercased>)."""
+    if isinstance(st, ast.Import):
+        names = [a.name for a in st.names]
+        base = None
+    else:
+        if st.level:
+            pkg = module_of(rel) if rel.endswith("/__init__.py") else module_of(rel).rpartition(".")[0]
+            parts = pkg.split(".")
+            pkg = ".".join(parts[:len(parts) - st.level + 1])
+            base = pkg + ("." + st.module if st.module else "")
+        else:
+            base = st.module or ""
+        names = [base] + [f"{base}.{a.name}" for a in st.names] + [f"{base}.{a.name.lower()}" for a in st.names]
+    out = set()
+    for n in names:
+        parts = n.split(".")
+        out.update(".".join(parts[:i]) for i in range(1, len(parts) + 1))
+    return out
+
+
 def is_docstring(st):
     return isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant) and isinstance(st.value.value, str)
 
@@ -537,6 +646,12 @@ def locate(tree, line, c0, c1, precise=True):
     fn_i = None
     for i in range(len(chain) - 1, 0, -1):
         if isinstance(chain[i], FUNC):
+            if isinstance(chain[i], ast.Lambda) and chain[i].lineno == line:
+                # A call of a lambda reports no line event for its first line (its RESUME sits
+                # there, so nothing "moves" to that line): coverage of this line only shows who
+                # created the lambda, never who called it. Judge the edit by what encloses it
+                # (the statement holding a dict entry, or the function creating it).
+                continue
             fn_i = i
             break
     path, cls = [], []
@@ -840,10 +955,12 @@ class Hunter:
             m |= self.resolve_stmt(rel, cls_path, names, (a, b), doc, visited, depth + 1)
         return m, unknown
 
-    def resolve_stmt(self, rel, cls_path, names, span, doc, visited, depth=0):
-        """Tests affected by a changed class-body or module-level statement."""
+    def resolve_stmt(self, rel, cls_path, names, span, doc, visited, depth=0, reexec=None):
+        """Tests affected by a changed class-body or module-level statement. reexec: the tests
+        that ran the statement itself (default: every test whose coverage holds its lines)."""
         self.import_time = True
-        reexec = self.span_mask(rel, span[0], span[1]) if span else 0
+        if reexec is None:
+            reexec = self.span_mask(rel, span[0], span[1]) if span else 0
         if doc:
             return reexec | self.d["name_mask"].get("__doc__", 0)
         if not names:
@@ -964,6 +1081,12 @@ class Hunter:
             elif kind == "remove":
                 if not ot.strip() or (ot.strip().startswith("#") and not self._in_string(otree, ol)):
                     continue
+                st = next((s for s in otree.body if isinstance(s, (ast.Import, ast.ImportFrom)) and
+                           s.lineno == ol == s.end_lineno), None)
+                got = self.removed_import_mask(rel, st, otree, ntree) if st is not None else None
+                if got is not None:
+                    m |= got
+                    continue
                 c0, c1 = line_cols(ot)
                 m |= self._site_mask(rel, locate(otree, ol, c0, c1, precise=False), visited, otree, ntree)
             else:
@@ -999,11 +1122,76 @@ class Hunter:
                 if got is not None:
                     return got
             before = self.import_time
-            got = self.resolve_stmt(rel, site.cls_path, assigned_names(st), site.span, is_docstring(st), visited)
+            reexec = self.deferred_runs(rel, site.cls_path, st, otree, ntree) if ntree is not None else None
+            got = self.resolve_stmt(rel, site.cls_path, assigned_names(st), site.span, is_docstring(st), visited,
+                                    reexec=reexec)
             if ntree is not None and self.quiet_constant_edit(rel, site.cls_path, st, otree, ntree):
                 self.import_time = before   # importing behaves exactly as before: nothing to probe
             return got
         return 0
+
+    def deferred_runs(self, rel, cls_path, st, otree, ntree):
+        """Tests that ran code inside this module- or class-level `NAME = value` after it was
+        built (lambda bodies), or None when the statement is not such a plain binding.
+
+        Line coverage holds a module's top-level lines for a test when the module was imported
+        while the test ran. The coverage run imports every sqlglot module before the first test,
+        but the pool workers some tests spawn (TPC-DS and TPC-H execution, the optimizer fixture
+        checks) import what they need on the fly: pushdown_predicates imports Athena and Presto
+        only for an isinstance check, so those tests "ran" every class attribute of Hive, Presto,
+        Trino, MySQL and Athena. Building a value without side effects and binding NAME does
+        nothing a test can see except through code that reads NAME (directly, through import-time
+        derivations or through instances), which resolve_stmt collects; whether the import still
+        succeeds is what the probe checks. So of the tests that ran the statement, only those that
+        ran a line of deferred code in it (a lambda body runs when called, not when the value is
+        built) are kept, exactly as for tests whose process imported the module before them."""
+        if not rel.startswith("sqlglot/"):
+            return None
+        if isinstance(st, ast.Assign) and len(st.targets) == 1:
+            target = st.targets[0]
+        elif isinstance(st, ast.AnnAssign) and st.value is not None:
+            target = st.target
+        else:
+            return None
+        if not isinstance(target, ast.Name):
+            return None
+        nst = _body_stmt(ntree, cls_path, _dump(target))
+        if nst is None or type(nst) is not type(st) or nst.value is None or \
+                _body_stmt(otree, cls_path, _dump(target)) is not st:
+            return None
+        if isinstance(st, ast.AnnAssign) and _dump(st.annotation) != _dump(nst.annotation):
+            return None
+        if not (self.builds_quietly(rel, st.value) and self.builds_quietly(rel, nst.value)):
+            return None
+        keep = 0
+        for node in ast.walk(st.value):
+            if isinstance(node, ast.Lambda):
+                keep |= self.span_mask(rel, node.body.lineno, node.body.end_lineno)
+        return keep
+
+    def builds_quietly(self, rel, node, depth=0):
+        """safe_value, and also `**X` / `*X` of a name or attribute (a class attribute holding a
+        dictionary, set or tuple, as in `{**Tokenizer.KEYWORDS, ...}`) inside a display."""
+        if depth > 12:
+            return False
+        chain = (ast.Name, ast.Attribute)
+        if isinstance(node, ast.Dict):
+            for k, v in zip(node.keys, node.values):
+                if k is None:
+                    if not (isinstance(v, chain) and self.safe_value(rel, v, depth + 1)):
+                        return False
+                elif not (self.builds_quietly(rel, k, depth + 1) and self.builds_quietly(rel, v, depth + 1)):
+                    return False
+            return True
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            for e in node.elts:
+                if isinstance(e, ast.Starred):
+                    if not (isinstance(e.value, chain) and self.safe_value(rel, e.value, depth + 1)):
+                        return False
+                elif not self.builds_quietly(rel, e, depth + 1):
+                    return False
+            return True
+        return self.safe_value(rel, node, depth)
 
     SAFE_BASE_SUFFIXES = ("Dialect", "Parser", "Generator", "Tokenizer")
 
@@ -1087,6 +1275,304 @@ class Hunter:
         log(rel, "star import changed: catcher takes all")
         self.import_time = True
         return self.ALL
+
+    # ---------------------------------------------------------------- removed imports
+    def removed_import_mask(self, rel, st, otree, ntree):
+        """A one-line module-level import that the patch removes from a sqlglot module, when no
+        name it bound is bound anywhere else in the module afterwards: only code of this module
+        can read those names (another module could get them from this one, `from M import name`,
+        `M.name` or `from M import *`, and then the general rules decide). A read while the module
+        imports fails the import, which the probe checks; any other read is a line of this module
+        that some test runs. The imported modules must be loaded anyway (standard library, or a
+        sqlglot module `import sqlglot` loads), so no longer importing them here runs nothing
+        less. Annotations are only read through get_type_hints and the like. None: not such an
+        edit."""
+        if not rel.startswith("sqlglot/") or isinstance(st, ast.ImportFrom) and (
+                st.level or any(a.name == "*" for a in st.names)):
+            return None
+        for mod in _imported_modules(st, rel):
+            top = mod.split(".")[0]
+            if top in getattr(sys, "stdlib_module_names", ()) and top != "sqlglot":
+                continue
+            if top != "sqlglot":
+                return None
+            exists = self.source(mod.replace(".", "/") + ".py") is not None or \
+                self.source(mod.replace(".", "/") + "/__init__.py") is not None
+            if exists and mod not in self.startup_modules():
+                return None
+        names = set(assigned_names(st))
+        if not names:
+            return None
+        for s in ntree.body:
+            if names & set(assigned_names(s)):
+                return None
+        for node in ast.walk(ntree):
+            if isinstance(node, (ast.Global, ast.Nonlocal)) and names & set(node.names):
+                return None
+            if isinstance(node, ast.Constant) and node.value in names and not any(
+                    s.lineno <= node.lineno <= s.end_lineno for s in ntree.body if isinstance(s, DEFS)):
+                return None   # a module-level string naming it (__all__, getattr): an export
+        if self.reexported(rel, names):
+            return None
+        for lam in ast.walk(otree):
+            if isinstance(lam, ast.Lambda) and any(
+                    isinstance(n, ast.Name) and n.id in names and n.lineno == lam.lineno for n in ast.walk(lam.body)):
+                return None   # read on a lambda's first line: who calls it is not in the map
+        m = 0
+        for node in ast.walk(otree):
+            if isinstance(node, ast.Name) and node.id in names and isinstance(node.ctx, ast.Load):
+                m |= self.span_mask(rel, node.lineno, node.end_lineno)
+        nm = self.d["name_mask"]
+        self.import_time = True
+        return m | nm.get("get_type_hints", 0) | nm.get("get_annotations", 0) | nm.get("__annotations__", 0)
+
+    def reexported(self, rel, names):
+        """Another file takes one of these names from module rel or star-imports it, or some code
+        reads rel's namespace as a whole (helper.subclasses, inspect.getmembers, vars, dir,
+        globals, __dict__), which sees names no line mentions."""
+        mod = module_of(rel)
+        parent, _, leaf = mod.rpartition(".")
+        own = self.source(rel) or ""
+        if re.search(r"\b(?:globals|vars|dir)\(\s*\)|\bsubclasses\(\s*__name__|\bgetmembers\(|"
+                     r"sys\.modules\[\s*__name__", own):
+            return True
+        aliases = {leaf}
+        imp = re.compile(r"\bimport\s+%s\s+as\s+(\w+)" % re.escape(mod))
+        sub = re.compile(r"\bfrom\s+%s\s+import\s+(\([^)]*\)|[^\n]*)" % re.escape(parent))
+        frm = re.compile(r"\bfrom\s+%s\s+import\s+(\([^)]*\)|[^\n]*)" % re.escape(mod))
+        texts = [(f, self.source(f) or "") for f in self.py_files() if f != rel]
+        for f, text in texts:
+            aliases.update(imp.findall(text))
+            for mt in sub.finditer(text):   # from parent import leaf as alias
+                for n in mt.group(1).strip("()").split(","):
+                    name, _, alias = n.strip().partition(" as ")
+                    if name.strip() == leaf and alias.strip():
+                        aliases.add(alias.strip())
+            for mt in frm.finditer(text):
+                got = {n.split(" as ")[0].strip() for n in mt.group(1).strip("()").split(",")}
+                if "*" in got or got & names:
+                    return True
+        alt = "|".join(map(re.escape, sorted(aliases)))
+        attr = re.compile(r"\b(?:%s)\.(?:%s)\b" % (alt, "|".join(map(re.escape, sorted(names)))))
+        scan = re.compile(r"\b(?:subclasses|getmembers|vars|dir)\(\s*(?:%s)\b|\b(?:%s)\.__dict__\b|"
+                          r"\bsubclasses\(\s*['\"]%s['\"]|sys\.modules\[\s*['\"]%s['\"]" % (alt, alt, re.escape(mod),
+                                                                                          re.escape(mod)))
+        return any(attr.search(text) or scan.search(text) for f, text in texts)
+
+    def startup_modules(self):
+        """sqlglot modules that `import sqlglot` loads: module-level imports followed from the
+        package's __init__ (statically, as the source shows them)."""
+        if getattr(self, "_startup", None) is None:
+            seen, todo = set(), ["sqlglot"]
+            while todo:
+                mod = todo.pop()
+                if mod in seen:
+                    continue
+                seen.add(mod)
+                base = mod.replace(".", "/")
+                for cand in (base + "/__init__.py", base + ".py"):
+                    tree = self.tree(cand)
+                    if tree is None:
+                        continue
+                    for s, scope in _imports(tree):
+                        if scope == "module":
+                            todo.extend(x for x in _imported_modules(s, cand) if x.startswith("sqlglot.") and (
+                                self.source(x.replace(".", "/") + ".py") is not None or
+                                self.source(x.replace(".", "/") + "/__init__.py") is not None))
+                    break
+            self._startup = seen
+        return self._startup
+
+    # ---------------------------------------------------------------- failed imports
+    def import_failure_mask(self, failed):
+        """Tests that can reach a sqlglot module whose patched import fails, or None when that
+        cannot be bounded. `failed` is the probe's list: it imports every sqlglot module, so it
+        names each module that fails, also those failing only because they import one that does.
+
+        After a failed import nothing of the module exists in the test process, and every later
+        attempt fails again. A test reaches such a module by importing it: through an import
+        statement (one at module level in a test module or test helper fails its collection; one
+        inside a function fails whoever runs it), by looking a dialect up by name (sqlglot's
+        dialect registry imports `sqlglot.dialects.<name>` on demand, and `from sqlglot.dialects
+        import Name` imports `sqlglot.dialects.<name lowercased>`), or by unpickling its classes
+        in a pool worker. The coverage map shows the tests that ran the module's code, imported
+        it while running, or created its classes or those of its dialect (dialect, parser,
+        generator, tokenizer and typing modules of one name go together); the import statements
+        are found in the source. Tests that load dialects in bulk (Dialect.classes, a loop over
+        every dialect) reach any dialect module: those that ran the registry's on-demand loader,
+        and those that created classes of nearly every dialect. If sqlglot itself fails, every
+        test does: None."""
+        F = {m for m in failed if isinstance(m, str)}
+        if not F or "sqlglot" in F or any(not m.startswith("sqlglot.") for m in F):
+            return None
+        m = 0
+        bulk = False
+        for mod in F:
+            rel = mod.replace(".", "/")
+            m |= self.file_mask(rel + ".py") | self.file_mask(rel + "/__init__.py") | self.group_mask(rel + ".py")
+            prefix = mod + ":"
+            for k, v in self.classes.items():
+                if k.startswith(prefix):
+                    m |= v
+            parts = mod.split(".")
+            bulk = bulk or (len(parts) == 3 and parts[1] in DIALECT_DIRS)
+        if bulk:
+            m |= self.bulk_dialect_loaders()
+        return m | self.import_sites(F) | self.dialect_name_sites(F) | self.mass_failure_mask()
+
+    def mass_failure_mask(self):
+        """Tests that fail because many others do, not because of what they run:
+        test_generator_memory fails under xdist once enough of the run fails. A failed import
+        breaks every test that reaches the module, so a narrowed selection keeps them (before
+        narrowing, a broken probe ran everything, which always included them)."""
+        return sum(1 << i for i, t in enumerate(self.d["tests"]) if t in MASS_FAILURE_TESTS)
+
+    def dialect_name_sites(self, F):
+        """Tests that ran a line of sqlglot code holding a failed dialect's name as a string
+        constant, e.g. parsers/presto.py's build_formatted_time(exp.TimeToStr, "teradata"): a
+        registry lookup by name imports the module on demand without creating any of its
+        classes, so neither the dialect's own coverage nor its import statements show it."""
+        names = set()
+        for mod in F:
+            p = mod.split(".")
+            if len(p) == 3 and p[1] in DIALECT_DIRS and p[2] not in ("dialect", "base", "__init__"):
+                names.add(p[2])
+        if not names:
+            return 0
+        if getattr(self, "_sqlglot_py", None) is None:
+            self._sqlglot_py = sorted(p.relative_to(SRC).as_posix() for p in (SRC / "sqlglot").rglob("*.py"))
+        m = 0
+        quoted = [q + n + q for n in names for q in ('"', "'")]
+        for rel in self._sqlglot_py:
+            text = self.source(rel)
+            if not text or not any(q in text for q in quoted):
+                continue
+            tree = self.tree(rel)
+            if tree is None:
+                return self.ALL
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value.lower() in names:
+                    m |= self.span_mask(rel, node.lineno, node.end_lineno)
+        return m
+
+    def bulk_dialect_loaders(self):
+        if getattr(self, "_bulk", None) is None:
+            fam = {}
+            for k, v in self.classes.items():
+                p = k.split(":")[0].split(".")
+                if len(p) == 3 and p[1] in DIALECT_DIRS and p[2] not in ("dialect", "base", "__init__"):
+                    fam[p[2]] = fam.get(p[2], 0) | v
+            m = 0
+            for i in range(self.n):
+                if 5 * sum(v >> i & 1 for v in fam.values()) >= 4 * len(fam):
+                    m |= 1 << i
+            tree = self.tree("sqlglot/dialects/dialect.py")
+            for node in ast.walk(tree) if tree is not None else ():
+                if isinstance(node, ast.FunctionDef) and node.name == "_try_load":
+                    m |= self.span_mask("sqlglot/dialects/dialect.py", node.body[0].lineno, node.end_lineno)
+            self._bulk = m
+        return self._bulk
+
+    def import_sites(self, F):
+        """Tests that execute an import statement naming a module of F (see import_failure_mask)."""
+        direct, by_parent = [], []
+        for mod in F:
+            parent, _, leaf = mod.rpartition(".")
+            direct.append(re.compile(r"\bimport\s+%s\b|\bfrom\s+%s\s+import\b" % (re.escape(mod), re.escape(mod))))
+            # `from parent import name`: a submodule, or a name the package's lazy __getattr__
+            # resolves to this module (sqlglot.dialects: the name lowercased; sqlglot.optimizer:
+            # its _LAZY_ATTRS table)
+            names = {leaf} | {n.lower() for n, mods in self.lazy_attr_modules(parent).items() if mod in mods}
+            by_parent.append((re.compile(r"\bfrom\s+%s\s+import\s+(\([^)]*\)|[^\n]*)" % re.escape(parent)), names))
+        dynamic = re.compile(r"\b(?:%s)\s*\(" % "|".join(map(re.escape, DYNAMIC_IMPORTS)))
+        hits = set()
+        for rel in self.py_files():
+            text = self.source(rel)
+            if not text:
+                continue
+            if any(p.search(text) for p in direct) or dynamic.search(text) or any(
+                    any(n.split(" as ")[0].strip().lower() in names for n in mt.group(1).strip("()").split(","))
+                    for p, names in by_parent for mt in p.finditer(text)):
+                hits.add(rel)
+        m = 0
+        for rel in sorted(hits):
+            tree = self.tree(rel)
+            if tree is None:
+                return self.ALL
+            sites = []
+            for st, scope in _imports(tree):
+                mods = _imported_modules(st, rel)
+                if isinstance(st, ast.ImportFrom) and not st.level and st.module:
+                    lazy = self.lazy_attr_modules(st.module)
+                    for a in st.names:
+                        mods |= lazy.get(a.name, set())
+                if mods & F:
+                    sites.append((st, scope))
+            # imports by computed name (a package walk importing each module, the dialect registry,
+            # lazy package attributes, deserialization by module path): a call whose name can be one
+            # of F counts like an import statement naming it
+            lazy_targets = None
+            if rel.endswith("/__init__.py"):   # a package's own lazy __getattr__: its table's modules
+                lazy_targets = set().union(*self.lazy_attr_modules(module_of(rel)).values()) or None
+            for call, scope, tgt in _dynamic_imports(tree, module_of(rel)):
+                if tgt[0] == "any" and lazy_targets is not None:
+                    hit = bool(lazy_targets & F)
+                else:
+                    hit = tgt[0] == "any" or (tgt[0] == "exact" and tgt[1] in F) or \
+                        (tgt[0] == "prefix" and any(f.startswith(tgt[1]) for f in F))
+                if hit:
+                    sites.append((call, scope))
+            for st, scope in sites:
+                if scope == "type_checking":
+                    continue
+                if scope == "function":
+                    m |= self.span_mask(rel, st.lineno, st.end_lineno)
+                elif rel.startswith("tests/"):
+                    d, base = os.path.dirname(rel), os.path.basename(rel)
+                    if base in ("conftest.py", "__init__.py"):
+                        m |= self.scope_tests(d)
+                    else:
+                        m |= self.file_tests.get(rel, 0) | self.importers_of_test_module(rel)
+                else:
+                    m |= self.file_mask(rel) | self.inst_mask(rel, ())   # a guarded import in sqlglot
+        return m
+
+    def lazy_attr_modules(self, pkg):
+        """{name: modules} that `from pkg import name` imports through a module-level __getattr__
+        of the package, read from the dictionaries in its __init__ (a key, and the dotted module
+        names or submodule names among its value's strings)."""
+        memo = self.__dict__.setdefault("_lazy_attrs", {})
+        if pkg not in memo:
+            out = {}
+            tree = self.tree(pkg.replace(".", "/") + "/__init__.py") if pkg.startswith("sqlglot") else None
+            if tree is not None and any(isinstance(s, ast.FunctionDef) and s.name == "__getattr__" for s in tree.body):
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Dict):
+                        continue
+                    for k, v in zip(node.keys, node.values):
+                        if not (isinstance(k, ast.Constant) and isinstance(k.value, str)):
+                            continue
+                        for c in ast.walk(v):
+                            if isinstance(c, ast.Constant) and isinstance(c.value, str):
+                                for mod in (c.value, f"{pkg}.{c.value}"):
+                                    if mod.startswith(pkg + ".") and (
+                                            self.source(mod.replace(".", "/") + ".py") is not None or
+                                            self.source(mod.replace(".", "/") + "/__init__.py") is not None):
+                                        out.setdefault(k.value, set()).add(mod)
+            memo[pkg] = out
+        return memo[pkg]
+
+    def py_files(self):
+        if getattr(self, "_py_files", None) is None:
+            out = []
+            for base in ("sqlglot", "tests"):
+                for dirpath, dirnames, fnames in os.walk(SRC / base):
+                    dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+                    for fn in sorted(fnames):
+                        if fn.endswith(".py"):
+                            out.append(os.path.relpath(os.path.join(dirpath, fn), SRC).replace(os.sep, "/"))
+            self._py_files = out
+        return self._py_files
 
     def _added(self, rel, otree, ntree, ol, nl, nt, visited):
         c0, c1 = line_cols(nt)
@@ -1608,15 +2094,18 @@ class Hunter:
                          and self.probe_files.get(fp.old) is not None for fp in files):
             self.verify_files = {fp.old: self.probe_files[fp.old] for fp in files}
         m = 0
+        self.file_masks = {}   # per patched path: what its own edits select
         for fp in files:
             rel = fp.old or fp.new
             if rel is None:
                 continue
             try:
-                m |= self.analyze_file(fp, isolated=len(files) == 1)
+                fm = self.analyze_file(fp, isolated=len(files) == 1)
             except Exception as e:   # catcher: never crash, widen instead
                 log(rel, "analysis error, catcher takes all:", repr(e))
-                m |= self.ALL
+                fm = self.ALL
+            self.file_masks[rel] = self.file_masks.get(rel, 0) | fm
+            m |= fm
             if m == self.ALL:
                 break
         probe = None
@@ -2254,6 +2743,11 @@ def _probe_env():
     return env, cwd
 
 
+class _Outcome(str):
+    """A probe outcome; 'broken' also carries the modules whose patched import failed."""
+    failed = ()
+
+
 def _verdict(text):
     k = text.rfind("\n@@BR-PROBE@@")
     if k < 0:
@@ -2268,7 +2762,10 @@ def _verdict(text):
         return "error"
     if rep.get("failed"):
         log("probe: patched import fails:", rep["failed"][0])
-        return "broken"
+        res = _Outcome("broken")
+        names = [f[0] for f in rep["failed"] if isinstance(f, list) and f and isinstance(f[0], str)]
+        res.failed = tuple(names) if len(names) == len(rep["failed"]) else ()
+        return res
     return "ok"
 
 
@@ -2805,7 +3302,18 @@ def main():
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
 
-    selected, probes, lazy_pending, verify_files = {}, {}, set(), {}
+    def nums_of(mask):
+        nums = set(unmapped) if mask else set()
+        bits = mask & hunter.ALL
+        while bits:
+            bit = bits & -bits
+            num = idx_to_num[bit.bit_length() - 1]
+            if num is not None:
+                nums.add(num)
+            bits ^= bit
+        return nums
+
+    selected, probes, lazy_pending, verify_files, parts = {}, {}, set(), {}, {}
     for p in patches:
         cid = p.stem
         try:
@@ -2818,17 +3326,10 @@ def main():
             if mask and mask == hunter.ALL:
                 selected[cid] = None
             else:
-                nums = set(unmapped) if mask else set()
-                bits = mask & hunter.ALL
-                while bits:
-                    bit = bits & -bits
-                    num = idx_to_num[bit.bit_length() - 1]
-                    if num is not None:
-                        nums.add(num)
-                    bits ^= bit
-                selected[cid] = nums
+                selected[cid] = nums_of(mask)
             if probe is not None:
                 probes[cid] = probe
+                parts[cid] = (mask, dict(hunter.file_masks))
                 if hunter.lazy_pending:
                     lazy_pending.add(cid)
             if hunter.verify_files is not None:
@@ -2842,8 +3343,29 @@ def main():
         outcome = run_probes(probes, lazy=lazy_seen)
         for cid, res in outcome.items():
             if res != "ok":
-                log(cid, f"import probe {res}: catcher takes all")
-                selected[cid] = None
+                reach = None
+                if res == "broken" and selected.get(cid) is not None:
+                    try:
+                        reach = hunter.import_failure_mask(getattr(res, "failed", ()))
+                    except Exception as e:   # catcher: widen instead
+                        log(cid, "import failure analysis error:", repr(e))
+                if reach is None or reach == hunter.ALL:
+                    log(cid, f"import probe {res}: catcher takes all")
+                    selected[cid] = None
+                    continue
+                log(cid, f"import probe broken ({len(res.failed)} modules fail): their importers and users")
+                # a module whose import fails never runs, so what its own edits would select is
+                # moot beyond that failure: keep the selections of the other patched files only
+                full, by_file = parts[cid]
+                own = full & hunter.d["subproc"] & ~hunter.lazy_mask
+                for rel, fm in by_file.items():
+                    if not (rel.endswith(".py") and module_of(rel) in res.failed):
+                        own |= fm
+                selected[cid] = nums_of(reach | own) | set(unmapped)
+                verify_files.pop(cid, None)   # a failed import can leave a worker process altered
+                if cid in lazy_pending:
+                    selected[cid].update(n for n in (idx_to_num[i] for i in range(hunter.n)
+                                                     if hunter.lazy_mask >> i & 1) if n is not None)
             elif cid in lazy_pending and selected.get(cid) is not None:
                 if lazy_seen.get(cid) is True:
                     log(cid, "probe: fresh `import sqlglot` still creates one dialect class")

@@ -50,7 +50,7 @@ widens to a safe superset whenever that reasoning runs out.
 | Edit lands in | Tests selected |
 | --- | --- |
 | a statement inside a function | tests that ran it (compound statements: the header) |
-| a lambda | tests that ran the lambda |
+| a lambda | tests that ran the lambda; on the lambda's **first line**, what encloses it decides (the statement holding the dict entry, or the function creating the lambda): a call of a lambda reports no `sys.monitoring` line event for that line, so its coverage only names whoever created the lambda (for `FUNCTIONS`/`TRANSFORMS` entries, the import) |
 | a signature, decorator or new line in a function | tests that ran the function |
 | the value of an existing entry of a literal dict, with side-effect-free old and new values (constants, names, attribute chains, lambdas, closure-factory calls) | tests the profile saw reading that entry (plus unobserved tests); the import is probed only when building the new value could raise (a name or attribute), since a trusted entry is read by nothing while modules import |
 | a file whose AST is unchanged (comments, layout, quoting, literal spelling `0x10`/`16`, parentheses, line breaks) | nothing: Python compiles the same program |
@@ -59,6 +59,8 @@ widens to a safe superset whenever that reasoning runs out.
 | `import os as _fresh` at module level, of a module every interpreter has loaded at start-up | nothing: a `sys.modules` hit binds a name nobody reads |
 | a `from X import *` line (added, removed, changed) | every test: it re-exports an open set of names looked up at run time (`exp.Properties`) |
 | any other class attribute / module constant / import | tests reading the names it binds that created the class (or a subclass/dialect), following import-time derivations; the import is probed unless the old and new values are constants, nothing that runs while modules import reads the name, and the class is a plain Dialect/Parser/Generator/Tokenizer-family class (no Enum, NamedTuple, TypedDict, dataclass or decorator processing its body) |
+| … and it is a plain `NAME = value` in a sqlglot module whose old and new values build without side effects | as above, but a test that only *ran* the statement because its process imported the module during the test is not counted: pool workers (TPC-DS/TPC-H execution, optimizer fixture checks) import Hive, Presto, Trino, MySQL and Athena on the fly through `pushdown_predicates`, so coverage shows them running every class attribute there. Whoever ran a lambda-body line inside the statement stays |
+| a removed one-line module-level import in a sqlglot module, of the standard library or of a module `import sqlglot` loads anyway, when no name it bound is bound elsewhere in the module, no other file takes the names from it (`from M import name`, `M.name`, `from M import *`) and nothing scans its namespace (`subclasses(__name__, …)`, `getmembers`, `vars`, `dir`, `globals`) | tests that ran a line of that module reading one of the names (plus readers of annotations through `get_type_hints`/`get_annotations`); the import is probed, since a read while the module imports fails the import |
 | `is` ↔ `==` / `is not` ↔ `!=` only | tests with an operand fact the swap would change, tests that ran the line but were never seen evaluating it (except, when the comparison follows the first operand of an `and`/`or` chain, tests that short-circuited before it), and unobserved tests that ran it; without profile evidence for that exact comparison, line coverage |
 | a fixture file | tests that opened it |
 | comments, blank lines (outside strings, file still compiles to the same text) | nothing |
@@ -78,8 +80,19 @@ widens to a safe superset whenever that reasoning runs out.
   `pyproject.toml` counts only through its validity and its `tool.pytest` table.
 - **Import probe**: when import-time code changed, one fresh interpreter (`-I -S`) imports
   *every* sqlglot module with the *combined* patch served from memory through a meta-path finder
-  (no overlay directory or symlinks; deleted modules raise). Any failure, a timeout, a probe that
-  did not load the patched source, or a probe that could not start means: run every test.
+  (no overlay directory or symlinks; deleted modules raise). A timeout, a probe that did not load
+  the patched source, a probe that could not start, or a failing `import sqlglot` means: run every
+  test. When other modules fail to import (the probe lists every one, including those failing only
+  because they import a failing one), the selection is the tests that can reach them: tests that
+  ran their code, imported them while running or created their classes or their dialect's
+  (dialect, parser, generator, tokenizer and typing modules of one name go together); tests that
+  execute an import statement naming them (module level in a test module or helper: its whole file
+  and its importers; inside a function: whoever ran it; `if TYPE_CHECKING:` blocks ignored;
+  `from sqlglot.dialects import Name` and the `sqlglot.optimizer` lazy table resolved to the module
+  they load); and tests that load dialects in bulk (`Dialect.classes`, loops over every dialect:
+  those that ran the registry's on-demand loader or created classes of at least 80 % of the
+  dialects). A failing module never runs, so its own edits add nothing more; edits in other
+  patched files keep their selections. The verifier is not used on such commits.
   The probe imports `sqlglot` first and replays `test_lazy_load`'s assertions: a fresh
   `import sqlglot` creates exactly one dialect class, and `print('Success')` then reaches stdout
   (printed through the probe's own, possibly patched, `print` and `stdout`; the bytes up to a raw
@@ -135,19 +148,24 @@ See [RESULTS.md](RESULTS.md) for every number and how it was produced. Simulated
 official scorer. The public sample was also run in the real linux/amd64 image under the official
 limits; the other sets were measured with the Windows emulation of that image.
 
-| set | baseline+probes (`3fd38f7`, Windows copy-based probes) | frozen (`c8a81ea`) | rev3 (`fcc7d3a`) | this version |
-| --- | --- | --- | --- | --- |
-| public sample (30, oracle 94.351) | 121.100 / 0 | 109.549 / 0 | 118.245 / 0 | 97.076 / 0 |
-| holdout 1 (66, independent labels) | 1795.553 / 4 | 701.636 / 0 | 776.358 / 0 | 654.997 / 0 |
-| holdout 2 unique (61) | 824.964 / 1 | 885.072 / 1 | 693.460 / 0 | 534.169 / 0 |
-| validation (27, aimed at rev3's two fixes) | 3349.836 / 11 | 3349.836 / 11 | 868.992 / 0 | 867.704 / 0 |
-| same-program edits (10, hand-built rule demos: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
-| unread additions (5, hand-built rule demos: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
-| independent holdout (66, seed 8675309, labelled after freeze) | - | - | 670.708 / 0 | 571.500 / 0 |
-| independent holdout (65, seed 271828, frozen merged artifact) | - | - | 619.830 / 0 | 491.085 / 0 |
+| set | rev3 (`fcc7d3a`) | main (`08aeb05`, #6 + #7) | this version |
+| --- | --- | --- | --- |
+| public sample (30, oracle 94.351) | 118.245 / 0 | 97.076 / 0 | 97.076 / 0 |
+| holdout 1 (66, independent labels) | 776.358 / 0 | 618.608 / 0 | 551.231 / 0 |
+| holdout 2 (65) | 741.078 / 0 | 545.397 / 0 | 464.316 / 0 |
+| holdout 2 unique (61) | 693.460 / 0 | 534.169 / 0 | 453.088 / 0 |
+| validation (27, aimed at rev3's two fixes) | 868.992 / 0 | 867.704 / 0 | 858.341 / 0 |
+| same-program edits (10, hand-built rule demos) | 266.486 / 0 | 0.000 / 0 | 0.000 / 0 |
+| unread additions (5, hand-built rule demos) | 130.542 / 0 | 0.000 / 0 | 0.000 / 0 |
+| independent holdout (65, seed 271828, labelled after freeze) | 619.830 / 0 | 491.085 / 0 | 434.951 / 0 |
+| independent holdout (66, seed 314159, labelled after freeze) | 644.613 / 0 | 501.325 / 0 | 465.185 / 0 |
+| one-line lambda edits (30, structure-chosen, labelled after freeze) | - | **8656.711 / 28** | 520.328 / 0 |
+| import failures (30, structure-chosen, labelled after freeze) | - | 1104.510 / 0 | 546.717 / 0 |
+| removed import lines (30, structure-chosen, labelled after freeze) | - | 1019.419 / 0 | 341.554 / 0 |
+| class attributes of lazily imported dialects (30, structure-chosen) | - | 764.184 / 0 | 292.756 / 0 |
 
-A third, pre-merge holdout (seed 42424242) scored 799.615 → 610.261 s with 0 misses; see
-[RESULTS.md](RESULTS.md).
+The reviewer's holdouts (seeds 8675309 and 42424242) scored 571.500 and 610.261 s with 0 misses
+before #7 and were not rerun here; see [RESULTS.md](RESULTS.md).
 
 The two hand-built sets were constructed to contain the edit categories the new rules excuse. They
 show the rules fire, but they are **not held-out evidence**; the independent check is the fresh-
