@@ -712,6 +712,21 @@ class DictEntries(Base):
         self.assertNotEqual(m, DATA["subproc"])
 
 
+class ImportTimeDerivedAttributes(Base):
+    """A class attribute read while classes are created ends up in derived attributes that run-time
+    code reads under other names: the MySQL tokenizer's COMMENTS becomes _COMMENTS. Every user of
+    the tokenizer can tell (found by a structure-chosen validation patch: 3 failing tests)."""
+
+    def test_tokenizer_comments_edit_keeps_its_users(self):
+        rel = "sqlglot/dialects/mysql.py"
+        old = '        COMMENTS = ["--", "#", ("/*", "*/")]' + "\n"
+        m, _ = self.mask(edit(rel, old, old.replace('("/*", "*/")', '("/X", "*/")')))
+        for t in ("tests/dialects/test_mysql.py::TestMySQL::test_ddl",
+                  "tests/test_transpile.py::TestTranspile::test_comments",
+                  "tests/dialects/test_dialect.py::TestDialect::test_table_query"):
+            self.assertTrue(m >> DATA["tests"].index(t) & 1, t)
+
+
 class ImportOnlyRuns(Base):
     """Import-only coverage must not select readers. Main's original map attributed Hive's
     import-time lines to TPC-DS's pool; R2's rebuilt map credits the child prewarm instead, so

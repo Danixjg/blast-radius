@@ -45,7 +45,9 @@ PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 IMPORT_SITE_INDEX = Path(os.environ.get("BR_IMPORT_SITE_INDEX", HERE / "import-sites.json"))
 IMPORT_SITE_INDEX_VERSION = 2
 # R5/R6 ported from targeted-probes
-INST_NARROW = os.environ.get("BR_INST_NARROW", "1") == "1"
+# off: an attribute read while classes are created (Tokenizer COMMENTS -> _COMMENTS, QUOTES, KEYWORDS)
+# is read at run time under derived names, so "readers that also instantiated" misses its users
+INST_NARROW = os.environ.get("BR_INST_NARROW", "0") == "1"
 GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
 GENMEM_NUM = 1224
 GENMEM_MAX_SELECTED = 500
