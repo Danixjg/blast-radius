@@ -237,6 +237,10 @@ class ParityTool(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import importlib.util
+        try:
+            import resource  # noqa: F401
+        except ImportError:   # Windows: the tool measures CPU with the POSIX resource module
+            raise unittest.SkipTest("probe_parity.py needs the POSIX resource module")
         spec = importlib.util.spec_from_file_location("probe_parity", R / "build" / "probe_parity.py")
         cls.tool = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.tool)

@@ -1,0 +1,10 @@
+# Installed into the image for the selector's verifier (see VERIFY in selector.py): the labelling
+# environment's exact versions (kit/requirements.lock) of the pure-Python packages that sqlglot
+# imports at run time (dateutil in optimizer/simplify.py, mypy_extensions in helper.py) or that
+# verifiable test modules import (pytz), so tests run here take the same code paths. Wheels only,
+# each pinned by its PyPI sha256; the verifier refuses to run unless exactly these are importable.
+python-dateutil==4.0.0 --hash=sha256:a5e246f79eb80475e691bf93862cead98decd8a498cf53ba0516fcdc0f50dc1c
+tzdata==2026.6 --hash=sha256:0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec
+pytz==2026.6 --hash=sha256:7fed3fee8fd6bd4a2b7b75a8d56021d0624127bf69bd5691f115db929ac570b3
+mypy-extensions==1.2.0 --hash=sha256:993e7a20aa5671eb41a7132cf555af30062da99729601601b9a8382b11cae768
+typing-extensions==4.16.0 --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8

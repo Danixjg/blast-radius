@@ -167,6 +167,19 @@ class UnobservableConsumers(unittest.TestCase):
         data, report = self._build(same, same)
         self.assertEqual(data["unobserved"], 0)
 
+    def test_divergence_superset_path_stays_observed(self):
+        """Instrumented run executed every plain line plus more (a pool worker that happened to
+        build a cache during this test): its records cover the plain path, so it is observed. The
+        divergence is still reported."""
+        same = {"tests/test_a.py::A::test_reads": {("sqlglot/x.py", 1)}, "tests/test_a.py::A::test_other": {("sqlglot/x.py", 1)}}
+        more = dict(same, **{"tests/test_a.py::A::test_other": {("sqlglot/x.py", 1), ("sqlglot/x.py", 9)}})
+        data, report = self._build(same, more)
+        self.assertEqual(data["unobserved"], 0)
+        self.assertIn("tests/test_a.py::A::test_other", report)
+        swapped = dict(same, **{"tests/test_a.py::A::test_other": {("sqlglot/x.py", 9)}})
+        data, _ = self._build(same, swapped)
+        self.assertEqual(data["unobserved"], 0b10, "a plain line the instrumented run missed")
+
     def test_divergence_ignores_import_time_lines_only(self):
         """A module body imported by a different task (pool scheduling) is not a changed path;
         a different run-time line still is."""

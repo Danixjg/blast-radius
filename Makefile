@@ -55,7 +55,7 @@ local: kit checkout
 	$(PY) build/bench.py run $(WORK)/apps/candidate $(SAMPLE) $(SAMPLE)/answers.json --runs 3 --label candidate --out $(WORK)/bench
 
 test: checkout venv
-	$(PY) -m unittest build/test_selector.py build/test_profiler.py -v
+	$(PY) -m unittest discover -s build -p 'test_*.py' -v
 	$(PY) -m unittest discover -s tests -v
 
 # Rebuild map.pkl / profile.pkl. Every coverage pass must exit 0 with every catalogued test

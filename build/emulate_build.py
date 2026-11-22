@@ -68,6 +68,9 @@ def main():
         elif op == "RUN":
             cmd = re.sub(r"(?<![\w.])(/(?:app|tmp)\b[^\s'\",)]*)", lambda m: host(m.group(1)).replace("\\", "/"), rest)
             cmd = re.sub(r"(^|&&\s*)python\b", lambda m: m.group(1) + py.replace("\\", "/"), cmd)
+            # pip installs into the image's site-packages; here into a scratch target instead, so the
+            # host interpreter is untouched while download and hash checks still run
+            cmd = cmd.replace("-m pip install", "-m pip install --target " + (str(fs) + "/site-packages").replace("\\", "/"))
             print("RUN", cmd[:160], "...")
             subprocess.run(["bash", "-ec", cmd], check=True)
     secs = time.monotonic() - t0

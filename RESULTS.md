@@ -1,12 +1,171 @@
 # Results
 
-Every number below was measured on **Windows 11** (no Docker or Linux runner was available; see
-"Not verified"). Runs use `build/bench.py`/`build/compare.py`: the selector runs from an `/app`
+Simulated numbers were measured on **Windows 11** and are exact; the public sample of this round was
+also run in the real linux/amd64 Docker image under the official limits (see below). Windows runs use
+`build/bench.py`/`build/compare.py`: the selector runs from an `/app`
 laid out like the image (for rev2/rev3 the `/app` produced by running the Dockerfile's own
 COPY/RUN chain, `build/emulate_build.py --worktree`), in a fresh empty temp dir with a clean
 environment, three runs per (version, set). Each run's stdout is scored by the kit's own
 `score.py`. CPU is user+system time of the whole process tree (Job Object accounting, including
 exited probe processes). "Total" is simulated + CPU of the middle run, as the board computes it.
+
+## This round: selection cost (`fcc7d3a` → this version)
+
+Changes, each in [README.md](README.md): the import probe decides `test_lazy_load`; the
+profile's "unobserved" rule only flags tests whose instrumented run missed plain lines
+(`profile.pkl` re-merged from the saved coverage passes: identical apart from `unobserved`, now
+empty); a verifier runs small, stdlib-only selections on the patched source and drops tests that
+pass; AST-equal edits, docstring/postponed-annotation/`TYPE_CHECKING`-only edits, whole new
+functions under fresh names and `import <start-up module> as <fresh name>` select nothing; dict
+edits whose new values cannot raise skip the probe; the root `pyproject.toml` counts only through
+its validity and `tool.pytest` table; a renamed or new test module importing a module collection
+imports anyway no longer selects everything.
+
+Simulated seconds / misses (official scorer; selection is deterministic, so one run per set):
+
+| set | rev3 (`fcc7d3a`) | this version | oracle |
+| --- | --- | --- | --- |
+| public sample (30) | 118.245 / 0 | 97.076 / 0 | 94.351 |
+| holdout 1 (66) | 776.358 / 0 | 654.997 / 0 | 309.807 |
+| holdout 2 (65) | 741.078 / 0 | 545.397 / 0 | 234.161 |
+| holdout 2 unique (61) | 693.460 / 0 | 534.169 / 0 | 222.933 |
+| validation 3 (27) | 868.992 / 0 | 867.704 / 0 | 365.754 |
+| feature (4) | 18.411 / 0 | 4.007 / 0 | 4.007 |
+| fresh (6, labelled earlier, never used for tuning) | 100.086 / 0 | 99.718 / 0 | 64.381 |
+| same-program edits (10, hand-built rule demos) | 266.486 / 0 | 0.000 / 0 | 0.000 |
+| unread additions (5, hand-built rule demos) | 130.542 / 0 | 0.000 / 0 | 0.000 |
+| **all** | **3713.658** / 0 | **2803.068** / 0 | |
+
+The two hand-built sets are **rule demonstrations, not held-out evidence**: their patches were
+written to contain exactly the edit categories the new rules excuse, then labelled with no failures.
+Zero seconds on them shows the rules fire, not that they generalize. The independent check is a
+fresh-seed holdout generated and labelled only after the selector and profile were frozen; see the
+next section. Both demo sets were labelled like the holdouts (`build/label.py`, whole suite, 4
+workers, capped pools; a pristine run first): every patch `complete` with zero failures.
+Same-program:
+in-line spacing, parentheses and line splits (`helper.ensure_list`), `0x0`/`0b0`/`0o1` spellings
+(`tokenizer_core`), quote style (Snowflake `STRING_ESCAPES`), a function and a class docstring
+(the latter read by `expressions/core.py` at class creation), a return annotation
+(`parser._parse_statement`), a `TYPE_CHECKING` import, a module variable annotation, a comment and
+reformatting inside a test. Unread additions: a new annotated function (`helper`), a new async
+function (`parser`), argument annotations (`generator.sql`), a `TYPE_CHECKING` import
+(`expressions/core`), `pyproject.toml` `line-length`.
+
+Public sample with CPU (Windows, `build/bench.py`, whole process tree, 3 runs each): rev3 median
+total 120.5 s (CPU 2.2 s), this version 100.4 s (CPU 3.3 s: 5 verifier runs of about 0.4 s
+each; 2 probes instead of 4). In the real Docker image (`make sample`, then `make measure` with three
+fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 2.00, 2.02 and
+1.99 s across the three runs (median total 99.08 s) after the merge with PR #5. Before that merge
+the same sample scored 97.076 s / 0 misses with median total 99.75 s. The simulated reduction is confirmed under the
+official limits; the CPU figure is the container's, not a Windows process-tree estimate. An earlier
+measurement of 3.45/3.75/2.98 s was taken while the independent holdout was being labelled on the
+same machine and is not comparable.
+
+**Verifier fidelity.** For every labelled patch that only edits existing sqlglot modules, all
+verifiable selected tests plus all verifiable labelled failures were run by the verifier (no cost
+policy) and compared with the labels: sample 20 agreeing failures / 21 agreeing passes, holdout 1
+1148 / 1438, holdout 2 165 / 806, validation 3 1046 / 32, feature 2 / 1, fresh 177 / 55, with
+**0 false passes and 0 false failures**. Two environment gaps found on the way are closed: without
+`dateutil` sqlglot's simplifier stops folding date arithmetic (a pristine Postgres test failed),
+and `test_generator_memory` (tracemalloc counts pytest-xdist's I/O thread) fails in labels whenever
+many tests fail, which an isolated run cannot reproduce; it is never verified.
+
+## Independent holdout (frozen artifact)
+
+To check that the gains above are not fitted to the sets used while writing the rules, the selector
+and profile were frozen first: `selector.py` SHA-256
+`068f644a9f0302aef1d59eb555fafd6a8e2c00327ca02006ba98404e9a3c5b3e` at the time of generation,
+and `profile.pkl` SHA-256
+`d306c5b42d9767fbef629f12dbb1922c030dec4b7dde75b2154d961ba120967b`. An adversarial test later
+found a false negative in the lazy-test rule (below); the one-line fix changed the selector to
+`9a95adfba9c68605ccb940f3a8ff749d32800098fb25a96ea5af3836124d2d72`. The fix came from that test,
+not from holdout results, and both holdouts were re-scored with the corrected selector.
+`build/holdout.py --seed 8675309 --n 66` then generated 66 patches (a seed
+used by neither the earlier holdouts nor the parity sets); `build/label.py` ran the full suite on a
+pristine worktree with 4 workers: pristine `complete` with 0 failures, all 66 labels `complete`,
+43 breaking. The selector's output was scored against those labels by the kit's `score.py`:
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 670.708 | 0 |
+| this version (frozen) | 571.500 | 0 |
+
+So the independent set shows a 14.8 % reduction with no misses, rather than the near-zero change on
+the small earlier "fresh" set. A temporary merge with PR #5 was measured and discarded: it scored
+574.340 s with 0 misses here, 2.84 s worse, because a forked probe cannot report the
+`test_lazy_load` observation and keeps that test. On the public sample the two were tied in Docker
+(97.076 s / 0 misses; median totals 99.18 s and 99.23 s).
+
+PR #5 has since been merged into `main`, and this branch now merges `main` with that cause
+removed. A probe the server serves starts from a checkpoint whose recorded modules its patch does
+not touch, so the patched `import sqlglot` behaves exactly as the pristine one and
+`test_lazy_load`'s verdict is the pristine pass. Only fresh probes, which import `sqlglot`
+themselves, replay the assertion. On Windows (no fork, so no server) selections are byte-identical
+to the pre-merge branch on all eight labelled sets. The merged version has not been re-measured in
+Docker or on the independent holdout; the server path needs Linux.
+
+## Second independent holdout (frozen merged artifact)
+
+The merged branch was frozen before this set existed: commit `a654094`, `selector.py` SHA-256
+`9134f268071812b95436ab2d818d06b6aef769fae9faad4d8b6a507e7725d902`, `profile.pkl`
+`d306c5b42d9767fbef629f12dbb1922c030dec4b7dde75b2154d961ba120967b`. Then
+`build/holdout.py --seed 271828 --n 66` generated 66 patches with a seed used by no earlier set.
+`build/label.py` ran the full suite per patch, on Windows with 4 workers. The pristine run was
+`complete` with 0 failures. 65 patches were `complete` (37 breaking). One generated patch was
+corrupt; `git apply` refused it, so it is left out. Scored by the kit's `score.py`:
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 619.830 | 0 |
+| this branch (frozen `a654094`) | 491.085 | 0 |
+
+That is a 20.8 % reduction with no misses. The oracle (only the failing tests, packed) is 269.140 s.
+
+Most of the remaining 221.9 s is structural:
+
+- three import failures (a missing module, two removed imports) that the probe turns into
+  "run everything" (62.8 s over the oracle);
+- `is`/`==` swaps and code edits whose selection includes the 21 s `test_execute_tpcds`;
+- class-attribute string edits read by many tests.
+
+### Additional pre-merge holdout (seed 42424242)
+
+A third set was generated from the pre-merge frozen selector
+(`9a95adfba9c68605ccb940f3a8ff749d32800098fb25a96ea5af3836124d2d72`, same profile hash). It is
+not the shipping artifact — PR #5 was merged afterwards — but it is a further check that the gains
+are not seed-specific. 66 patches, 40 breaking, pristine `complete` with 0 failures, all 66 labels
+`complete`:
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 799.615 | 0 |
+| pre-merge version | 610.261 | 0 |
+
+## Adversarial checks
+
+Targeted tests were added for the three rules most likely to be overfitted:
+
+- **AST-equal shortcuts.** When a test reads `__doc__`, `__annotations__` or calls
+  `get_type_hints`, a docstring/annotation change still selects it; existing cases cover eager
+  annotations, class-level annotations, decorators, `TYPE_CHECKING` switches, shadowed builtins and
+  side-effecting defaults.
+- **Lazy-test rule.** A probe that only counted dialect classes was a false negative: appending
+  `builtins.print = lambda *a, **k: None` to `sqlglot/__init__.py` keeps one class but makes the
+  test's `assert "Success" in stdout` fail. The probe now replays that output assertion too. With
+  the fix, the patch selects the test; before the fix it selected nothing. This is the one change to
+  `selector.py` after the first holdout was generated. In the merge with `main` the replay goes
+  further: `Success` is printed through the probe's own (possibly patched) `print` and `stdout`, the
+  end of that output is marked on fd 1 with a raw write, and the parent applies the test's stdout
+  assertion to the bytes before the marker, decoded strictly as UTF-8 like the test's text-mode
+  capture. Replaying `print` into a swapped-in buffer would miss a patch that redirects
+  `sys.stdout` at import, or one that writes undecodable bytes; both now keep the test.
+- **`unobserved` narrowing.** `test_profiler.py` checks that a plain-only run-time line marks a test
+  unobserved, and that a superset instrumented path stays observed while still being reported as a
+  divergence. The profile tracks value provenance, so equal line sets are not proof of equal value
+  reads; this remains a documented limitation rather than a validated guarantee.
+
+After the fix, the first holdout still scores 571.500 s / 0 misses and the public sample still
+scores 97.076 s / 0 misses in Docker (median total 99.08 s after the PR #5 merge).
 
 ## Versions
 
@@ -173,7 +332,13 @@ unobserved tests`. Committed tree about 1.8 MB.
 
 ## Not verified
 
-No Docker or WSL was available, so none of these ran: `docker build` of this repository, the
-official-limits container runs (`--cpus 2 --memory 4096m --read-only --network none
---user 65534`, `/tmp` 64 MB), the container's cgroup CPU (`make measure`), timings on linux/amd64.
-All CPU numbers are Windows process-tree CPU; the scorer's Linux CPU will differ.
+Verified in Docker for this version: `docker build`, `make sample` (official limits: `--cpus 2
+--memory 4096m --read-only --network none --user 65534`, `/tmp` 64 MB, 256 pids) and `make measure`
+(three fresh containers, cgroup CPU), including the verifier's runs as `nobody` with the hash-pinned
+site-packages installed by the Dockerfile. The simulated score is 97.076 s / 0 misses and the median
+total is 99.18 s; the verifier did run inside the image (five test batches on the sample).
+
+Still emulated rather than run in Docker: the holdouts, validation, feature and demo sets, and the
+Windows comparison versions. Their CPU figures are Windows process-tree CPU and are not comparable
+to the container's cgroup CPU. If the image's packages ever differ from the pinned versions, the
+verifier refuses to run (version check) and selections stand.
