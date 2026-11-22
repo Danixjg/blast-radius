@@ -154,6 +154,68 @@ def parse_sql_fixture_pairs(text):
     return out
 
 
+# Standard-library modules whose import is a plain binding (no output, no interpreter or compiler
+# state changes); R3 reasons about names they bind. __future__ changes how the module compiles.
+IMPORT_SIDE_EFFECTS = frozenset(("__future__", "__main__", "this", "antigravity", "readline", "rlcompleter",
+                                 "site", "sitecustomize", "usercustomize", "builtins"))
+REFLECTION_CALLS = frozenset(("getattr", "setattr", "hasattr", "delattr", "vars", "dir", "getmembers", "reload"))
+
+
+def import_bindings(tree):
+    """name -> [binding] for every module-level statement of tree: ("import", dotted, aliased),
+    ("from", module, level, attr) for import statements, ("other",) for any other binding."""
+    out = {}
+    for st in tree.body:
+        if isinstance(st, ast.Import):
+            for a in st.names:
+                out.setdefault(a.asname or a.name.split(".")[0], []).append(("import", a.name, a.asname is not None))
+        elif isinstance(st, ast.ImportFrom):
+            for a in st.names:
+                out.setdefault(a.asname or a.name, []).append(("from", st.module or "", st.level, a.name))
+        else:
+            for n in assigned_names(st):
+                out.setdefault(n, []).append(("other",))
+    return out
+
+
+def runtime_name_reads(tree, names):
+    """(lines, at_import): lines inside function or lambda bodies that load one of names, and
+    whether any reference to them runs while the module imports (module level, class bodies,
+    decorators, defaults, annotations) or is declared global/nonlocal."""
+    lines, at_import = set(), False
+
+    def visit(node, in_func):
+        nonlocal at_import
+        if isinstance(node, (ast.Global, ast.Nonlocal)) and names & set(node.names):
+            at_import = True
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            for child in ast.iter_child_nodes(node):
+                inside = child in getattr(node, "body", []) if isinstance(node.body, list) else child is node.body
+                visit(child, True if inside else in_func)
+            return
+        if isinstance(node, ast.Name) and node.id in names:
+            if in_func:
+                lines.add(node.lineno)
+            else:
+                at_import = True
+        for child in ast.iter_child_nodes(node):
+            visit(child, in_func)
+
+    visit(tree, False)
+    return lines, at_import
+
+
+def dotted(node):
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return ".".join(reversed(parts))
+    return None
+
+
 def module_of(rel):
     m = rel[:-3].replace("/", ".")
     return m[:-9] if m.endswith(".__init__") else m
@@ -1037,12 +1099,124 @@ class Hunter:
                 got = self.dict_entry_mask(rel, site, otree, ntree)
                 if got is not None:
                     return got
+            if isinstance(st, (ast.Import, ast.ImportFrom)) and ntree is not None:
+                got = self.import_binding_mask(rel, st, otree, ntree)
+                if got is not None:
+                    return got
             before = self.import_time
             got = self.resolve_stmt(rel, site.cls_path, assigned_names(st), site.span, is_docstring(st), visited)
             if ntree is not None and self.quiet_constant_edit(rel, site.cls_path, st, otree, ntree):
                 self.import_time = before   # importing behaves exactly as before: nothing to probe
             return got
         return 0
+
+    def py_files(self):
+        """Every .py file under sqlglot/ and tests/ in SRC (what the image ships), cached."""
+        if getattr(self, "_py_files", None) is None:
+            out = []
+            for top in ("sqlglot", "tests"):
+                for dirpath, dirnames, fnames in os.walk(SRC / top):
+                    dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
+                    out += [os.path.relpath(os.path.join(dirpath, f), SRC).replace(os.sep, "/")
+                            for f in sorted(fnames) if f.endswith(".py")]
+            self._py_files = out
+        return self._py_files
+
+    def import_binding_mask(self, rel, st, otree, ntree):
+        """R3. A module-level import of standard-library modules only binds names in this module's
+        globals. When every binding the patch adds, removes or changes is such a name, nothing reads
+        it while the module imports, and no other file can reach it through this module, the tests
+        affected are those that ran a line of this module reading it inside a function. None when
+        any condition fails (the caller falls back to the name-wide rule)."""
+        if ntree is None or not any(st is s for s in otree.body):
+            return None
+        ob, nb = import_bindings(otree), import_bindings(ntree)
+        changed = {n for n in set(ob) | set(nb) if ob.get(n) != nb.get(n)}
+        if not changed:
+            return 0
+        for n in changed:
+            bs = ob.get(n, []) + nb.get(n, [])
+            if len(ob.get(n, [])) > 1 or len(nb.get(n, [])) > 1:
+                return None
+            for b in bs:
+                if b[0] == "other" or (b[0] == "from" and b[2]):
+                    return None
+                top = b[1].split(".")[0]
+                if top not in sys.stdlib_module_names or top in IMPORT_SIDE_EFFECTS:
+                    return None
+        src = self.source(rel) or ""
+        if any(w in src for w in ("globals(", "vars(", "__dict__", "__all__", "__getattr__")):
+            return None
+        lines, at_import = runtime_name_reads(otree, changed)
+        if at_import:
+            return None
+        if self.name_reached_from_outside(rel, changed):
+            return None
+        m = 0
+        for ln in lines:
+            m |= self.span_mask(rel, ln, ln)
+        if any(n in nb for n in changed):
+            self.import_time = True
+            self.need_probe = True   # a new binding may fail to import
+        log(rel, f"import names {sorted(changed)}: {len(lines)} reading line(s) in this module")
+        return m
+
+    def name_reached_from_outside(self, rel, names):
+        """Another sqlglot/tests file may reach names through this module: imports them from it
+        (or star-imports it), reads them as attributes of it, names them in a string
+        (mock.patch targets), or inspects the module object reflectively."""
+        mod = module_of(rel)
+        leaf = mod.rsplit(".", 1)[-1]
+        word = re.compile(r"\b%s\b" % re.escape(leaf))
+        # a file can only reach the names by spelling one of them, star-importing, or reflecting
+        reach = re.compile(r"\b(?:%s)\b|import \*|__dict__|\b(?:%s)\(" % (
+            "|".join(map(re.escape, sorted(names))), "|".join(sorted(REFLECTION_CALLS))))
+        for f in self.py_files():
+            if f == rel:
+                continue
+            text = self.source(f)
+            if not text or not word.search(text) or not reach.search(text):
+                continue
+            try:
+                tree = ast.parse(text)
+            except (SyntaxError, ValueError, RecursionError, MemoryError):
+                return True
+            package = module_of(f).split(".")[:-1] if not f.endswith("/__init__.py") else module_of(f).split(".")
+            aliases = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    if node.level:
+                        if node.level > len(package):
+                            continue
+                        base = package[:len(package) - node.level + 1]
+                        src_mod = ".".join(base + ([node.module] if node.module else []))
+                    else:
+                        src_mod = node.module or ""
+                    for a in node.names:
+                        if src_mod == mod and (a.name == "*" or a.name in names):
+                            return True
+                        if f"{src_mod}.{a.name}" == mod:
+                            aliases.add(a.asname or a.name)
+                elif isinstance(node, ast.Import):
+                    for a in node.names:
+                        if a.name == mod and a.asname:
+                            aliases.add(a.asname)   # plain `import a.b.mod` is reached as a dotted chain
+                elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    if node.value == mod or any(f"{mod}.{n}" in node.value for n in names):
+                        return True
+            def is_module(expr):
+                d = dotted(expr)
+                return d is not None and (d == mod or d in aliases or mod.endswith("." + d))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Attribute):
+                    if (node.attr in names or node.attr == "__dict__") and is_module(node.value):
+                        return True
+                elif isinstance(node, ast.Call) and node.args:
+                    fn = node.func.id if isinstance(node.func, ast.Name) else \
+                        node.func.attr if isinstance(node.func, ast.Attribute) else None
+                    if fn in REFLECTION_CALLS and is_module(node.args[0]):
+                        return True
+        return False
 
     SAFE_BASE_SUFFIXES = ("Dialect", "Parser", "Generator", "Tokenizer")
 

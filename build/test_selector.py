@@ -663,6 +663,59 @@ class PairFixtures(Base):
         self.assertFalse(m & self.bit(self.EX + "test_execute_tpch"))
 
 
+class ImportNames(Base):
+    """R3: a module-level import of a standard-library module binds names only this module's
+    global namespace holds. Removing or changing it reaches the tests that ran a line of this module
+    reading the name inside a function; anything else falls back to the name-wide rule."""
+    TSQL = "sqlglot/generators/tsql.py"
+    LINE = "from functools import reduce\n"
+
+    def readers(self):
+        src = read(self.TSQL).splitlines()
+        lines = [i for i, ln in enumerate(src, 1) if "reduce(" in ln]
+        self.assertEqual(len(lines), 1)
+        return self.h.span_mask(self.TSQL, lines[0], lines[0])
+
+    def test_removed_stdlib_import_reaches_only_its_readers(self):
+        m, probe = self.mask(edit(self.TSQL, self.LINE, ""))
+        self.assertEqual(m, self.readers())
+        self.assertTrue(m)
+        self.assertIsNone(probe, "removing a binding cannot make the import fail")
+
+    def test_changed_stdlib_import_reaches_its_readers_and_is_probed(self):
+        m, probe = self.mask(edit(self.TSQL, self.LINE, "from operator import add as reduce\n"))
+        self.assertEqual(m, self.readers())
+        self.assertIsNotNone(probe, "a new binding may fail to import")
+
+    def test_name_read_while_importing_falls_back(self):
+        rel = "sqlglot/generators/hive.py"
+        src = read(rel)
+        self.assertIn("\nimport re\n", src)
+        m, _ = self.mask(diff(rel, src, src.replace("\nimport re\n", "\n", 1)))
+        self.assertGreater(bin(m).count("1"), bin(self.h.file_mask(rel)).count("1") // 2)
+
+    def test_non_stdlib_import_falls_back(self):
+        old = "from sqlglot import exp, generator, transforms\n"
+        m, _ = self.mask(edit(self.TSQL, old, "from sqlglot import exp, generator\n"))
+        self.assertNotEqual(m, 0)
+        self.assertNotEqual(m & ~self.readers(), 0)
+
+    def test_external_users_of_the_name_fall_back(self):
+        fake = "sqlglot/zz_user.py"
+        for text in ("from sqlglot.generators.tsql import reduce\n",
+                     "from sqlglot.generators import tsql\n\ndef f():\n    return tsql.reduce\n",
+                     "import sqlglot.generators.tsql\n\ndef f():\n    return sqlglot.generators.tsql.reduce\n",
+                     "PATCH = 'sqlglot.generators.tsql.reduce'\n",
+                     "from sqlglot.generators.tsql import *\n",
+                     "from .generators.tsql import reduce\n"):
+            h = S.Hunter(DATA)
+            src_of = h.source
+            h.source = lambda rel, _t=text, _s=src_of: _t if rel == fake else _s(rel)
+            h._py_files = h.py_files() + [fake]
+            m, _ = self.mask(edit(self.TSQL, self.LINE, ""), hunter=h)
+            self.assertNotEqual(m, self.readers(), text)
+
+
 class DictEntries(Base):
     REL = "sqlglot/parsers/singlestore.py"
     OLD = '"GROUPS FOR USER": _show_parser("GROUPS FOR USER", target=True),'
