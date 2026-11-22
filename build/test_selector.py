@@ -556,6 +556,104 @@ class ContainerNone(Base):
         self.assertIsNone(probe)
 
 
+class PairFixtures(Base):
+    """R4: tests/fixtures/optimizer/tpc-{ds,h}/tpc-*.sql are read through
+    tests/helpers.load_sql_fixture_pairs as (meta, sql, expected) entries; each opener is selected
+    only when a field it reads changes, or when the new file no longer parses."""
+    DS = "tests/fixtures/optimizer/tpc-ds/tpc-ds.sql"
+    H = "tests/fixtures/optimizer/tpc-h/tpc-h.sql"
+    EX = "tests/test_executor.py::TestExecutor::"
+    OPT = "tests/test_optimizer.py::TestOptimizer::"
+
+    def bit(self, tid):
+        return 1 << DATA["tests"].index(tid)
+
+    def executor_others(self):
+        m = 0
+        for i, t in enumerate(DATA["tests"]):
+            if t and t.startswith(self.EX) and not t.endswith(("test_execute_tpcds", "test_execute_tpch",
+                                                                "test_optimized_tpch")):
+                m |= 1 << i
+        return m
+
+    def test_parser_matches_the_helper(self):
+        sys.path.insert(0, str(SQLGLOT))
+        try:
+            import tests.helpers as th
+        finally:
+            sys.path.remove(str(SQLGLOT))
+        for rel in (self.DS, self.H):
+            name = rel[len("tests/fixtures/"):]
+            self.assertEqual(S.parse_sql_fixture_pairs(read(rel)), list(th.load_sql_fixture_pairs(name)), rel)
+        tmp = Path(tempfile.mkdtemp(prefix="br-pairs-"))
+        old_dir = th.FIXTURES_DIR
+        try:
+            th.FIXTURES_DIR = str(tmp)
+            src = read(self.DS)
+            for text in (src.replace("-- TPC-DS 2\n", "-- TPC-DS 2\nSELECT 1;\n"), src.replace("\n", "\r\n"),
+                         src + "\n#tail: x\nSELECT 2", src.replace("# execute: true\n", "# execute: true\n#broken\n")):
+                (tmp / "f.sql").write_bytes(text.encode("utf-8"))
+                try:
+                    want = list(th.load_sql_fixture_pairs("f.sql"))
+                except Exception as e:
+                    with self.assertRaises(type(e)):
+                        S.parse_sql_fixture_pairs(text)
+                    continue
+                self.assertEqual(S.parse_sql_fixture_pairs(text), want)
+        finally:
+            th.FIXTURES_DIR = old_dir
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_expected_only_edit_drops_the_executor_tests(self):
+        old = '    "store_returns"."sr_customer_sk" AS "ctr_customer_sk",'
+        m, _ = self.mask(edit(self.DS, old, old.replace('"ctr_customer_sk"', '"ctr_customer_skx"')))
+        self.assertEqual(m, self.bit(self.OPT + "test_tpcds"))
+
+    def test_sql_edit_keeps_the_executing_tests_only(self):
+        m, _ = self.mask(edit(self.DS, "AND d_year = 2001", "AND d_year = 2002"))
+        self.assertEqual(m, self.bit(self.OPT + "test_tpcds") | self.bit(self.EX + "test_execute_tpcds"))
+        self.assertEqual(m & self.executor_others(), 0)
+
+    def test_meta_edit_reaches_mp_execute(self):
+        m, _ = self.mask(edit(self.DS, "# execute: true", "# execute: false"))
+        self.assertTrue(m & self.bit(self.EX + "test_execute_tpcds"))
+
+    def test_unparseable_meta_keeps_every_opener(self):
+        # _extract_meta splits "#broken" on ":" and raises in TestExecutor.setUpClass
+        m, _ = self.mask(edit(self.DS, "# execute: true\n", "# execute: true\n#broken\n"))
+        self.assertEqual(m, DATA["opens"][self.DS])
+
+    def test_shifted_pairs_reach_every_reader(self):
+        m, _ = self.mask(edit(self.DS, "-- TPC-DS 2\n", "-- TPC-DS 2\nSELECT 1;\n"))
+        self.assertTrue(m & self.bit(self.EX + "test_execute_tpcds"))
+        self.assertTrue(m & self.bit(self.OPT + "test_tpcds"))
+
+    def test_comment_only_edit_selects_nothing(self):
+        m, _ = self.mask(edit(self.DS, "-- TPC-DS 1\n", "-- TPC-DS 1 (note)\n"))
+        self.assertEqual(m, 0)
+
+    def test_rule_is_off_when_a_described_source_changes_too(self):
+        old = '    "store_returns"."sr_customer_sk" AS "ctr_customer_sk",'
+        p = edit(self.DS, old, old.replace('"ctr_customer_sk"', '"ctr_customer_skx"')) + \
+            edit("tests/helpers.py", "def load_sql_fixture_pairs(filename):\n",
+                 "def load_sql_fixture_pairs(filename):\n    # note\n")
+        m, _ = self.mask(p)
+        self.assertTrue(m & self.bit(self.EX + "test_execute_tpcds"))
+
+    def test_tpch_expected_edit_keeps_the_tests_reading_expected(self):
+        src = read(self.H)
+        i = src.index(";\n") + 2   # start of entry 1's expected SQL
+        j = src.index("\n", i)
+        p = diff(self.H, src, src[:i] + "-- a comment line\n" + src[i:])   # filtered out: nothing changes
+        self.assertEqual(self.mask(p)[0], 0)
+        line = src[i:j]
+        p = diff(self.H, src, src[:i] + line + "  /* x */" + src[j:])
+        m, _ = self.mask(p)
+        self.assertTrue(m & self.bit(self.EX + "test_optimized_tpch"))
+        self.assertTrue(m & self.bit(self.OPT + "test_tpch"))
+        self.assertFalse(m & self.bit(self.EX + "test_execute_tpch"))
+
+
 class DictEntries(Base):
     REL = "sqlglot/parsers/singlestore.py"
     OLD = '"GROUPS FOR USER": _show_parser("GROUPS FOR USER", target=True),'

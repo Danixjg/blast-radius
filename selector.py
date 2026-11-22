@@ -115,6 +115,45 @@ PYTEST_FIXTURES = frozenset((
 ))
 
 
+# Fixture files whose only readers parse them with tests/helpers.load_sql_fixture_pairs into
+# (meta, sql, expected) entries, and the fields each reader uses (at the pin: the executor's
+# setUpClass parses both files for every TestExecutor test; test_execute_* pass meta and sql to
+# the engine; test_optimized_tpch compares sql with expected; check_file reads all three). A
+# reader not listed here keeps the plain "opened the file" rule. The rule is off whenever the patch
+# also edits a file this table describes.
+PAIR_FIXTURES = {
+    "tests/fixtures/optimizer/tpc-ds/tpc-ds.sql": {
+        "tests/test_executor.py::TestExecutor::test_execute_tpcds": ("meta", "sql"),
+        "tests/test_optimizer.py::TestOptimizer::test_tpcds": ("meta", "sql", "expected"),
+    },
+    "tests/fixtures/optimizer/tpc-h/tpc-h.sql": {
+        "tests/test_executor.py::TestExecutor::test_execute_tpch": ("meta", "sql"),
+        "tests/test_executor.py::TestExecutor::test_optimized_tpch": ("sql", "expected"),
+        "tests/test_optimizer.py::TestOptimizer::test_tpch": ("meta", "sql", "expected"),
+    },
+}
+PAIR_CLASS_READERS = ("tests/test_executor.py::TestExecutor::",)   # setUpClass parse only
+PAIR_SOURCES = ("tests/helpers.py", "tests/test_executor.py", "tests/test_optimizer.py")
+
+
+def parse_sql_fixture_pairs(text):
+    """tests/helpers.load_sql_fixture_pairs on already-read text (universal newlines, as open()
+    reads it), including its _filter_comments and _extract_meta; raises where they raise."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    statements = "\n".join(ln for ln in text.splitlines() if ln and not ln.startswith("--")).split(";")
+    out = []
+    for i in range(0, len(statements), 2):
+        if i + 1 < len(statements):
+            sql_lines = statements[i].strip().split("\n")
+            meta, k = {}, 0
+            while sql_lines[k].startswith("#"):
+                key, val = sql_lines[k].split(":", maxsplit=1)
+                meta[key.lstrip("#").strip()] = val.strip()
+                k += 1
+            out.append((meta, "\n".join(sql_lines[k:]), statements[i + 1].strip()))
+    return out
+
+
 def module_of(rel):
     m = rel[:-3].replace("/", ".")
     return m[:-9] if m.endswith(".__init__") else m
@@ -1432,6 +1471,49 @@ class Hunter:
         return None
 
     # ---------------------------------------------------------------- other files
+    def pair_fixture_mask(self, fp, rel):
+        """Openers of a PAIR_FIXTURES file that read a (meta, sql, expected) field the patch changes;
+        every opener when the new text no longer parses; None when the rule does not apply."""
+        if any(p in getattr(self, "patch_paths", ()) for p in PAIR_SOURCES):
+            return None
+        old = self.source(rel)
+        new = apply_hunks(old, fp.hunks) if old is not None and fp.hunks else None
+        if new is None:
+            return None
+        try:
+            new.encode("utf-8")   # surrogates: bytes open(encoding="utf-8") would refuse
+        except UnicodeEncodeError:
+            return None
+        openers = self.d["opens"].get(rel, 0)
+        try:
+            before = parse_sql_fixture_pairs(old)
+        except Exception:
+            return None
+        try:
+            after = parse_sql_fixture_pairs(new)
+        except Exception:
+            log(rel, "fixture no longer parses: every opener")
+            return openers
+        if len(before) != len(after):
+            changed = {"meta", "sql", "expected"}
+        else:
+            changed = set()
+            for a, b in zip(before, after):
+                changed |= {f for f, x, y in zip(("meta", "sql", "expected"), a, b) if x != y}
+        readers = PAIR_FIXTURES[rel]
+        m = 0
+        for i in range(self.n):
+            if not openers >> i & 1:
+                continue
+            tid = self.d["tests"][i] or ""
+            if tid in readers:
+                if changed & set(readers[tid]):
+                    m |= 1 << i
+            elif not tid.startswith(PAIR_CLASS_READERS):
+                m |= 1 << i   # a reader this table does not describe
+        log(rel, f"fixture entries: changed {sorted(changed) or 'nothing'}")
+        return m
+
     def analyze_other(self, rel):
         m = self.d["opens"].get(rel, 0)
         if rel in self.d["imp_opens"]:
@@ -1601,6 +1683,7 @@ class Hunter:
         self.need_probe = False
         self.probe_files = {}
         files = parse_patch(patch_text)
+        self.patch_paths = {p for fp in files for p in (fp.old, fp.new) if p}
         self.probe_files = self.combined(files)
         # the verifier may run tests on this patch only when it just edits existing sqlglot modules
         self.verify_files = None
@@ -1710,6 +1793,10 @@ class Hunter:
             return self.analyze_other(new)
         if rel.endswith(".py"):
             return self.analyze_py(rel, fp)
+        if rel in PAIR_FIXTURES and rel not in self.d["imp_opens"]:
+            m = self.pair_fixture_mask(fp, rel)
+            if m is not None:
+                return m
         return self.analyze_other(rel)
 
     def new_test_file(self, rel, fp):
