@@ -32,6 +32,7 @@ import sys
 import threading
 import time
 import tokenize
+import textwrap
 from pathlib import Path
 
 T0 = time.monotonic()
@@ -43,6 +44,16 @@ PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 # which sqlglot modules importing each module loads (build/mkimports.py); the targeted probe
 PROBE_IMPORTS = Path(os.environ.get("BR_PROBE_IMPORTS", HERE / "probe_imports.json"))
 PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "1") == "1"
+# Two measured selection rules, enabled after they passed the fresh-seed gate.
+# R5: narrow the import-time class-attribute fallback to readers that also instantiated the
+# class, only when neither the old nor the new statement contains a Call/Lambda. The new-side
+# check is stricter than driver7.py but cannot add a miss.
+INST_NARROW = os.environ.get("BR_INST_NARROW", "1") == "1"
+# R6: drop test_generator_memory from small selections unless line/file coverage selected it
+# directly (pp2.py's rule; 1224 is its catalogue number and 500 the measured cap).
+GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
+GENMEM_NUM = 1224
+GENMEM_MAX_SELECTED = 500
 WORKER_MS = 2000
 MAX_WORKERS = 8
 # The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
@@ -356,6 +367,35 @@ def line_map(hunks):
                 break
         return line + shift
     return ochanged, nchanged, to_new
+
+
+def map_new_span(span, hunks):
+    """Map an old-line span (both endpoints) to the corresponding new-line span.
+    A replaced line maps to the new line at the same hunk position; an inserted line maps
+    to the new line that was added. R5's guard uses this to inspect the patched statement."""
+    def one(line):
+        delta = 0
+        for os_, ol, ns, nl, body in hunks:
+            o_end = os_ + max(ol - 1, 0)
+            if line < os_:
+                break
+            if line > o_end:
+                delta += nl - ol
+                continue
+            o, n = os_, ns
+            for b in body:
+                if line == o:
+                    return n
+                if b[0] == " ":
+                    o += 1
+                    n += 1
+                elif b[0] == "-":
+                    o += 1
+                else:
+                    n += 1
+            return ns + max(nl - 1, 0)
+        return line + delta
+    return one(span[0]), one(span[1])
 
 
 _DOC_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -806,6 +846,8 @@ class Hunter:
         self.lazy_pending = False
         self._kd_memo = {}
         self._fresh_memo, self._nchanged = {}, set()
+        self._new_src, self._hunks = {}, {}   # R5: patched text per file for the Call/Lambda guard
+        self._inst_ok = True   # R5: the current top-level statement has no Call/Lambda
         # the one fresh-interpreter test whose assertion the import probe replays exactly
         self.lazy_mask = 0
         for i, t in enumerate(data["tests"]):
@@ -944,9 +986,33 @@ class Hunter:
             m |= self.resolve_stmt(rel, cls_path, names, (a, b), doc, visited, depth + 1)
         return m, unknown
 
+    @staticmethod
+    def _has_call(rel, span, source, new_source=None, new_span=None):
+        """True when the old or the new statement contains a Call/Lambda, or cannot be parsed.
+        driver7.py only checked the pristine statement; a Call *added* by the patch is the more
+        dangerous case, so the new side is checked too (strictly more conservative)."""
+        spans = [(source, span)]
+        if new_source is not None and new_span is not None:
+            spans.append((new_source, new_span))
+        for src_fn, sp in spans:
+            if not sp:
+                return True
+            try:
+                src = "\n".join(src_fn(rel).split("\n")[sp[0] - 1:sp[1]])
+                tree = ast.parse(textwrap.dedent(src))
+            except Exception:
+                return True
+            if any(isinstance(n, (ast.Call, ast.Lambda)) for n in ast.walk(tree)):
+                return True
+        return False
+
     def resolve_stmt(self, rel, cls_path, names, span, doc, visited, depth=0):
         """Tests affected by a changed class-body or module-level statement."""
         self.import_time = True
+        if depth == 0 and INST_NARROW:
+            hunks = self._hunks.get(rel, ())
+            nspan = map_new_span(span, hunks) if hunks and span else None
+            self._inst_ok = not self._has_call(rel, span, self.source, self._new_src.get, nspan)
         reexec = self.span_mask(rel, span[0], span[1]) if span else 0
         if doc:
             return reexec | self.d["name_mask"].get("__doc__", 0)
@@ -960,7 +1026,10 @@ class Hunter:
             s1, unknown = self.resolve_name(name, own, visited, depth)
             if name in self.d["name_imp_cls"] or (name in self.d["name_imp"] and built):
                 unknown = True   # read while importing: class creation, helpers, early instances
-            if unknown or not s1:
+            if INST_NARROW and unknown and inst and s1 and self._inst_ok:
+                # driver7.py: readers that also instantiated, even when the name is unknown
+                res |= s1 & inst
+            elif unknown or not s1:
                 res |= inst if inst else (s1 | self.fallback(rel, cls_path))
             else:
                 res |= (s1 & inst) if inst else s1
@@ -1007,6 +1076,9 @@ class Hunter:
         if new is None:
             log(rel, "patch does not apply: catcher takes all")
             return self.ALL
+        if INST_NARROW:
+            self._new_src[rel] = new
+            self._hunks[rel] = fp.hunks
         new_bytes = new.encode("utf-8", "surrogateescape")
         problem = decoding_problem(new_bytes)
         if problem:   # before any line-based shortcut: unchanged lines may now mean other text
@@ -1859,6 +1931,8 @@ class Hunter:
         self.import_time = False
         self.need_probe = False
         self.probe_files = {}
+        self._new_src, self._hunks = {}, {}
+        self._inst_ok = True
         files = parse_patch(patch_text)
         self.patch_paths = {p for fp in files for p in (fp.old, fp.new) if p}
         self.probe_files = self.combined(files)
@@ -3125,6 +3199,20 @@ def verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num):
         selected[cid] = kept
 
 
+def drop_genmem(selected, direct):
+    """R6 (pp2.py): drop test_generator_memory from small selections unless line or file
+    coverage selected it directly. `direct` maps commit id -> that direct-coverage evidence."""
+    if not GENMEM_DROP:
+        return
+    for cid, nums in selected.items():
+        if nums is None or GENMEM_NUM not in nums or len(nums) > GENMEM_MAX_SELECTED:
+            continue
+        if direct.get(cid):
+            continue
+        nums.discard(GENMEM_NUM)
+        log(cid, "genmem: dropped from a small, non-direct selection")
+
+
 def main():
     catalog = json.loads((DATA / "tests.json").read_text(encoding="utf-8"))["tests"]
     patches = sorted((DATA / "commits").glob("*.patch"))
@@ -3141,7 +3229,7 @@ def main():
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
 
-    selected, probes, lazy_pending, verify_files = {}, {}, set(), {}
+    selected, probes, lazy_pending, verify_files, texts = {}, {}, set(), {}, {}
     for p in patches:
         cid = p.stem
         try:
@@ -3150,6 +3238,7 @@ def main():
             if remaining() < RESERVE_S:
                 raise RuntimeError("out of time")
             text = p.read_bytes().decode("utf-8", "surrogateescape")
+            texts[cid] = text
             mask, probe = hunter.analyze(text)
             if mask and mask == hunter.ALL:
                 selected[cid] = None
@@ -3194,6 +3283,28 @@ def main():
             verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num)
         except Exception as e:   # the selections stand as they are
             log("verification failed, selections kept:", repr(e))
+
+    if GENMEM_DROP and hunter is not None:
+        genmem_bit = 0
+        if GENMEM_NUM in idx_to_num:
+            genmem_bit = 1 << idx_to_num.index(GENMEM_NUM)
+        direct = {}
+        if genmem_bit:
+            for p in patches:
+                cid, text = p.stem, texts.get(p.stem)
+                if not text:
+                    continue
+                m = 0
+                for fp in parse_patch(text):
+                    rel = fp.old or fp.new
+                    m |= hunter.file_mask(rel)
+                    for os_, ol, ns, nl, _ in fp.hunks:
+                        if ol:
+                            m |= hunter.span_mask(rel, os_, os_ + ol - 1)
+                        if nl:
+                            m |= hunter.span_mask(rel, ns, ns + nl - 1)
+                direct[cid] = bool(m & genmem_bit)
+        drop_genmem(selected, direct)
 
     out, total = [], 0
     all_schedule = None

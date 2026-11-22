@@ -396,3 +396,50 @@ Still emulated rather than run in Docker: the holdouts, validation, feature and 
 Windows comparison versions. Their CPU figures are Windows process-tree CPU and are not comparable
 to the container's cgroup CPU. If the image's packages ever differ from the pinned versions, the
 verifier refuses to run (version check) and selections stand.
+
+## R5 and R6: fresh-seed validation
+
+R5 narrows the import-time class-attribute fallback to `readers ∩ instantiators`, only when neither
+the old **nor the new** statement contains a `Call`/`Lambda`. R6 drops `test_generator_memory` from
+selections of at most 500 tests unless line/file coverage selected it directly. Both were
+implemented with tests first, then frozen: `selector.py` SHA-256
+`04002c8e781132d6c96b95dc4b2f045707fdd3da3bdcf91b01b4fee3afba6a6e`, map `0bbff6ad…`, profile
+`735e6730…`. No source changed after hashing.
+
+The first frozen version checked only the pristine statement, exactly as `driver7.py` does. A
+review found that a `Call` *added* by the patch still got narrowed; `map_new_span` now maps the old
+statement to its new lines and checks both sides. This is strictly more conservative than the
+measurement, so it cannot introduce a miss, and it changed one fresh-seed number slightly (seed
+8675309: 525.371 → 529.074 s, still −20.7 s against the off baseline). A unit test covers the
+added-call case.
+
+Every rule was scored alone and together on the five committed sets and three independently
+labelled fresh seeds (`8675309`, `42424242`, `314159`). **All runs had 0 misses**, including each
+rule separately; the solo runs were re-checked with only one rule enabled at a time (an earlier
+solo-run log had leaked the other flag, but that did not affect the combined result). Simulated
+seconds, both rules off → both on:
+
+| set | off | both | Δ |
+| --- | ---: | ---: | ---: |
+| sample | 97.076 | 97.076 | 0 |
+| holdout1 | 573.956 | 546.077 | −27.879 |
+| holdout2 | 449.843 | 399.742 | −50.101 |
+| holdout2u | 438.615 | 388.514 | −50.101 |
+| mutants | 927.443 | 854.858 | −72.585 |
+| seed 314159 | 433.721 | 390.351 | −43.370 |
+| seed 8675309 | 549.778 | 529.074 | −20.704 |
+| seed 42424242 | 587.043 | 538.532 | −48.511 |
+
+Solo results (simulated seconds, 0 misses in every cell):
+
+| set | R5 only | R6 only |
+| --- | ---: | ---: |
+| holdout1 | 552.763 | 554.481 |
+| holdout2 | 414.502 | 408.627 |
+| mutants | 854.862 | 878.362 |
+| seed 314159 | 396.895 | 401.807 |
+| seed 8675309 | 540.998 | 529.168 |
+| seed 42424242 | 541.259 | 552.540 |
+
+Docker on the final frozen artifact: `make sample` 97.076 s / 0 misses; `make measure` median
+total 99.15 s.
