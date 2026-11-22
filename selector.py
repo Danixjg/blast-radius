@@ -3279,7 +3279,7 @@ def load_import_site_index():
         if not all(row_ok(*row) for row in anywhere):
             return None
         return {"sites": sites, "prefix": prefix, "any": anywhere}
-    except (OSError, KeyError, TypeError, ValueError):
+    except (OSError, KeyError, TypeError, ValueError, RecursionError):   # rebuild in-process
         return None
 
 
