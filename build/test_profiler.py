@@ -260,9 +260,25 @@ class Comparisons(unittest.TestCase):
         self.assertTrue(r)
         self.assertEqual(self.ns["Obj"].calls, 0, "recording `o is not None` must not call __eq__")
         fact = self.facts(rec, 12)
-        self.assertEqual(fact, {(False, None, False)})
+        self.assertEqual(fact, {(False, None, False, ("sqlglot.fake_module.Obj.__eq__", "builtins.object.__ne__"))},
+                         "against None: the implementations the swap would run, looked up, not called")
         self.assertFalse(S.Hunter._swap_preserves(next(iter(fact)), negated=True),
                          "`is not` -> `!=` would run the side-effecting __eq__")
+        h = S.Hunter(S.load_map())
+        self.assertFalse(h._preserves(next(iter(fact)), negated=True), "not provably identity's answer")
+
+    def test_none_answer_of_sqlglot_equality(self):
+        h = S.Hunter(S.load_map())
+        eq, ne = "sqlglot.expressions.core.Expression.__eq__", "sqlglot.expressions.core.Expression.__ne__"
+        # `self is other or (type(self) is type(other) and hash(self) == hash(other))`: decided
+        # False for None before hash() would run
+        self.assertTrue(h._preserves((False, None, False, (eq, ne)), negated=False))
+        self.assertTrue(h._preserves((False, None, False, (eq, ne)), negated=True), "`not self.__eq__(other)`")
+        self.assertTrue(h._preserves((False, None, False, ("builtins.list.__eq__", "builtins.list.__ne__")), True))
+        for impl in (("sqlglot.dialects.dialect.Dialect.__eq__", "builtins.object.__ne__"),   # a metaclass __eq__
+                     ("numpy.ndarray.__eq__", "numpy.ndarray.__ne__"), (None, None)):
+            self.assertFalse(h._preserves((False, None, False, impl), negated=False), impl)
+        self.assertTrue(h._preserves((True, True, True), negated=False), "3-tuples as before")
 
     def test_ne_original_cannot_drop_its_side_effects(self):
         o = self.ns["Obj"]()
@@ -288,6 +304,101 @@ class Comparisons(unittest.TestCase):
         fact = next(iter({f for (s, f) in rec[2]}))
         self.assertEqual(fact, (False, True, True))
         self.assertFalse(S.Hunter._swap_preserves(fact, negated=False), "'UPPER' == E.UPPER but is not identical")
+
+
+class NoneEqualityProof(unittest.TestCase):
+    """_none_answer may only vouch for `x == None` when the equality code decides it through
+    identity before anything user-defined could run."""
+
+    MOD = ("class Rec:\n    def __eq__(self, other):\n        return self == other\n\n\n"
+           "class Ident:\n    def __eq__(self, other):\n"
+           "        return self is other or (type(self) is type(other) and hash(self) == hash(other))\n\n"
+           "    def __ne__(self, other):\n        return not self.__eq__(other)\n\n\n"
+           "class TypeEq:\n    def __eq__(self, other):\n        return type(self) == type(other)\n\n\n"
+           "class CustomNe:\n    def __eq__(self, other):\n        return self is other\n\n"
+           "    def __ne__(self, other):\n        return self.x != other\n\n\n"
+           "class Effect:\n    def __eq__(self, other):\n        return print('x') or self is other\n\n\n"
+           "class Walrus:\n    def __eq__(self, other):\n        return (other := self) is self\n")
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="br-eqproof-"))
+        (self.tmp / "sqlglot").mkdir()
+        (self.tmp / "sqlglot" / "fake_eq.py").write_text(self.MOD, encoding="utf-8")
+        (self.tmp / "sqlglot" / "shadow.py").write_text(
+            "type = lambda x: 0\n\n\n" + self.MOD.split("\n\n\n")[1] + "\n", encoding="utf-8")
+        (self.tmp / "sqlglot" / "other.py").write_text("class Base:\n    pass\n\n\nclass Leaf(Base):\n    pass\n",
+                                                        encoding="utf-8")
+        self.saved, S.SRC = S.SRC, self.tmp
+        self.h = S.Hunter(S.load_map())
+
+    def tearDown(self):
+        S.SRC = self.saved
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def answer(self, cls, method="__eq__", mod="fake_eq"):
+        eq = f"sqlglot.{mod}.{cls}.__eq__"
+        return self.h._none_answer(f"sqlglot.{mod}.{cls}.{method}", method, eq)
+
+    def fact(self, cls, mod="fake_eq"):
+        return (False, None, False, (f"sqlglot.{mod}.{cls}.__eq__", f"sqlglot.{mod}.{cls}.__ne__"))
+
+    def test_recursive_equality_is_not_vouched_for(self):
+        ns = {}
+        exec(compile(self.MOD, "fake_eq.py", "exec"), ns)
+        with self.assertRaises(RecursionError):
+            ns["Rec"]() == None  # noqa: E711 - the premise: CPython recurses
+        self.assertIsNone(self.answer("Rec"))
+        self.assertFalse(self.h._preserves(self.fact("Rec"), negated=False))
+
+    def test_identity_proof(self):
+        self.assertIs(self.answer("Ident"), False)
+        self.assertIs(self.answer("Ident", "__ne__"), True)
+        self.assertTrue(self.h._preserves(self.fact("Ident"), negated=False))
+        self.assertTrue(self.h._preserves(self.fact("Ident"), negated=True))
+
+    def test_negative_controls(self):
+        self.assertIsNone(self.answer("TypeEq"), "type(self) == type(other) runs a metaclass __eq__")
+        self.assertIs(self.answer("CustomNe"), False)
+        self.assertFalse(self.h._preserves(self.fact("CustomNe"), negated=True), "custom __ne__ reads self.x")
+        self.assertIsNone(self.answer("Effect"), "a call before the identity test")
+        self.assertIsNone(self.answer("Walrus"))
+        self.assertIsNone(self.answer("Ident", mod="shadow"), "module-level `type` is not the builtin")
+
+    def test_patches_that_touch_the_proof(self):
+        def with_patch(files):
+            self.h.probe_files = files
+            return self.h._preserves(self.fact("Ident"), negated=False)
+
+        self.assertTrue(with_patch({}))
+        changed = self.MOD.replace("hash(self) == hash(other)", "self.k == other.k")
+        self.assertFalse(with_patch({"sqlglot/fake_eq.py": changed}), "the method itself changes")
+        self.assertFalse(with_patch({"sqlglot/fake_eq.py": "type = None\n" + self.MOD}), "`type` rebound")
+        self.assertFalse(with_patch({"sqlglot/other.py": "class Base:\n    pass\n\n\nclass Leaf(Base, dict):\n    pass\n"}),
+                         "another file changes a class's bases: inherited __eq__ may change")
+        self.assertFalse(with_patch({"sqlglot/other.py": "class Base:\n    def __eq__(self, o):\n        return True\n\n\n"
+                                                         "class Leaf(Base):\n    pass\n"}), "a new __eq__ elsewhere")
+        self.assertTrue(with_patch({"sqlglot/other.py": "class Base:\n    pass\n\n\nclass Leaf(Base):\n    x = 1\n"}),
+                        "unrelated edits keep the proof")
+
+    def test_guard_is_decided_for_each_patch(self):
+        # main() runs every patch through one Hunter; a freed probe_files dict's id comes back for
+        # the next patch, so the guard must not be keyed on the dict's identity
+        files = {}
+        self.h.probe_files = files
+        self.assertTrue(self.h._preserves(self.fact("Ident"), negated=False))
+        files["sqlglot/other.py"] = "class Base:\n    pass\n\n\nclass Leaf(Base, dict):\n    pass\n"
+        self.assertFalse(self.h._preserves(self.fact("Ident"), negated=False), "same dict object, new patch")
+
+    def test_other_ways_to_rebind_equality(self):
+        base = "class Base:\n    pass\n\n\nclass Leaf(Base):\n    pass\n"
+        for label, text in (
+                ("tuple target", base.replace("class Leaf(Base):\n    pass", "class Leaf(Base):\n    __eq__, _x = (lambda s, o: True), 0")),
+                ("def under if", base.replace("class Leaf(Base):\n    pass", "class Leaf(Base):\n    if True:\n        def __eq__(s, o):\n            return True")),
+                ("module-level assignment", base + "\n\nLeaf.__eq__ = lambda s, o: True\n"),
+                ("setattr", base + "\n\nsetattr(Leaf, '_' + '_eq__', lambda s, o: True)\n")):
+            self.h.probe_files = {"sqlglot/other.py": text}
+            self.assertFalse(self.h._preserves(self.fact("Ident"), negated=False), label)
 
 
 if __name__ == "__main__":

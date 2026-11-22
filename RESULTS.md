@@ -329,6 +329,51 @@ above. Selector CPU on the sample is unchanged within timer
 resolution. A commit whose probe fails spends extra CPU reading the source tree; the build-time
 import index in the follow-up PR removes most of that.
 
+## `x is None` vs `x == None` on sqlglot objects (follow-up to the import index)
+
+Swapping `is None` and `== None` is a common edit. When the operand is a sqlglot `Expression`,
+`==` runs `Expression.__eq__`, so the profile could not vouch for the swap, and tests like
+`test_execute_tpcds` were selected even though nothing can change. The profiler now records, for a
+comparison against `None` whose operand has its own equality, the qualified names of the `__eq__`
+and `__ne__` that operand's type supplies. It looks the methods up and never calls them. The selector
+keeps such an evaluation unchanged when that code provably gives identity's answer for `None`, and
+only under these conditions:
+
+- the method is a single `return` built from `is`/`is not` tests of self, other, `None` and builtin
+  `type(...)`, combined with `and`/`or`/`not`, and decided before anything else would run;
+- `==` and `!=` decide nothing, because they run user code. A first version treated them like
+  identity: for an `__eq__` whose body is `return self == other`, it predicted `False` where CPython
+  raises `RecursionError`;
+- the name `type` must not be rebound in the method's module, before or after the patch;
+- the patch changes no `__eq__`/`__ne__` definition and no class's bases, keywords or decorators in any
+  file it touches.
+
+`Expression.__eq__` qualifies: `self is other or (type(self) is type(other) and hash(self) ==
+hash(other))` is decided at the type-identity test before `hash` runs. Regression tests cover the
+recursive case, `==` on types, a custom `__ne__`, a side effect, a walrus, a shadowed `type`, and
+multi-file patches that change the method, a binding or a class's bases.
+
+`profile.pkl` was rebuilt with this recorder: two instrumented passes merged with the existing
+divergence passes. It has 783 comparison sites, and 330 of its facts carry implementation names.
+
+Validation (`work/eqnone`, code and profile frozen together: selector `5760525a…`, profile
+`08e515d7…`): 30 comparison sites chosen by structure where the new facts change the selection,
+each swapped and labelled. All 30 are `complete` with **zero failures**, so the swaps are neutral as
+the proof says. That set measures the saving. The soundness side rests on the proof's restrictions
+and its negative-control tests.
+
+| set | before (this PR's base) | after | misses |
+| --- | ---: | ---: | ---: |
+| structural `== None` swaps (30) | 248.592 | 0.000 | 0 / 0 |
+| holdout 1 (66) | 551.231 | 549.224 | 0 / 0 |
+| holdout 2 (65) | 464.316 | 425.492 | 0 / 0 |
+| holdout seed 271828 (65) | 434.951 | 409.497 | 0 / 0 |
+| holdout seed 314159 (66) | 465.185 | 441.011 | 0 / 0 |
+| sample, validation 3, fresh, the four import-time validation sets | unchanged | unchanged | 0 / 0 |
+
+The holdouts suggested this idea, so they are regression checks. The estimate before measuring was
+110 s across them; the measured saving is 90 s.
+
 ## Adversarial checks
 
 Targeted tests were added for the three rules most likely to be overfitted:

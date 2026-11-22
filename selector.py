@@ -22,6 +22,7 @@ Standard library only. stdout carries exactly one JSON line per commit; logs go 
 """
 
 import ast
+import collections
 import io
 import json
 import os
@@ -256,6 +257,14 @@ def line_map(hunks):
                 break
         return line + shift
     return ochanged, nchanged, to_new
+
+
+_EQ_TOKENS = ("__eq__", "__ne__", "setattr", "__dict__")
+
+
+def _eq_lines(text):
+    """The lines of a source text that could rebind an equality method, with their counts."""
+    return collections.Counter(ln.strip() for ln in text.splitlines() if any(t in ln for t in _EQ_TOKENS))
 
 
 _DOC_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -626,6 +635,48 @@ def _imported_modules(st, rel):
         parts = n.split(".")
         out.update(".".join(parts[:i]) for i in range(1, len(parts) + 1))
     return out
+
+
+def _module_binds(tree, name):
+    """The module (re)binds `name` in its global namespace: assignment, annotated or augmented
+    assignment, walrus, import (also star imports, which could bring anything), def or class, loop,
+    with or except target at module level (compound statements included), or a `global name`
+    anywhere. None (no tree) counts as binding."""
+    if tree is None:
+        return True
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Global) and name in node.names:
+            return True
+
+    def binds(st):
+        for n in ast.walk(st):
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)) and n is not st:
+                continue
+            if isinstance(n, ast.Name) and n.id == name and isinstance(n.ctx, (ast.Store, ast.Del)):
+                return True
+            if isinstance(n, (ast.Import, ast.ImportFrom)):
+                for a in n.names:
+                    if a.name == "*" or (a.asname or a.name.split(".")[0]) == name:
+                        return True
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and n.name == name:
+                return True
+            if isinstance(n, ast.ExceptHandler) and n.name == name:
+                return True
+        return False
+
+    def visit(body):
+        for st in body:
+            if isinstance(st, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if st.name == name:
+                    return True
+                if isinstance(st, ast.ClassDef):
+                    continue   # class bodies have their own namespace
+                continue
+            if binds(st):
+                return True
+        return False
+
+    return visit(tree.body)
 
 
 def is_docstring(st):
@@ -1716,12 +1767,12 @@ class Hunter:
         if rec is None:
             return None
         negated = isinstance(node.ops[0], (ast.IsNot, ast.NotEq))
-        if not all(self._swap_preserves(f, negated) for f in rec["imp"]):
+        if not all(self._preserves(f, negated) for f in rec["imp"]):
             return self.ALL   # an evaluation while modules import would change
         seen = bad = 0
         for fact, mask in rec["facts"].items():
             seen |= mask
-            if not self._swap_preserves(fact, negated):
+            if not self._preserves(fact, negated):
                 bad |= mask
         ran = self.span_mask(rel, line, line)
         unseen = ran & ~seen
@@ -1748,10 +1799,186 @@ class Hunter:
         """Decided here, per edit, from pristine operand facts (identical, eq, ne_ok): swapping
         `is`<->`==` (negated: `is not`<->`!=`) leaves this evaluation unchanged only when the
         equality involved runs side-effect-free builtin code and agrees with identity."""
-        identical, eq, ne_ok = fact
+        identical, eq, ne_ok = fact[:3]
         if eq is None or eq != identical:
             return False
         return ne_ok if negated else True
+
+    # equality methods of builtin types: given None as the other operand they return
+    # NotImplemented at once (object's: identity), so `x == None` falls back to identity
+    NONE_SAFE_BUILTIN = frozenset(f"builtins.{t}.__{op}__" for t in (
+        "object", "type", "str", "bytes", "bytearray", "int", "float", "complex", "bool", "tuple", "list",
+        "dict", "set", "frozenset", "range") for op in ("eq", "ne"))
+
+    def _preserves(self, fact, negated):
+        """_swap_preserves, and for an evaluation against None whose other operand has its own
+        equality (the profile then records which __eq__ and __ne__ that type supplies): the swap
+        keeps it when that code gives identity's answer for None and runs nothing else."""
+        if len(fact) < 4 or fact[0] or fact[1] is not None:
+            return self._swap_preserves(fact, negated)
+        if not self._equality_code_unchanged():
+            return False   # the patch may change which __eq__/__ne__ runs: the recorded names are stale
+        eq_impl, ne_impl = fact[3]
+        if self._none_answer(eq_impl, "__eq__", eq_impl) is not False:
+            return False
+        if not negated:
+            return True
+        if ne_impl == "builtins.object.__ne__":
+            return True   # object.__ne__ inverts the __eq__ just vouched for
+        return self._none_answer(ne_impl, "__ne__", eq_impl) is True
+
+    def _equality_code_unchanged(self):
+        """The patch changes no __eq__/__ne__ definition and no class's bases, keywords or
+        decorators in any file it touches (which method type(x).__eq__ is stays what the profile
+        recorded), and binds no new name `type` at module level."""
+        # keyed on the patch's content: one Hunter sees every patch, and a freed probe_files
+        # dict's id comes back for the next one
+        key = tuple(sorted((rel, text) for rel, text in self.probe_files.items() if rel.endswith(".py")))
+        if getattr(self, "_eq_stable", (None, None))[0] == key:
+            return self._eq_stable[1]
+
+        def signature(text):
+            tree = ast.parse(text)
+            sig = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    sig.add(("class", node.name, _dump(ast.Tuple(elts=node.bases + [k.value for k in node.keywords]
+                                                                + node.decorator_list, ctx=ast.Load())),
+                             tuple(k.arg or "" for k in node.keywords)))
+                    for s in node.body:
+                        if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) and s.name in ("__eq__", "__ne__"):
+                            sig.add(("method", node.name, s.name, _dump(s)))
+                        elif any(isinstance(t, ast.Name) and t.id in ("__eq__", "__ne__")
+                                 for t in getattr(s, "targets", [getattr(s, "target", None)]) if t is not None):
+                            sig.add(("assigned", node.name, _dump(s)))
+            sig.add(("binds-type", _module_binds(tree, "type")))
+            return sig
+
+        ok = True
+        for rel, text in self.probe_files.items():
+            if not rel.endswith(".py"):
+                continue
+            old = self.source(rel)
+            try:
+                # any added or removed line naming the equality methods, setattr or __dict__
+                # (tuple targets, defs nested in the class body, Cls.__eq__ = ... at module level,
+                # setattr with a computed name) may change which __eq__ runs
+                if old is None or text is None or _eq_lines(old) != _eq_lines(text) or \
+                        signature(old) != signature(text):
+                    ok = False
+                    break
+            except (SyntaxError, ValueError, RecursionError):
+                ok = False
+                break
+        self._eq_stable = (key, ok)
+        return ok
+
+    def _none_answer(self, impl, name, eq_impl, depth=0):
+        """What `impl(self, None)` returns (True/False), provided it provably returns that bool
+        without running anything else, or None. Builtins from NONE_SAFE_BUILTIN; a sqlglot method
+        whose body is one `return` of identity tests (`is`, `is not`: never user code) on self,
+        other, None and builtin type(...), combined with and/or/not and decided before anything
+        else would be evaluated, in a module that does not rebind `type` (before or after the
+        patch), and which the patch leaves as it is. `==` and `!=` can run user code (even this
+        very method again), so they decide nothing."""
+        if impl in self.NONE_SAFE_BUILTIN:
+            return name == "__ne__"
+        if not impl or not impl.startswith("sqlglot.") or depth > 3:
+            return None
+        found = self._method_by_qualname(impl)
+        if found is None:
+            return None
+        rel, fn, path = found
+        args = fn.args
+        if args.vararg or args.kwarg or args.kwonlyargs or len(args.posonlyargs + args.args) != 2 or fn.decorator_list:
+            return None
+        me, other = (a.arg for a in args.posonlyargs + args.args)
+        body = [s for s in fn.body if not is_docstring(s)]
+        if len(body) != 1 or not isinstance(body[0], ast.Return) or body[0].value is None:
+            return None
+        if any(isinstance(n, ast.NamedExpr) for n in ast.walk(body[0].value)):
+            return None   # a binding inside the expression could change what self or other mean
+        type_ok = "type" not in (me, other) and not _module_binds(self.tree(rel), "type")
+        new = self.probe_files.get(rel)
+        if rel in self.probe_files:   # the patch edits this file: the method must stay the same
+            if new is None:
+                return None
+            try:
+                ntree = ast.parse(new)
+            except SyntaxError:
+                return None
+            nfound = self._method_in(ntree, path)
+            if nfound is None or ast.dump(nfound) != ast.dump(fn):
+                return None
+            type_ok = type_ok and not _module_binds(ntree, "type")
+
+        def ev(node):
+            if isinstance(node, ast.Constant) and isinstance(node.value, bool):
+                return node.value
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+                v = ev(node.operand)
+                return None if v is None else not v
+            if isinstance(node, ast.BoolOp):
+                stop = isinstance(node.op, ast.Or)   # value that decides the chain
+                for v in node.values:
+                    r = ev(v)
+                    if r is None:
+                        return None
+                    if r is stop:
+                        return stop
+                return not stop
+            if isinstance(node, ast.Compare) and len(node.ops) == 1:
+                left, right, op = node.left, node.comparators[0], node.ops[0]
+                if not isinstance(op, (ast.Is, ast.IsNot)):
+                    return None   # == and != call __eq__/__ne__: user code
+                kinds = {kind(left), kind(right)}
+                if kinds in ({"self", "other"}, {"self", "none"}, {"type_self", "type_other"}):
+                    differ = True   # self is an instance, never None; its type is not NoneType
+                elif kinds == {"other", "none"}:
+                    differ = False
+                else:
+                    return None
+                return differ if isinstance(op, ast.IsNot) else not differ
+            if isinstance(node, ast.Call) and not node.keywords and len(node.args) == 1 and \
+                    isinstance(node.func, ast.Attribute) and kind(node.func.value) == "self" and \
+                    node.func.attr == "__eq__" and kind(node.args[0]) == "other" and name == "__ne__":
+                return self._none_answer(eq_impl, "__eq__", eq_impl, depth + 1)   # what type(self).__eq__ says
+            return None
+
+        def kind(node):
+            if isinstance(node, ast.Name):
+                return "self" if node.id == me else "other" if node.id == other else None
+            if isinstance(node, ast.Constant) and node.value is None:
+                return "none"
+            if type_ok and isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type" and \
+                    len(node.args) == 1 and not node.keywords:
+                k = kind(node.args[0])
+                return f"type_{k}" if k in ("self", "other") else None
+            return None
+
+        return ev(body[0].value)
+
+    def _method_by_qualname(self, impl):
+        """(rel, FunctionDef, path inside the module) for 'sqlglot.pkg.module.Class.method', or None."""
+        parts = impl.split(".")
+        for cut in range(len(parts) - 2, 0, -1):
+            base = "/".join(parts[:cut])
+            for rel in (base + ".py", base + "/__init__.py"):
+                tree = self.tree(rel)
+                if tree is not None:
+                    fn = self._method_in(tree, parts[cut:])
+                    return (rel, fn, parts[cut:]) if fn is not None else None
+        return None
+
+    @staticmethod
+    def _method_in(tree, path):
+        node = tree
+        for i, name in enumerate(path):
+            want = (ast.FunctionDef,) if i == len(path) - 1 else (ast.ClassDef,)
+            node = next((s for s in getattr(node, "body", []) if isinstance(s, want) and s.name == name), None)
+            if node is None:
+                return None
+        return node
 
     def dict_entry_mask(self, rel, site, otree, ntree):
         """Per-entry coverage for a literal dictionary whose entries only changed value.
