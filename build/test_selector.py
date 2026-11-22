@@ -576,6 +576,15 @@ class PairFixtures(Base):
                 m |= 1 << i
         return m
 
+    def test_fixtures_ship_in_the_image(self):
+        # the image only holds what build/fetch_sqlglot.py extracts (and verifies by manifest)
+        sys.path.insert(0, str(R / "build"))
+        import fetch_sqlglot
+        manifest = (R / "build" / "sqlglot.manifest").read_text(encoding="utf-8")
+        for rel in S.PAIR_FIXTURES:
+            self.assertTrue(fetch_sqlglot.wanted(rel), rel)
+            self.assertIn("  " + rel + "\n", manifest, rel)
+
     def test_parser_matches_the_helper(self):
         sys.path.insert(0, str(SQLGLOT))
         try:
