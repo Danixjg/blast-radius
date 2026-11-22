@@ -1336,31 +1336,47 @@ class GenmemDrop(Base):
     A broken import probe is direct evidence: #8's mass_failure_mask keeps genmem there, and R6
     must not undo that decision."""
 
+    G = 1224   # any number: R6 takes it from the caller, never from a constant
+
     def selected(self):
-        return {S.GENMEM_NUM, 1, 2}
+        return {self.G, 1, 2}
 
     def test_drops_genmem_from_a_small_non_direct_selection(self):
         selected = {"c": self.selected()}
-        S.drop_genmem(selected, {}, ())
+        S.drop_genmem(selected, {}, (), self.G)
         self.assertEqual(selected["c"], {1, 2})
 
     def test_keeps_genmem_when_line_or_file_coverage_selected_it(self):
         selected = {"c": self.selected()}
-        S.drop_genmem(selected, {"c": True}, ())
+        S.drop_genmem(selected, {"c": True}, (), self.G)
         self.assertEqual(selected["c"], self.selected())
 
     def test_keeps_genmem_on_an_import_probe_broken_commit(self):
         selected = {"c": self.selected()}
-        S.drop_genmem(selected, {}, {"c"})
+        S.drop_genmem(selected, {}, {"c"}, self.G)
         self.assertEqual(selected["c"], self.selected())
 
     def test_leaves_large_selections_and_full_runs_alone(self):
         large = self.selected() | set(range(1, S.GENMEM_MAX_SELECTED + 1))
         selected = {"full": None, "large": large}
-        S.drop_genmem(selected, {}, ())
+        S.drop_genmem(selected, {}, (), self.G)
         self.assertIsNone(selected["full"])
         self.assertEqual(selected["large"], large)
 
+
+    def test_drops_the_number_it_is_given_not_a_fixed_one(self):
+        selected = {"c": {7, 1224, 2}}
+        S.drop_genmem(selected, {}, (), 7)
+        self.assertEqual(selected["c"], {1224, 2})
+
+    def test_drops_nothing_when_genmem_is_not_in_the_catalogue_or_map(self):
+        selected = {"c": self.selected()}
+        S.drop_genmem(selected, {}, (), None)
+        self.assertEqual(selected["c"], self.selected())
+
+    def test_genmem_is_identified_by_id(self):
+        self.assertEqual(S.GENMEM_ID, "tests/test_generator.py::TestGenerator::test_generator_memory")
+        self.assertFalse(hasattr(S, "GENMEM_NUM"))
 
 if __name__ == "__main__":
     unittest.main()
