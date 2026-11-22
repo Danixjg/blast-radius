@@ -542,6 +542,19 @@ class Equality(Base):
             S.EQ_SHORT_CIRCUIT = old
 
 
+class FixturePackaging(Base):
+    """The fixture projection reads the pristine TPC fixtures from SRC; the image and bench.py's
+    app hold only what fetch_sqlglot.wanted extracts, so both files must be wanted and pinned."""
+
+    def test_tpc_fixtures_ship_in_the_image(self):
+        sys.path.insert(0, str(R / "build"))
+        import fetch_sqlglot
+        manifest = (R / "build" / "sqlglot.manifest").read_text(encoding="utf-8")
+        for rel in ("tests/fixtures/optimizer/tpc-ds/tpc-ds.sql", "tests/fixtures/optimizer/tpc-h/tpc-h.sql"):
+            self.assertTrue(fetch_sqlglot.wanted(rel), rel)
+            self.assertIn("  " + rel + "\n", manifest, rel)
+
+
 class DictEntries(Base):
     REL = "sqlglot/parsers/singlestore.py"
     OLD = '"GROUPS FOR USER": _show_parser("GROUPS FOR USER", target=True),'
