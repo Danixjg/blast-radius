@@ -486,6 +486,26 @@ of the memory exhaustion, not of the edit, but this cannot be confirmed here.
   name without readers selects the tests that ran the file. The same blindness is what made every
   earlier version miss `h33749` and 11 of 27 validation patches.
 
+## Review fix: failed-import narrowing (Linux rescore)
+
+Rescoring this PR on Linux against `main` (`build/evalsets.py`, 3 runs) found one miss: seed 314159,
+h15941 removes `import typing as t` from `optimizer/qualify_columns.py`. The module then fails at
+import time and 733 tests fail. The narrowed selection (909 tests) left out
+`test_generator_memory`, which fails under xdist once that many tests fail. Before this PR, a
+broken probe ran everything, so that test was always included. Two changes:
+
+- `mass_failure_mask`: a narrowed failed-import selection always keeps `test_generator_memory`.
+- `dialect_name_sites`: a failed dialect module also selects the tests that ran a line of sqlglot
+  code holding its name as a string constant. For example, `parsers/presto.py` runs
+  `Dialect["teradata"]` through `build_formatted_time(exp.TimeToStr, "teradata")` without
+  creating any Teradata class. Without this, those tests were caught only because the coverage
+  run happened to hit the registry's loader.
+
+Simulated seconds / misses after the fix, `main` → this PR: sample 97.076 → 97.076, holdout 1
+618.608 → 563.268, holdout 2 545.397 → 466.316, holdout 2 unique 534.169 → 455.088, mutants
+1065.357 → 924.094, seed 314159 501.325 → 466.097, seed 8675309 571.500 → 508.965, seed 42424242
+610.261 → 539.162. Every set has 0 misses.
+
 ## Profiler regressions (counterexamples that reproduced on c8a81ea)
 
 | counterexample | c8a81ea | fixed recorder | affected trusted sites in the pinned profile |

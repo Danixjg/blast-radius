@@ -77,6 +77,8 @@ EQ_SHORT_CIRCUIT = os.environ.get("BR_EQ_SHORT_CIRCUIT", "1") == "1"
 # tracemalloc counts every thread's allocations: under pytest-xdist the worker's I/O thread makes
 # this test fail whenever many other tests fail, which a run here cannot reproduce
 VERIFY_UNSAFE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
+# tests that fail once enough of the run fails (see Hunter.mass_failure_mask)
+MASS_FAILURE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
 # build/verify-requirements.txt installs exactly these (kit/requirements.lock versions); without
 # them sqlglot's date folding (dateutil) and pytz-importing test modules would run differently
 VERIFY_ENV = {"python-dateutil": "4.0.0", "tzdata": "2026.6", "pytz": "2026.6", "mypy-extensions": "1.2.0",
@@ -1424,7 +1426,42 @@ class Hunter:
             bulk = bulk or (len(parts) == 3 and parts[1] in DIALECT_DIRS)
         if bulk:
             m |= self.bulk_dialect_loaders()
-        return m | self.import_sites(F)
+        return m | self.import_sites(F) | self.dialect_name_sites(F) | self.mass_failure_mask()
+
+    def mass_failure_mask(self):
+        """Tests that fail because many others do, not because of what they run:
+        test_generator_memory fails under xdist once enough of the run fails. A failed import
+        breaks every test that reaches the module, so a narrowed selection keeps them (before
+        narrowing, a broken probe ran everything, which always included them)."""
+        return sum(1 << i for i, t in enumerate(self.d["tests"]) if t in MASS_FAILURE_TESTS)
+
+    def dialect_name_sites(self, F):
+        """Tests that ran a line of sqlglot code holding a failed dialect's name as a string
+        constant, e.g. parsers/presto.py's build_formatted_time(exp.TimeToStr, "teradata"): a
+        registry lookup by name imports the module on demand without creating any of its
+        classes, so neither the dialect's own coverage nor its import statements show it."""
+        names = set()
+        for mod in F:
+            p = mod.split(".")
+            if len(p) == 3 and p[1] in DIALECT_DIRS and p[2] not in ("dialect", "base", "__init__"):
+                names.add(p[2])
+        if not names:
+            return 0
+        if getattr(self, "_sqlglot_py", None) is None:
+            self._sqlglot_py = sorted(p.relative_to(SRC).as_posix() for p in (SRC / "sqlglot").rglob("*.py"))
+        m = 0
+        quoted = [q + n + q for n in names for q in ('"', "'")]
+        for rel in self._sqlglot_py:
+            text = self.source(rel)
+            if not text or not any(q in text for q in quoted):
+                continue
+            tree = self.tree(rel)
+            if tree is None:
+                return self.ALL
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value.lower() in names:
+                    m |= self.span_mask(rel, node.lineno, node.end_lineno)
+        return m
 
     def bulk_dialect_loaders(self):
         if getattr(self, "_bulk", None) is None:
