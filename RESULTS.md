@@ -329,6 +329,48 @@ above. Selector CPU on the sample is unchanged within timer
 resolution. A commit whose probe fails spends extra CPU reading the source tree; the build-time
 import index in the follow-up PR removes most of that.
 
+## SQL fixture edits that change only expected outputs (follow-up to the import index)
+
+A fixture file read through `tests/helpers.py`'s `load_sql_fixture_pairs` is a list of records:
+metadata, input SQL and expected output. Before this change, an edit selected every test that opened
+the file. For the TPC-H and TPC-DS fixtures that includes `test_execute_tpch` (3.9 s) and
+`test_execute_tpcds` (21.5 s). Both execute the inputs and never read the expected outputs.
+
+For a patch that only edits such a fixture, both versions are parsed with the pinned loader. That is
+the pristine `tests/helpers.py`, which uses only the standard library, fed the patched text in
+memory. The projection applies when both versions parse and every record's metadata and input SQL
+are unchanged, in the same number and order. In that case only expected outputs changed. The test
+code is then followed from each loader call to every place that unpacks its records, through:
+
+- for loops and comprehensions, including through `enumerate`;
+- stored `self`/`cls` attributes, and method parameters that receive the records;
+- unpacking of `records[i]`.
+
+A test that opened the file is dropped only if, at every such place it ran, the expected field is
+unpacked into `_`. Every opener stays in any of these cases:
+
+- a record use the analysis does not follow (another call, `len()`, a bare subscript);
+- a loader failure, which is a setup error for every reader;
+- changed inputs, metadata, count or order;
+- another file in the same patch.
+
+Validation (`work/fixval`, selector frozen `d0cb0dcd…` = `300f7f0`): 30 edits of the TPC-H/TPC-DS
+fixtures, each classified with the pinned loader itself: 18 expected-output token edits, 4
+input-SQL edits, 3 metadata toggles, 2 malformed metadata lines and 3 reordered record pairs. All
+30 labels are `complete`, and 24 patches break tests.
+
+| kind | patches (breaking) | before (#9) | after | selections changed | misses |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| expected-output edits | 18 (18) | 458.172 | 143.399 | 18 | 0 / 0 |
+| input SQL edits | 4 (4) | 101.816 | 101.816 | 0 | 0 / 0 |
+| malformed metadata | 2 (2) | 50.908 | 50.908 | 0 | 0 / 0 |
+| metadata toggles | 3 (0) | 76.362 | 76.362 | 0 | 0 / 0 |
+| reordered records | 3 (0) | 76.362 | 76.362 | 0 | 0 / 0 |
+
+Regression checks: holdout 2 goes from 464.316 to 447.102, from its one expected-output fixture edit
+(`h33743`, earlier 25.454 s and now 8.240 s, with its labelled failure kept). Holdout 2 unique goes
+from 453.088 to 435.874. All other sets are unchanged, with 0 misses.
+
 ## Adversarial checks
 
 Targeted tests were added for the three rules most likely to be overfitted:
