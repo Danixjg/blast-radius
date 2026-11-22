@@ -638,9 +638,10 @@ class DictEntries(Base):
 
 
 class ImportOnlyRuns(Base):
-    """deferred_runs: a test whose coverage holds a class attribute's lines only because its
-    process imported the module during the test (pool workers import Hive, Presto, Trino, MySQL
-    and Athena through pushdown_predicates) is not selected for a change to that attribute."""
+    """Import-only coverage must not select readers. Main's original map attributed Hive's
+    import-time lines to TPC-DS's pool; R2's rebuilt map credits the child prewarm instead, so
+    those lines no longer appear in any test's coverage and the narrowing has nothing to undo.
+    The assertions below hold under both maps: only real readers keep the edited lines."""
 
     TPCDS = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
 
@@ -658,7 +659,8 @@ class ImportOnlyRuns(Base):
 
     def test_class_attribute_value_drops_tests_that_only_imported_the_module(self):
         rel = "sqlglot/dialects/hive.py"
-        self.assertTrue(self.h.span_mask(rel, 1, 1) & self.bit(self.TPCDS), "TPC-DS's pool imports hive.py")
+        self.assertFalse(self.h.span_mask(rel, 1, 1) & self.bit(self.TPCDS),
+                         "R2's map credits the child prewarm, not TPC-DS, for hive.py's import")
         m, probe = self.mask(edit(rel, '        "E": "%a",\n', '        "E": "%a_",\n'))
         self.assertFalse(m & self.bit(self.TPCDS), "TPC-DS never reads Hive.TIME_MAPPING")
         self.assertTrue(m & self.bit("tests/dialects/test_hive.py::TestHive::test_time"), "readers stay")
@@ -666,7 +668,7 @@ class ImportOnlyRuns(Base):
 
     def test_lambda_lines_keep_their_runners(self):
         # a one-line lambda's body shares its line with the dict entry: running that line can mean
-        # calling the lambda, so whoever ran it stays (here TPC-DS, which only imported the module)
+        # calling the lambda, so whoever ran it stays (here the dialect tests that call it)
         rel = "sqlglot/parsers/hive.py"
         old = '        "BASE64": exp.ToBase64.from_arg_list,\n'
         site, otree, ntree = self.stmt(rel, old, old.replace("ToBase64", "FromBase64"), old)
@@ -676,7 +678,8 @@ class ImportOnlyRuns(Base):
         lam1 = src.index('        "COLLECT_LIST": lambda args: exp.ArrayAgg(this=seq_get(args, 0), nulls_excluded=True),') + 1
         lam2 = src.index('        "CONCAT_WS": lambda args, dialect: exp.ConcatWs(') + 1
         lambdas = self.h.span_mask(rel, lam1, lam1) | self.h.span_mask(rel, lam2, lam2 + 5)
-        self.assertTrue(lambdas & self.bit(self.TPCDS), "TPC-DS's import ran the one-line lambda's line")
+        self.assertTrue(lambdas & self.bit("tests/dialects/test_duckdb.py::TestDuckDB::test_concat_ws"),
+                        "the dialect test that calls CONCAT_WS ran its lambda's line")
         self.assertEqual(keep & lambdas, lambdas, "every lambda body line keeps its runners")
         # whoever imported the module also ran the one-line lambdas' lines: nothing is dropped here
         self.assertEqual(keep, self.h.span_mask(rel, site.span[0], site.span[1]))
@@ -1236,6 +1239,37 @@ class Deadline(unittest.TestCase):
             self.assertIn("skipped", err, "the budget ran out before every probe could start")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class GenmemDrop(Base):
+    """R6 removes test_generator_memory from small selections that did not select it directly.
+    A broken import probe is direct evidence: #8's mass_failure_mask keeps genmem there, and R6
+    must not undo that decision."""
+
+    def selected(self):
+        return {S.GENMEM_NUM, 1, 2}
+
+    def test_drops_genmem_from_a_small_non_direct_selection(self):
+        selected = {"c": self.selected()}
+        S.drop_genmem(selected, {}, ())
+        self.assertEqual(selected["c"], {1, 2})
+
+    def test_keeps_genmem_when_line_or_file_coverage_selected_it(self):
+        selected = {"c": self.selected()}
+        S.drop_genmem(selected, {"c": True}, ())
+        self.assertEqual(selected["c"], self.selected())
+
+    def test_keeps_genmem_on_an_import_probe_broken_commit(self):
+        selected = {"c": self.selected()}
+        S.drop_genmem(selected, {}, {"c"})
+        self.assertEqual(selected["c"], self.selected())
+
+    def test_leaves_large_selections_and_full_runs_alone(self):
+        large = self.selected() | set(range(1, S.GENMEM_MAX_SELECTED + 1))
+        selected = {"full": None, "large": large}
+        S.drop_genmem(selected, {}, ())
+        self.assertIsNone(selected["full"])
+        self.assertEqual(selected["large"], large)
 
 
 if __name__ == "__main__":
