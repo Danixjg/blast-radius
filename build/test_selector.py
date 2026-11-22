@@ -780,6 +780,61 @@ class FailedImports(Base):
                         S._imported_modules(st, "tests/x.py"))
 
 
+class FixtureProjection(Base):
+    """A SQL fixture edit that changes only expected outputs keeps the tests that read them and drops
+    the ones whose every use of the records ignores the expected field (TPC-DS execution)."""
+
+    REL = "tests/fixtures/optimizer/tpc-ds/tpc-ds.sql"
+    TPCDS = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
+    OPT = "tests/test_optimizer.py::TestOptimizer::test_tpcds"
+
+    def has(self, m, test_id):
+        return bool(m >> DATA["tests"].index(test_id) & 1)
+
+    def test_expected_output_change_drops_input_only_readers(self):
+        m, probe = self.mask(edit(self.REL, '    "store_returns"."sr_store_sk" AS "ctr_store_sk",\n',
+                                  '    "store_returns"."sr_store_sk" AS "ctr_store_skx",\n'))
+        self.assertFalse(self.has(m, self.TPCDS), "executes the inputs only")
+        self.assertTrue(self.has(m, self.OPT), "compares against the expected output")
+        self.assertIsNone(probe)
+
+    def test_other_changes_keep_every_opener(self):
+        opened = DATA["opens"][self.REL]
+        for old, new, why in (
+                ("                AND d_year = 2001\n", "                AND d_year = 2002\n", "input SQL"),
+                ("# execute: true\nWITH customer_total_return\n", "# execute: false\nWITH customer_total_return\n",
+                 "metadata"),
+                ("# execute: true\nWITH customer_total_return\n", "# execute true\nWITH customer_total_return\n",
+                 "malformed metadata: the loader raises (a setup error for every reader)")):
+            m, _ = self.mask(edit(self.REL, old, new))
+            self.assertEqual(m & opened, opened, why)
+
+    def test_reordered_records_keep_every_opener(self):
+        src = read(self.REL)
+        parts = src.split(";")
+        swapped = ";".join(parts[2:4] + parts[0:2] + parts[4:])   # first two records exchanged
+        m, _ = self.mask(diff(self.REL, src, swapped))
+        self.assertTrue(self.has(m, self.TPCDS))
+
+    def test_interacting_edit_keeps_every_opener(self):
+        a = edit(self.REL, '    "store_returns"."sr_store_sk" AS "ctr_store_sk",\n',
+                 '    "store_returns"."sr_store_sk" AS "ctr_store_skx",\n')
+        b = edit("tests/helpers.py", "def string_to_bool(string):\n", "def string_to_bool(string):  # c\n")
+        m, _ = self.mask(a + b)
+        self.assertTrue(self.has(m, self.TPCDS), "another file in the same patch: no projection")
+
+    def test_unfollowed_record_use_widens(self):
+        import ast
+        src = ("from tests.helpers import load_sql_fixture_pairs\n\n\nclass T:\n    @classmethod\n"
+               "    def setUpClass(cls):\n        cls.rows = list(load_sql_fixture_pairs('x.sql'))\n\n"
+               "    def test_a(self):\n        for meta, sql, _ in self.rows:\n            pass\n\n"
+               "    def test_b(self):\n        return len(self.rows)\n")
+        self.assertIsNone(S._pair_record_sites(ast.parse(src), "x.sql"))
+        self.assertEqual(S._pair_record_sites(ast.parse(src.replace("return len(self.rows)", "pass")), "x.sql"),
+                         [(10, False)])
+        self.assertEqual(S._pair_record_sites(ast.parse(src), "y.sql"), [], "another fixture")
+
+
 class OneLineLambdas(Base):
     """A call of a lambda reports no line event for its first line (sys.monitoring, CPython 3.12+),
     so coverage of that line only names whoever created the lambda."""

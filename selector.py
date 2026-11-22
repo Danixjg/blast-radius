@@ -74,6 +74,8 @@ VERIFY_UNSAFE_FILES = {
 # eq_swap_mask). Validated on 24 swap sites chosen by structure alone (an and/or operand after the
 # first, profiled, short-circuiting tests), labelled by full-suite runs: none breaks a test.
 EQ_SHORT_CIRCUIT = os.environ.get("BR_EQ_SHORT_CIRCUIT", "1") == "1"
+# SQL fixture edits that change only expected outputs drop the tests that never read them
+FIXTURE_PROJECTION = os.environ.get("BR_FIXTURE_PROJECTION", "1") == "1"
 # tracemalloc counts every thread's allocations: under pytest-xdist the worker's I/O thread makes
 # this test fail whenever many other tests fail, which a run here cannot reproduce
 VERIFY_UNSAFE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
@@ -624,6 +626,147 @@ def _imported_modules(st, rel):
         parts = n.split(".")
         out.update(".".join(parts[:i]) for i in range(1, len(parts) + 1))
     return out
+
+
+def _pair_record_sites(tree, fixture):
+    """Where one test module unpacks records of `fixture` (path below tests/fixtures/) produced by
+    load_sql_fixture_pairs: [(line, reads_expected)]. Follows the loader call into a for loop or
+    comprehension (also through enumerate), into a name or self/cls attribute it is stored in,
+    through `self.method(..., records, ...)` into that method's parameter, and into tuple
+    unpacking of records[i] (also inside `a if c else b`). A record is (metadata, input SQL,
+    expected output); reads_expected is False only when the third element is unpacked into `_`.
+    None when records go anywhere else (a call this does not follow, len(), a bare subscript, a
+    whole record bound to one name)."""
+    parent = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parent[id(child)] = node
+    methods = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            for s in node.body:
+                if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    methods.setdefault(s.name, []).append(s)
+
+    def may_name(arg):
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            return arg.value == fixture
+        if isinstance(arg, ast.JoinedStr):
+            pat = "".join(re.escape(v.value) if isinstance(v, ast.Constant) else ".*" for v in arg.values)
+            return re.fullmatch(pat, fixture) is not None
+        return True   # computed: it could be this file
+
+    sites = []
+
+    def target_reads(t):
+        if isinstance(t, ast.Tuple) and len(t.elts) == 3 and not any(isinstance(e, ast.Starred) for e in t.elts):
+            last = t.elts[2]
+            return not (isinstance(last, ast.Name) and last.id == "_")
+        return True
+
+    def iterated(expr, loop):
+        """expr (the records) is the iterable of loop, maybe through enumerate(expr, ...)."""
+        t = loop.target
+        if isinstance(parent.get(id(expr)), ast.Call) and getattr(parent[id(expr)].func, "id", None) == "enumerate":
+            if not (isinstance(t, ast.Tuple) and len(t.elts) == 2):
+                return False
+            t = t.elts[1]
+        line = loop.lineno if isinstance(loop, ast.For) else loop.iter.lineno
+        sites.append((line, target_reads(t)))
+        return True
+
+    def use(expr, depth=0):
+        """Records value `expr` (an AST node) is used by its parent: record the sites or fail."""
+        if depth > 6:
+            return False
+        p = parent.get(id(expr))
+        if isinstance(p, ast.Call) and getattr(p.func, "id", None) in ("enumerate", "list") and p.args and p.args[0] is expr:
+            q = parent.get(id(p))
+            if getattr(p.func, "id", None) == "enumerate":
+                if isinstance(q, (ast.For, ast.comprehension)) and q.iter is p:
+                    return iterated(expr, q)
+                return False
+            return use(p, depth + 1)   # list(records): the same records
+        if isinstance(p, (ast.For, ast.comprehension)) and p.iter is expr:
+            return iterated(expr, p)
+        if isinstance(p, ast.Assign) and p.value is expr and len(p.targets) == 1:
+            tgt = p.targets[0]
+            if isinstance(tgt, ast.Attribute) and isinstance(tgt.value, ast.Name) and tgt.value.id in ("self", "cls"):
+                return attribute_uses(tgt.attr, depth + 1)
+            if isinstance(tgt, ast.Name):
+                scope = enclosing_function(p)
+                return name_uses(tgt.id, scope if scope is not None else tree, depth + 1, exclude=tgt)
+            return False
+        if isinstance(p, ast.Subscript) and p.value is expr:
+            q = parent.get(id(p))
+            while isinstance(q, ast.IfExp) and (q.body is p or q.orelse is p):
+                p, q = q, parent.get(id(q))
+            if isinstance(q, ast.Assign) and q.value is p and len(q.targets) == 1:
+                sites.append((q.lineno, target_reads(q.targets[0])))
+                return True
+            return False
+        if isinstance(p, ast.Call) and expr in p.args and isinstance(p.func, ast.Attribute) and \
+                isinstance(p.func.value, ast.Name) and p.func.value.id in ("self", "cls"):
+            cands = methods.get(p.func.attr, [])
+            if len(cands) != 1:
+                return False
+            fn = cands[0]
+            params = [a.arg for a in fn.args.posonlyargs + fn.args.args][1:]
+            i = p.args.index(expr)
+            if i >= len(params) or fn.args.vararg:
+                return False
+            return name_uses(params[i], fn, depth + 1)
+        return False
+
+    def enclosing_function(node):
+        q = parent.get(id(node))
+        while q is not None and not isinstance(q, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            q = parent.get(id(q))
+        return q
+
+    def name_uses(name, scope, depth, exclude=None):
+        found = False
+        for n in ast.walk(scope):
+            if isinstance(n, ast.Name) and n.id == name and n is not exclude:
+                if isinstance(n.ctx, ast.Load):
+                    if not use(n, depth):
+                        return False
+                    found = True
+                elif n is not exclude:
+                    return False   # rebound: not followed
+        return True
+
+    seen_attrs = set()
+
+    def attribute_uses(attr, depth):
+        if attr in seen_attrs:
+            return True
+        seen_attrs.add(attr)
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Attribute) and n.attr == attr and isinstance(n.value, ast.Name) and \
+                    n.value.id in ("self", "cls"):
+                if isinstance(n.ctx, ast.Load):
+                    if not use(n, depth):
+                        return False
+                else:
+                    q = parent.get(id(n))
+                    if not (isinstance(q, ast.Assign) and _is_pairs_call(q.value)):
+                        return False   # stored from something else
+        return True
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", None)) ==                 "load_sql_fixture_pairs" and may_name(node.args[0] if node.args else None):
+            if not use(node):
+                return None
+    return sites
+
+
+def _is_pairs_call(node):
+    """load_sql_fixture_pairs(...) or list(load_sql_fixture_pairs(...))."""
+    if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "list" and node.args:
+        node = node.args[0]
+    return isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", None)) == \
+        "load_sql_fixture_pairs"
 
 
 def is_docstring(st):
@@ -2178,7 +2321,101 @@ class Hunter:
             return self.analyze_other(new)
         if rel.endswith(".py"):
             return self.analyze_py(rel, fp)
-        return self.analyze_other(rel)
+        m = self.analyze_other(rel)
+        if isolated and m and m != self.ALL and FIXTURE_PROJECTION and rel.startswith("tests/fixtures/") and \
+                rel.endswith(".sql"):
+            try:
+                return self.fixture_projection(rel, fp, m)
+            except Exception as e:   # widen instead
+                log(rel, "fixture projection error, openers kept:", repr(e))
+        return m
+
+    # ---------------------------------------------------------------- SQL fixture fields
+    def fixture_projection(self, rel, fp, m):
+        """A patch that only edits a SQL fixture file read through tests/helpers.py's
+        load_sql_fixture_pairs (records of metadata, input SQL and expected output). Parsed with the
+        pinned loader itself: when both versions parse and every record's metadata and input SQL
+        are unchanged, in the same number and order, only expected outputs changed. A test that
+        opened the file then keeps its place unless every place where it was seen consuming those
+        records ignores the expected field (`for meta, sql, _ in ...`, `_, sql, _ = records[i]`);
+        records flowing anywhere else (another call, len(), indexing without unpacking) keep it."""
+        old = self.source(rel)
+        new = apply_hunks(old, fp.hunks) if old is not None else None
+        if old is None or new is None or old == new:
+            return m
+        loader = self._fixture_loader()
+        if loader is None:
+            return m
+        try:
+            before = loader(old)
+        except Exception:
+            return m   # the pristine file does not parse: nothing is known about its readers
+        try:
+            after = loader(new)
+        except Exception:
+            return m   # the loader now fails (a setup error for every reader)
+        if [(tuple(meta.items()), sql) for meta, sql, _ in before] != \
+                [(tuple(meta.items()), sql) for meta, sql, _ in after]:
+            return m   # inputs, metadata, count or order changed: every reader can tell
+        drop = 0
+        sites = self._fixture_sites(rel[len("tests/fixtures/"):])
+        if sites is None:
+            return m
+        input_only = expected = 0
+        for srel, line, reads_expected in sites:
+            ran = self.span_mask(srel, line, line)
+            if reads_expected:
+                expected |= ran
+            else:
+                input_only |= ran
+        drop = input_only & ~expected & m
+        if drop:
+            log(rel, f"fixture edit changes only expected outputs: {bin(drop).count('1')} input-only readers dropped")
+        return m & ~drop
+
+    def _fixture_loader(self):
+        """records(text) through the pinned tests/helpers.py load_sql_fixture_pairs, or None."""
+        if not hasattr(self, "_fixture_loader_fn"):
+            self._fixture_loader_fn = None
+            text = self.source("tests/helpers.py")
+            if text is not None:
+                tree = ast.parse(text)
+                stdlib = getattr(sys, "stdlib_module_names", ())
+                imports_ok = all(
+                    all(a.name.split(".")[0] in stdlib for a in s.names) if isinstance(s, ast.Import) else
+                    (not s.level and (s.module or "").split(".")[0] in stdlib)
+                    for s in ast.walk(tree) if isinstance(s, (ast.Import, ast.ImportFrom)))
+                # the loader module may only use the standard library: it is run here
+                if imports_ok:
+                    ns = {"__name__": "pinned_test_helpers", "__file__": str(SRC / "tests" / "helpers.py")}
+                    exec(compile(tree, "tests/helpers.py", "exec"), ns)
+                    fn = ns.get("load_sql_fixture_pairs")
+                    if callable(fn):
+                        import io
+
+                        def records(content, fn=fn, ns=ns):
+                            ns["open"] = lambda *a, **k: io.StringIO(content)
+                            try:
+                                return list(fn("in-memory.sql"))
+                            finally:
+                                del ns["open"]
+                        self._fixture_loader_fn = records
+        return self._fixture_loader_fn
+
+    def _fixture_sites(self, fixture):
+        """(test file, line, reads expected) for every place the test code unpacks records of the
+        fixture `fixture` (relative to tests/fixtures/) from load_sql_fixture_pairs, or None when
+        the records reach code this does not follow."""
+        out = []
+        for rel in self.test_files + ["tests/helpers.py"]:
+            text = self.source(rel)
+            if not text or "load_sql_fixture_pairs" not in text or rel == "tests/helpers.py":
+                continue
+            got = _pair_record_sites(ast.parse(text), fixture)
+            if got is None:
+                return None
+            out.extend((rel, line, reads) for line, reads in got)
+        return out
 
     def new_test_file(self, rel, fp):
         """A test-tree .py file that did not exist before."""
