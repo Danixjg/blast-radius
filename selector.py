@@ -32,6 +32,7 @@ import sys
 import threading
 import time
 import tokenize
+import textwrap
 from pathlib import Path
 
 T0 = time.monotonic()
@@ -43,6 +44,15 @@ PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 # which sqlglot modules importing each module loads (build/mkimports.py); the targeted probe
 PROBE_IMPORTS = Path(os.environ.get("BR_PROBE_IMPORTS", HERE / "probe_imports.json"))
 PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "1") == "1"
+# Two measured selection rules, off by default until they pass the fresh-seed gate.
+# R5: narrow the import-time class-attribute fallback to readers that also instantiated the
+# class, but only for a changed statement containing no Call/Lambda (driver7.py's guard).
+INST_NARROW = os.environ.get("BR_INST_NARROW", "0") == "1"
+# R6: drop test_generator_memory from small selections unless line/file coverage selected it
+# directly (pp2.py's rule; 1224 is its catalogue number and 500 the measured cap).
+GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "0") == "1"
+GENMEM_NUM = 1224
+GENMEM_MAX_SELECTED = 500
 WORKER_MS = 2000
 MAX_WORKERS = 8
 # The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
@@ -806,6 +816,7 @@ class Hunter:
         self.lazy_pending = False
         self._kd_memo = {}
         self._fresh_memo, self._nchanged = {}, set()
+        self._inst_ok = True   # R5: the current top-level statement has no Call/Lambda
         # the one fresh-interpreter test whose assertion the import probe replays exactly
         self.lazy_mask = 0
         for i, t in enumerate(data["tests"]):
@@ -944,9 +955,25 @@ class Hunter:
             m |= self.resolve_stmt(rel, cls_path, names, (a, b), doc, visited, depth + 1)
         return m, unknown
 
+    @staticmethod
+    def _has_call(rel, span, source):
+        """True when a statement span contains a Call or Lambda, or cannot be parsed.
+        Mirrors driver7.py: a value built by a call can raise at import time, so the
+        narrowing guard is only safe when the statement is call-free."""
+        if not span:
+            return True
+        try:
+            src = "\n".join(source(rel).split("\n")[span[0] - 1:span[1]])
+            tree = ast.parse(textwrap.dedent(src))
+        except Exception:
+            return True
+        return any(isinstance(n, (ast.Call, ast.Lambda)) for n in ast.walk(tree))
+
     def resolve_stmt(self, rel, cls_path, names, span, doc, visited, depth=0):
         """Tests affected by a changed class-body or module-level statement."""
         self.import_time = True
+        if depth == 0 and INST_NARROW:
+            self._inst_ok = not self._has_call(rel, span, self.source)
         reexec = self.span_mask(rel, span[0], span[1]) if span else 0
         if doc:
             return reexec | self.d["name_mask"].get("__doc__", 0)
@@ -960,7 +987,10 @@ class Hunter:
             s1, unknown = self.resolve_name(name, own, visited, depth)
             if name in self.d["name_imp_cls"] or (name in self.d["name_imp"] and built):
                 unknown = True   # read while importing: class creation, helpers, early instances
-            if unknown or not s1:
+            if INST_NARROW and unknown and inst and s1 and self._inst_ok:
+                # driver7.py: readers that also instantiated, even when the name is unknown
+                res |= s1 & inst
+            elif unknown or not s1:
                 res |= inst if inst else (s1 | self.fallback(rel, cls_path))
             else:
                 res |= (s1 & inst) if inst else s1
@@ -3125,6 +3155,20 @@ def verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num):
         selected[cid] = kept
 
 
+def drop_genmem(selected, direct):
+    """R6 (pp2.py): drop test_generator_memory from small selections unless line or file
+    coverage selected it directly. `direct` maps commit id -> that direct-coverage evidence."""
+    if not GENMEM_DROP:
+        return
+    for cid, nums in selected.items():
+        if nums is None or GENMEM_NUM not in nums or len(nums) > GENMEM_MAX_SELECTED:
+            continue
+        if direct.get(cid):
+            continue
+        nums.discard(GENMEM_NUM)
+        log(cid, "genmem: dropped from a small, non-direct selection")
+
+
 def main():
     catalog = json.loads((DATA / "tests.json").read_text(encoding="utf-8"))["tests"]
     patches = sorted((DATA / "commits").glob("*.patch"))
@@ -3141,7 +3185,7 @@ def main():
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
 
-    selected, probes, lazy_pending, verify_files = {}, {}, set(), {}
+    selected, probes, lazy_pending, verify_files, texts = {}, {}, set(), {}, {}
     for p in patches:
         cid = p.stem
         try:
@@ -3150,6 +3194,7 @@ def main():
             if remaining() < RESERVE_S:
                 raise RuntimeError("out of time")
             text = p.read_bytes().decode("utf-8", "surrogateescape")
+            texts[cid] = text
             mask, probe = hunter.analyze(text)
             if mask and mask == hunter.ALL:
                 selected[cid] = None
@@ -3194,6 +3239,28 @@ def main():
             verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num)
         except Exception as e:   # the selections stand as they are
             log("verification failed, selections kept:", repr(e))
+
+    if GENMEM_DROP and hunter is not None:
+        genmem_bit = 0
+        if GENMEM_NUM in idx_to_num:
+            genmem_bit = 1 << idx_to_num.index(GENMEM_NUM)
+        direct = {}
+        if genmem_bit:
+            for p in patches:
+                cid, text = p.stem, texts.get(p.stem)
+                if not text:
+                    continue
+                m = 0
+                for fp in parse_patch(text):
+                    rel = fp.old or fp.new
+                    m |= hunter.file_mask(rel)
+                    for os_, ol, ns, nl, _ in fp.hunks:
+                        if ol:
+                            m |= hunter.span_mask(rel, os_, os_ + ol - 1)
+                        if nl:
+                            m |= hunter.span_mask(rel, ns, ns + nl - 1)
+                direct[cid] = bool(m & genmem_bit)
+        drop_genmem(selected, direct)
 
     out, total = [], 0
     all_schedule = None

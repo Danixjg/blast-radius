@@ -1127,6 +1127,45 @@ class Verifier(unittest.TestCase):
         self.assertLessEqual(out["breaking"], out0["breaking"], "verification only ever removes tests")
 
 
+class RiskyRules(unittest.TestCase):
+    """The two rules frozen for the fresh-seed gate (driver7.py R5, pp2.py R6)."""
+
+    def test_inst_narrow_requires_a_call_free_statement(self):
+        h = S.Hunter(DATA, S.load_profile(DATA["tests"]))
+        harmless = (R / "labels/holdout1/data/commits/h12117.patch").read_text()
+        with_call = (R / "labels/holdout1/data/commits/h12134.patch").read_text()
+        old = S.INST_NARROW
+        try:
+            S.INST_NARROW = False
+            before = h.analyze(harmless)[0]
+            S.INST_NARROW = True
+            after = h.analyze(harmless)[0]
+            self.assertTrue(after & before == after, "narrowing must be a subset")
+            self.assertLess(bin(after).count("1"), bin(before).count("1"))
+            S.INST_NARROW = False
+            with_before = h.analyze(with_call)[0]
+            S.INST_NARROW = True
+            self.assertEqual(h.analyze(with_call)[0], with_before,
+                             "a Call in the edited statement keeps the full selection")
+        finally:
+            S.INST_NARROW = old
+
+    def test_genmem_drop_only_for_small_non_direct_selections(self):
+        old = S.GENMEM_DROP
+        try:
+            S.GENMEM_DROP = True
+            n = S.GENMEM_NUM
+            sel = {"direct": {n, 1}, "indirect": {n, 2}, "large": {n} | set(range(501)),
+                   "absent": {1}}
+            S.drop_genmem(sel, {"direct": True, "indirect": False, "large": False})
+            self.assertEqual(sel["direct"], {n, 1}, "direct coverage keeps the test")
+            self.assertEqual(sel["indirect"], {2}, "small, non-direct selection drops it")
+            self.assertIn(n, sel["large"], "the 500-test cap is respected")
+            self.assertEqual(sel["absent"], {1})
+        finally:
+            S.GENMEM_DROP = old
+
+
 class Deadline(unittest.TestCase):
     """Several slow imports in one batch under a short injected budget: every commit still gets a
     valid answer before the budget runs out, and every unfinished probe becomes "run everything"."""
