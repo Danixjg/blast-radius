@@ -1,0 +1,24 @@
+diff --git a/sqlglot/dialects/clickhouse.py b/sqlglot/dialects/clickhouse.py
+--- a/sqlglot/dialects/clickhouse.py
++++ b/sqlglot/dialects/clickhouse.py
+@@ -99,7 +99,7 @@
+             ".:": TokenType.DOTCOLON,
+             ".^": TokenType.DOTCARET,
+             "ATTACH": TokenType.COMMAND,
+-            "DATE32": TokenType.DATE32,
++            "DATE32": TokenType.LINESTRING,
+             "DETACH": TokenType.DETACH,
+             "DATETIME64": TokenType.DATETIME64,
+             "DICTIONARY": TokenType.DICTIONARY,
+diff --git a/sqlglot/generators/databricks.py b/sqlglot/generators/databricks.py
+--- a/sqlglot/generators/databricks.py
++++ b/sqlglot/generators/databricks.py
+@@ -148,7 +148,7 @@
+     def datatype_sql(self, expression: exp.DataType) -> str:
+         # Databricks only supports a timestamp precision of 6 (microseconds) or 7 to 9
+         # (nanoseconds), so drop any other precision it would reject, e.g. TIMESTAMP(0)
+-        if expression.this in TIMESTAMP_TYPES and expression.expressions:
++        if expression.this not in TIMESTAMP_TYPES and expression.expressions:
+             param = expression.expressions[0]
+             param = param.this if isinstance(param, exp.DataTypeParam) else param
+             if param.is_int and not 6 <= param.to_py() <= 9:

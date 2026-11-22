@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/hive.py b/sqlglot/dialects/hive.py
+--- a/sqlglot/dialects/hive.py
++++ b/sqlglot/dialects/hive.py
+@@ -66,7 +66,7 @@
+         "d": "%-d",
+         "HH": "%Hstrict",
+         "H": "%-H",
+-        "hh": "%Istrict",
++        "hh": '%Istrict_',
+         "h": "%-I",
+         "mm": "%Mstrict",
+         "m": "%-M",

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/duckdb.py b/sqlglot/generators/duckdb.py
+--- a/sqlglot/generators/duckdb.py
++++ b/sqlglot/generators/duckdb.py
+@@ -1674,7 +1674,7 @@
+         exp.ArrayRemoveAt: _array_remove_at_sql,
+         exp.ArrayRemove: remove_from_array_using_filter,
+         exp.ArraySort: _array_sort_sql,
+-        exp.ArrayPrepend: array_append_sql("LIST_PREPEND", swap_params=True),
++        exp.ArrayPrepend: array_append_sql("LIST_PREPEND", swap_params=False),
+         exp.ArraySum: rename_func("LIST_SUM"),
+         exp.ArrayMax: rename_func("LIST_MAX"),
+         exp.ArrayMin: rename_func("LIST_MIN"),

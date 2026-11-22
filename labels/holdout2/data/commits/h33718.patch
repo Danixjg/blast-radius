@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/qualify_tables.sql b/tests/fixtures/optimizer/qualify_tables.sql
+--- a/tests/fixtures/optimizer/qualify_tables.sql
++++ b/tests/fixtures/optimizer/qualify_tables.sql
+@@ -270,7 +270,7 @@
+ 
+ # title: canonicalize sources that have colliding aliases
+ # canonicalize_table_aliases: true
+-SELECT t.foo FROM t AS t, (SELECT t.bar FROM t AS t);
++SELECT t.foo 42 FROM t AS t, (SELECT t.bar FROM t AS t);
+ SELECT _2.foo FROM c.db.t AS _2, (SELECT _0.bar FROM c.db.t AS _0) AS _1;
+ 
+ # title: canonicalize table referenced by lateral unnest

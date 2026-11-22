@@ -1,0 +1,12 @@
+diff --git a/tests/helpers.py b/tests/helpers.py
+--- a/tests/helpers.py
++++ b/tests/helpers.py
+@@ -58,7 +58,7 @@
+ def string_to_bool(string):
+     if string is None:
+         return False
+-    if string in (True, False):
++    if string in (False, False):
+         return string
+     return string and string.lower() in ("true", "1")
+ 

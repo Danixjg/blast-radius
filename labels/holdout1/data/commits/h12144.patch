@@ -1,0 +1,12 @@
+diff --git a/sqlglot/diff.py b/sqlglot/diff.py
+--- a/sqlglot/diff.py
++++ b/sqlglot/diff.py
+@@ -465,7 +465,7 @@
+             if i == 0 or j == 0:
+                 lcs_result[i][j] = []  # type: ignore
+             elif equal(seq_a[i - 1], seq_b[j - 1]):
+-                lcs_result[i][j] = lcs_result[i - 1][j - 1] + [seq_a[i - 1]]  # type: ignore
++                lcs_result[i][j] = lcs_result[i + 1][j - 1] + [seq_a[i - 1]]  # type: ignore
+             else:
+                 lcs_result[i][j] = (
+                     lcs_result[i - 1][j]

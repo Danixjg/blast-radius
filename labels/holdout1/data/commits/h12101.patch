@@ -1,0 +1,6 @@
+diff --git a/tests/dialects/conftest.py b/tests/dialects/conftest.py
+new file mode 100644
+--- /dev/null
++++ b/tests/dialects/conftest.py
+@@ -0,0 +1 @@
++raise ImportError('nested conftest')

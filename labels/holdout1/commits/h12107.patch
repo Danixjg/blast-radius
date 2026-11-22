@@ -1,0 +1,12 @@
+diff --git a/tests/helpers.py b/tests/helpers.py
+--- a/tests/helpers.py
++++ b/tests/helpers.py
+@@ -15,7 +15,7 @@
+ def _extract_meta(sql):
+     meta = {}
+     sql_lines = sql.split("\n")
+-    i = 0
++    i = 1
+     while sql_lines[i].startswith("#"):
+         key, val = sql_lines[i].split(":", maxsplit=1)
+         meta[key.lstrip("#").strip()] = val.strip()

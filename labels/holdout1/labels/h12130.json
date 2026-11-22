@@ -1,0 +1,20 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_dialect.py::TestDialect::test_cast",
+  "tests/dialects/test_dialect.py::TestDialect::test_limit",
+  "tests/dialects/test_hive.py::TestHive::test_add_columns",
+  "tests/dialects/test_oracle.py::TestOracle::test_full_procedure",
+  "tests/dialects/test_oracle.py::TestOracle::test_json_functions",
+  "tests/dialects/test_oracle.py::TestOracle::test_json_table",
+  "tests/dialects/test_oracle.py::TestOracle::test_oracle",
+  "tests/dialects/test_oracle.py::TestOracle::test_xml_table"
+ ],
+ "seconds": 49.6,
+ "peak_mb": null,
+ "patch": "h12130.patch"
+}

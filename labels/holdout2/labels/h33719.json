@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_redshift.py::TestRedshift::test_identity"
+ ],
+ "seconds": 47.6,
+ "peak_mb": null,
+ "patch": "h33719.patch"
+}

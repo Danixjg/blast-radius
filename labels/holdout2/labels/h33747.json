@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_clickhouse.py::TestClickhouse::test_functions"
+ ],
+ "seconds": 50.4,
+ "peak_mb": null,
+ "patch": "h33747.patch"
+}

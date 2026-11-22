@@ -1,0 +1,12 @@
+diff --git a/sqlglot/expressions/array.py b/sqlglot/expressions/array.py
+--- a/sqlglot/expressions/array.py
++++ b/sqlglot/expressions/array.py
+@@ -208,7 +208,7 @@
+ 
+ 
+ class StrtokToArray(Expression, Func):
+-    arg_types = {"this": True, "expression": False}
++    arg_types = {"this": True, "expression": True}
+ 
+ 
+ # Higher-order / lambda

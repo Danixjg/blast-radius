@@ -33,6 +33,7 @@ import sys
 import threading
 import time
 import tokenize
+import textwrap
 from pathlib import Path
 
 T0 = time.monotonic()
@@ -43,6 +44,19 @@ MAP = Path(os.environ.get("BR_MAP", HERE / "map.pkl"))
 PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 IMPORT_SITE_INDEX = Path(os.environ.get("BR_IMPORT_SITE_INDEX", HERE / "import-sites.json"))
 IMPORT_SITE_INDEX_VERSION = 2
+# R5/R6 ported from targeted-probes
+# off: an attribute read while classes are created (Tokenizer COMMENTS -> _COMMENTS, QUOTES, KEYWORDS)
+# is read at run time under derived names, so "readers that also instantiated" misses its users
+INST_NARROW = os.environ.get("BR_INST_NARROW", "0") == "1"
+GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
+GENMEM_NUM = 1224
+GENMEM_MAX_SELECTED = 500
+# which sqlglot modules importing each module loads (build/mkimports.py). The targeted probe
+# imports only that subset, which saves CPU but can miss an order-dependent import failure and
+# so bypass #8's import_failure_mask (an over-selection, never an under-selection). It was
+# validated on targeted-probes, which has no #8; keep it opt-in until checked on main's rule.
+PROBE_IMPORTS = Path(os.environ.get("BR_PROBE_IMPORTS", HERE / "probe_imports.json"))
+PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "0") == "1"
 WORKER_MS = 2000
 MAX_WORKERS = 8
 # The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
@@ -267,6 +281,35 @@ _EQ_TOKENS = ("__eq__", "__ne__", "setattr", "__dict__")
 def _eq_lines(text):
     """The lines of a source text that could rebind an equality method, with their counts."""
     return collections.Counter(ln.strip() for ln in text.splitlines() if any(t in ln for t in _EQ_TOKENS))
+
+
+def map_new_span(span, hunks):
+    """Map an old-line span (both endpoints) to the corresponding new-line span.
+    A replaced line maps to the new line at the same hunk position; an inserted line maps
+    to the new line that was added. R5's guard uses this to inspect the patched statement."""
+    def one(line):
+        delta = 0
+        for os_, ol, ns, nl, body in hunks:
+            o_end = os_ + max(ol - 1, 0)
+            if line < os_:
+                break
+            if line > o_end:
+                delta += nl - ol
+                continue
+            o, n = os_, ns
+            for b in body:
+                if line == o:
+                    return n
+                if b[0] == " ":
+                    o += 1
+                    n += 1
+                elif b[0] == "-":
+                    o += 1
+                else:
+                    n += 1
+            return ns + max(nl - 1, 0)
+        return line + delta
+    return one(span[0]), one(span[1])
 
 
 _DOC_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -1015,6 +1058,8 @@ class Hunter:
         self.lazy_pending = False
         self._kd_memo = {}
         self._fresh_memo, self._nchanged = {}, set()
+        self._new_src, self._hunks = {}, {}   # R5: patched text per file for the Call/Lambda guard
+        self._inst_ok = True   # R5: the current top-level statement has no Call/Lambda
         # the one fresh-interpreter test whose assertion the import probe replays exactly
         self.lazy_mask = 0
         for i, t in enumerate(data["tests"]):
@@ -1153,10 +1198,31 @@ class Hunter:
             m |= self.resolve_stmt(rel, cls_path, names, (a, b), doc, visited, depth + 1)
         return m, unknown
 
+    @staticmethod
+    def _has_call(rel, span, source, new_source=None, new_span=None):
+        spans = [(source, span)]
+        if new_source is not None and new_span is not None:
+            spans.append((new_source, new_span))
+        for src_fn, sp in spans:
+            if not sp:
+                return True
+            try:
+                src = "\n".join(src_fn(rel).split("\n")[sp[0] - 1:sp[1]])
+                tree = ast.parse(textwrap.dedent(src))
+            except Exception:
+                return True
+            if any(isinstance(n, (ast.Call, ast.Lambda)) for n in ast.walk(tree)):
+                return True
+        return False
+
     def resolve_stmt(self, rel, cls_path, names, span, doc, visited, depth=0, reexec=None):
         """Tests affected by a changed class-body or module-level statement. reexec: the tests
         that ran the statement itself (default: every test whose coverage holds its lines)."""
         self.import_time = True
+        if depth == 0 and INST_NARROW:
+            hunks = self._hunks.get(rel, ())
+            nspan = map_new_span(span, hunks) if hunks and span else None
+            self._inst_ok = not self._has_call(rel, span, self.source, self._new_src.get, nspan)
         if reexec is None:
             reexec = self.span_mask(rel, span[0], span[1]) if span else 0
         if doc:
@@ -1171,7 +1237,10 @@ class Hunter:
             s1, unknown = self.resolve_name(name, own, visited, depth)
             if name in self.d["name_imp_cls"] or (name in self.d["name_imp"] and built):
                 unknown = True   # read while importing: class creation, helpers, early instances
-            if unknown or not s1:
+            if INST_NARROW and unknown and inst and s1 and self._inst_ok:
+                # driver7.py: readers that also instantiated, even when the name is unknown
+                res |= s1 & inst
+            elif unknown or not s1:
                 res |= inst if inst else (s1 | self.fallback(rel, cls_path))
             else:
                 res |= (s1 & inst) if inst else s1
@@ -1218,6 +1287,9 @@ class Hunter:
         if new is None:
             log(rel, "patch does not apply: catcher takes all")
             return self.ALL
+        if INST_NARROW:
+            self._new_src[rel] = new
+            self._hunks[rel] = fp.hunks
         new_bytes = new.encode("utf-8", "surrogateescape")
         problem = decoding_problem(new_bytes)
         if problem:   # before any line-based shortcut: unchanged lines may now mean other text
@@ -2471,6 +2543,8 @@ class Hunter:
         self.import_time = False
         self.need_probe = False
         self.probe_files = {}
+        self._new_src, self._hunks = {}, {}
+        self._inst_ok = True
         files = parse_patch(patch_text)
         self.probe_files = self.combined(files)
         # the verifier may run tests on this patch only when it just edits existing sqlglot modules
@@ -3201,7 +3275,65 @@ def _kill(p):
         pass
 
 
+_PROBE_FWD = None
+_MUTATING_CALLS = frozenset(("setattr", "delattr", "update", "pop", "popitem", "append", "extend", "insert", "remove",
+                             "clear", "setdefault", "add", "discard", "register", "__setitem__", "__delitem__"))
+
+
+def import_time_mutation(text):
+    """Code that runs while the module imports (module level, class bodies, decorators,
+    defaults) stores into or deletes an attribute or item, augments one in place, or calls a
+    mutating method: it may change state another module reads. True also when it does not parse."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return True
+    found = False
+
+    def visit(node):
+        nonlocal found
+        if found:
+            return
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            for d in getattr(node, "decorator_list", []):
+                visit(d)
+            for d in node.args.defaults + [x for x in node.args.kw_defaults if x is not None]:
+                visit(d)
+            return
+        if isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Delete)):
+            targets = node.targets if isinstance(node, (ast.Assign, ast.Delete)) else [node.target]
+            if isinstance(node, ast.AugAssign) or any(isinstance(n, (ast.Attribute, ast.Subscript))
+                                                      for t in targets for n in ast.walk(t)):
+                found = True
+                return
+        if isinstance(node, ast.Call):
+            f = node.func
+            name = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+            if name in _MUTATING_CALLS:
+                found = True
+                return
+        for c in ast.iter_child_nodes(node):
+            visit(c)
+
+    visit(tree)
+    return found
+
+
+def _probe_fwd():
+    global _PROBE_FWD
+    if _PROBE_FWD is None:
+        try:
+            _PROBE_FWD = {k: frozenset(v) for k, v in json.loads(PROBE_IMPORTS.read_text(encoding="utf-8"))["fwd"].items()}
+        except Exception:
+            _PROBE_FWD = {}
+    return _PROBE_FWD
+
+
 def _probe_modules(files):
+    """The modules the probe imports, in its fixed order. Targeted: `sqlglot`, the patched modules
+    and every module whose import loads one of them (probe_imports.json), when the patch only edits
+    sqlglot modules and none of them, before or after the patch, mutates state while it imports
+    (another module could then fail without importing it). Otherwise every module."""
     mods = list(all_modules())
     for rel, text in files.items():
         if rel.startswith("sqlglot/"):
@@ -3211,7 +3343,21 @@ def _probe_modules(files):
                     mods.remove(m)
             elif m not in mods:
                 mods.append(m)
-    return mods
+    if not PROBE_TARGETED or not files or not all(rel.startswith("sqlglot/") and rel.endswith(".py") for rel in files):
+        return mods
+    fwd = _probe_fwd()
+    if not fwd:
+        return mods
+    patched = {module_of(rel) for rel in files}
+    for rel, text in files.items():
+        old = None
+        try:
+            old = (SRC / rel).read_text(encoding="utf-8")
+        except OSError:
+            pass
+        if (text is not None and import_time_mutation(text)) or (old is not None and import_time_mutation(old)):
+            return mods
+    return [m for m in mods if m == "sqlglot" or m in patched or m not in fwd or fwd[m] & patched]
 
 
 def _probe_env():
@@ -3792,6 +3938,22 @@ def verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num):
         selected[cid] = kept
 
 
+def drop_genmem(selected, direct, import_broken=()):
+    """R6 (pp2.py): drop test_generator_memory from small selections unless line or file
+    coverage selected it directly. `direct` maps commit id -> that direct-coverage evidence.
+    `import_broken` holds commits whose import probe failed: there #8's mass_failure_mask keeps
+    genmem, so R6 must not undo that decision."""
+    if not GENMEM_DROP:
+        return
+    for cid, nums in selected.items():
+        if nums is None or GENMEM_NUM not in nums or len(nums) > GENMEM_MAX_SELECTED:
+            continue
+        if direct.get(cid) or cid in import_broken:
+            continue
+        nums.discard(GENMEM_NUM)
+        log(cid, "genmem: dropped from a small, non-direct selection")
+
+
 def main():
     catalog = json.loads((DATA / "tests.json").read_text(encoding="utf-8"))["tests"]
     patches = sorted((DATA / "commits").glob("*.patch"))
@@ -3820,6 +3982,7 @@ def main():
         return nums
 
     selected, probes, lazy_pending, verify_files, parts = {}, {}, set(), {}, {}
+    texts, import_broken = {}, set()
     for p in patches:
         cid = p.stem
         try:
@@ -3828,6 +3991,7 @@ def main():
             if remaining() < RESERVE_S:
                 raise RuntimeError("out of time")
             text = p.read_bytes().decode("utf-8", "surrogateescape")
+            texts[cid] = text
             mask, probe = hunter.analyze(text)
             if mask and mask == hunter.ALL:
                 selected[cid] = None
@@ -3860,6 +4024,7 @@ def main():
                     selected[cid] = None
                     continue
                 log(cid, f"import probe broken ({len(res.failed)} modules fail): their importers and users")
+                import_broken.add(cid)   # #8's mass_failure_mask keeps genmem here
                 # a module whose import fails never runs, so what its own edits would select is
                 # moot beyond that failure: keep the selections of the other patched files only
                 full, by_file = parts[cid]
@@ -3886,6 +4051,28 @@ def main():
             verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num)
         except Exception as e:   # the selections stand as they are
             log("verification failed, selections kept:", repr(e))
+
+    if GENMEM_DROP and hunter is not None:
+        genmem_bit = 0
+        if GENMEM_NUM in idx_to_num:
+            genmem_bit = 1 << idx_to_num.index(GENMEM_NUM)
+        direct = {}
+        if genmem_bit:
+            for p in patches:
+                cid, text = p.stem, texts.get(p.stem)
+                if not text:
+                    continue
+                m = 0
+                for fp in parse_patch(text):
+                    rel = fp.old or fp.new
+                    m |= hunter.file_mask(rel)
+                    for os_, ol, ns, nl, _ in fp.hunks:
+                        if ol:
+                            m |= hunter.span_mask(rel, os_, os_ + ol - 1)
+                        if nl:
+                            m |= hunter.span_mask(rel, ns, ns + nl - 1)
+                direct[cid] = bool(m & genmem_bit)
+        drop_genmem(selected, direct, import_broken)
 
     out, total = [], 0
     all_schedule = None

@@ -1,0 +1,4 @@
+diff --git a/tests/dialects/test_tsql.py b/tests/dialects/test_tsql_renamed.py
+similarity index 95%
+rename from tests/dialects/test_tsql.py
+rename to tests/dialects/test_tsql_renamed.py

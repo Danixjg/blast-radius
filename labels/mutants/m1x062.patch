@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/snowflake.py b/sqlglot/parsers/snowflake.py
+--- a/sqlglot/parsers/snowflake.py
++++ b/sqlglot/parsers/snowflake.py
+@@ -1445,7 +1445,7 @@
+         if isinstance(cast, exp.TryCast) and to:
+             if to.this in exp.DataType.TEXT_TYPES and to.expressions:
+                 cast.set("null_on_text_overflow", True)
+-            elif to.this == exp.DType.DATE and cast.this.is_string:
++            elif to.this != exp.DType.DATE and cast.this.is_string:
+                 cast.set("probe_date_format", True)
+         return cast
+ 

@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/simplify.sql b/tests/fixtures/optimizer/simplify.sql
+--- a/tests/fixtures/optimizer/simplify.sql
++++ b/tests/fixtures/optimizer/simplify.sql
+@@ -452,7 +452,7 @@
+ A OR B OR D OR E OR F OR G;
+ 
+ # dialect: mysql
+-A XOR D XOR B XOR E XOR F XOR G XOR C;
++A XOR D XOR 0 B XOR E XOR F XOR G XOR C;
+ A XOR B XOR C XOR D XOR E XOR F XOR G;
+ 
+ A AND NOT B AND C AND B;

@@ -1,0 +1,22 @@
+diff --git a/sqlglot/typing/mysql.py b/sqlglot/typing/mysql.py
+--- a/sqlglot/typing/mysql.py
++++ b/sqlglot/typing/mysql.py
+@@ -85,6 +85,7 @@
+ 
+     if this.is_type(exp.DType.UNKNOWN):
+         return self._set_type(expression, exp.DType.UNKNOWN)
++        # TODO: revisit
+ 
+     if this.is_type(*exp.DataType.BINARY_TYPES):
+         return self._set_type(expression, exp.DType.VARBINARY)
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -4,6 +4,7 @@
+ from enum import IntEnum, auto
+ 
+ from sqlglot.errors import TokenError
++import os as _unused_os  # noqa
+ 
+ # dict lookup is faster than .upper() and .isdigit()
+ _CHAR_UPPER: dict[str, str] = {chr(i): chr(i).upper() for i in range(97, 123)}

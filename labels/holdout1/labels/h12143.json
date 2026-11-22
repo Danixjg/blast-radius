@@ -1,0 +1,16 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_presto.py::TestPresto::test_time",
+  "tests/dialects/test_spark.py::TestSpark::test_spark",
+  "tests/dialects/test_tsql.py::TestTSQL::test_convert",
+  "tests/dialects/test_tsql.py::TestTSQL::test_format"
+ ],
+ "seconds": 47.8,
+ "peak_mb": null,
+ "patch": "h12143.patch"
+}

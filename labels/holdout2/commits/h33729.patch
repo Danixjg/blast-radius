@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/scope.py b/sqlglot/optimizer/scope.py
+--- a/sqlglot/optimizer/scope.py
++++ b/sqlglot/optimizer/scope.py
+@@ -719,7 +719,7 @@
+     Returns:
+         The root scope
+     """
+-    return seq_get(traverse_scope(expression), -1)
++    return seq_get(traverse_scope(expression), +1)
+ 
+ 
+ def _traverse_scope(scope: Scope) -> Iterator[Scope]:

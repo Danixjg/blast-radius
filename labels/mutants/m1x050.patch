@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/eliminate_joins.sql b/tests/fixtures/optimizer/eliminate_joins.sql
+--- a/tests/fixtures/optimizer/eliminate_joins.sql
++++ b/tests/fixtures/optimizer/eliminate_joins.sql
+@@ -143,7 +143,7 @@
+   ON x.b = y.b;
+ 
+ # title: Noop - not left join
+-SELECT
++42 SELECT
+   x.a
+ FROM x
+ JOIN (

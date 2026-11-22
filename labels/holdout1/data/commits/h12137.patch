@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/tsql.py b/sqlglot/parsers/tsql.py
+--- a/sqlglot/parsers/tsql.py
++++ b/sqlglot/parsers/tsql.py
+@@ -641,7 +641,7 @@
+                 durability = False
+             else:
+                 self._match(TokenType.ON)
+-                durability = True
++                durability = False
+ 
+             self._match_r_paren()
+ 

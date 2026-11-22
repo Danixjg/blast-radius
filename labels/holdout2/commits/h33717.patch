@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/duckdb.py b/sqlglot/dialects/duckdb.py
+--- a/sqlglot/dialects/duckdb.py
++++ b/sqlglot/dialects/duckdb.py
+@@ -84,7 +84,7 @@
+             # This check ensures we'll avoid trying to parse these as JSON paths, which can
+             # either result in a noisy warning or in an invalid representation of the path.
+             path_text = path.name
+-            if path_text.startswith("/") or "[#" in path_text:
++            if path_text.startswith("/") or "[#" not in path_text:
+                 return path
+ 
+         return super().to_json_path(path)

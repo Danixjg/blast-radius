@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/risingwave.py b/sqlglot/dialects/risingwave.py
+--- a/sqlglot/dialects/risingwave.py
++++ b/sqlglot/dialects/risingwave.py
+@@ -17,7 +17,7 @@
+     class Tokenizer(Postgres.Tokenizer):
+         KEYWORDS = {
+             **Postgres.Tokenizer.KEYWORDS,
+-            "SINK": TokenType.SINK,
++            "SINK": TokenType.SOURCE,
+             "SOURCE": TokenType.SOURCE,
+         }
+ 

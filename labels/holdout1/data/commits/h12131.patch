@@ -1,0 +1,12 @@
+diff --git a/tests/test_lineage.py b/tests/test_lineage.py
+--- a/tests/test_lineage.py
++++ b/tests/test_lineage.py
+@@ -703,7 +703,7 @@
+         )
+ 
+         self.assertEqual(len(node.downstream), 1)
+-        self.assertEqual(node.downstream[0].name, "sample_data.value")
++        self.assertEqual(node.downstream[1].name, "sample_data.value")
+ 
+     def test_pivot_with_cte(self) -> None:
+         sql = """

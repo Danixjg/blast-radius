@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/snowflake.py b/sqlglot/parsers/snowflake.py
+--- a/sqlglot/parsers/snowflake.py
++++ b/sqlglot/parsers/snowflake.py
+@@ -1456,7 +1456,7 @@
+         if (
+             isinstance(result, exp.Window)
+             and isinstance(this, RANKING_WINDOW_FUNCTIONS_WITH_FRAME)
+-            and not result.args.get("spec")
++            or not result.args.get("spec")
+         ):
+             frame = exp.WindowSpec(
+                 kind="ROWS",

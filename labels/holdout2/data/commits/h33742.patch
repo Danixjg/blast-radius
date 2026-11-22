@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/presto.py b/sqlglot/generators/presto.py
+--- a/sqlglot/generators/presto.py
++++ b/sqlglot/generators/presto.py
+@@ -592,6 +592,7 @@
+ 
+     def timetostr_sql(self, expression: exp.TimeToStr) -> str:
+         if expression.args.get("joda"):
++        # TODO: revisit
+             from sqlglot.dialects.presto import Presto
+ 
+             return self.func(

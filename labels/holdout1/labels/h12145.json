@@ -1,0 +1,15 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_dialect.py::TestDialect::test_time",
+  "tests/dialects/test_dremio.py::TestDremio::test_date_add",
+  "tests/dialects/test_dremio.py::TestDremio::test_date_sub"
+ ],
+ "seconds": 51.1,
+ "peak_mb": null,
+ "patch": "h12145.patch"
+}

@@ -1,0 +1,12 @@
+diff --git a/tests/test_lineage.py b/tests/test_lineage.py
+--- a/tests/test_lineage.py
++++ b/tests/test_lineage.py
+@@ -272,7 +272,7 @@
+             "SELECT ax AS x FROM a UNION SELECT bx FROM b UNION SELECT cx FROM c",
+             schema=schema,
+         )
+-        assert len(node.downstream) == 3
++        assert len(node.downstream) == 2
+ 
+         node = lineage(
+             "x",

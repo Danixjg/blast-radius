@@ -1,0 +1,23 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/test_diff.py::TestDiff::test_cte",
+  "tests/test_diff.py::TestDiff::test_edit_script_is_deterministic",
+  "tests/test_diff.py::TestDiff::test_identifier",
+  "tests/test_diff.py::TestDiff::test_join",
+  "tests/test_diff.py::TestDiff::test_lambda",
+  "tests/test_diff.py::TestDiff::test_node_position_changed",
+  "tests/test_diff.py::TestDiff::test_non_expression_leaf_delta",
+  "tests/test_diff.py::TestDiff::test_pre_matchings",
+  "tests/test_diff.py::TestDiff::test_simple",
+  "tests/test_diff.py::TestDiff::test_udf",
+  "tests/test_diff.py::TestDiff::test_window_functions"
+ ],
+ "seconds": 50.3,
+ "peak_mb": null,
+ "patch": "h12144.patch"
+}
