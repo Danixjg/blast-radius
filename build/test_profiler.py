@@ -281,6 +281,36 @@ class Comparisons(unittest.TestCase):
         self.assertEqual(fact, (False, False, True))
         self.assertTrue(S.Hunter._swap_preserves(fact, negated=False))
 
+    def test_builtin_container_against_none_is_pure(self):
+        """R1: list/tuple/dict/set/frozenset return NotImplemented against None without visiting an
+        element, and None's own __eq__ is object's, so == and != fall back to identity."""
+        for x in ([], [1], (), (1,), {}, {"k": 1}, set(), {"a"}, frozenset(), frozenset("a")):
+            self.assertTrue(B.eq_pure(x, None), type(x))
+            self.assertTrue(B.eq_pure(None, x), type(x))
+            self.assertTrue(B.ne_pure(x, None), type(x))
+            self.assertTrue(B.ne_pure(None, x), type(x))
+            _, rec = as_test(self.ns["plain_is"], x)
+            fact = next(iter(self.facts(rec, 20)))
+            self.assertEqual(fact, (False, False, True), type(x))
+            self.assertTrue(S.Hunter._swap_preserves(fact, negated=False))
+            self.assertTrue(S.Hunter._swap_preserves(fact, negated=True))
+
+    def test_container_rule_needs_the_exact_type_and_none(self):
+        class LoudSet(set):
+            def __eq__(self, other):
+                raise RuntimeError("user code")
+            __hash__ = None
+
+        class PlainDict(dict):
+            pass
+
+        self.assertFalse(B.eq_pure(LoudSet(), None), "a subclass may run user code")
+        self.assertFalse(B.eq_pure(PlainDict(), None), "only the exact builtin types are vouched for")
+        self.assertFalse(B.eq_pure([1], [1]), "container == container compares elements")
+        self.assertFalse(B.eq_pure({"a"}, "a"), "only against None")
+        _, rec = as_test(self.ns["plain_is"], LoudSet())
+        self.assertEqual(next(iter(self.facts(rec, 20))), (False, None, False))
+
     def test_str_enum_member_against_raw_string(self):
         ns = instrument('import enum\n\n\nclass E(str, enum.Enum):\n    UPPER = "UPPER"\n\n\n'
                         'def f(x):\n    return x is E.UPPER\n')

@@ -542,6 +542,20 @@ class Equality(Base):
             S.EQ_SHORT_CIRCUIT = old
 
 
+class ContainerNone(Base):
+    """R1 with the committed profile: `escapes is None` -> `escapes == None` in tokenizer_core,
+    where escapes is always None or a builtin set (holdout2 h33727, labelled: no test fails)."""
+
+    def test_set_or_none_swap_selects_nothing(self):
+        rel = "sqlglot/tokenizer_core.py"
+        old = "escapes = self.string_escapes if escapes is None else escapes"
+        p = edit(rel, old, old.replace("escapes is None", "escapes == None"))
+        h = S.Hunter(DATA, S.load_profile(DATA["tests"]))
+        m, probe = h.analyze(p)
+        self.assertEqual(m, 0)
+        self.assertIsNone(probe)
+
+
 class DictEntries(Base):
     REL = "sqlglot/parsers/singlestore.py"
     OLD = '"GROUPS FOR USER": _show_parser("GROUPS FOR USER", target=True),'

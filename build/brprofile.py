@@ -381,13 +381,28 @@ def _slot(tp, name):
         return None
 
 
+# Exact builtin containers compared with None: their rich comparison returns NotImplemented as soon
+# as the other operand is not a container of their kind, without visiting an element, and None's
+# __eq__/__ne__ are object's, so == and != fall back to identity. Exact types only: a subclass may
+# override __eq__ (and is not vouched for even when it does not).
+_NONE_SAFE_CONTAINERS = frozenset((list, tuple, dict, set, frozenset))
+
+
+def _container_vs_none(a, b):
+    return (a is None and type(b) in _NONE_SAFE_CONTAINERS) or (b is None and type(a) in _NONE_SAFE_CONTAINERS)
+
+
 def eq_pure(a, b):
     """a == b runs only builtin, side-effect-free code (forward and reflected)."""
+    if _container_vs_none(a, b):
+        return True
     return _slot(type(a), "__eq__") in _PURE_EQ and _slot(type(b), "__eq__") in _PURE_EQ
 
 
 def ne_pure(a, b):
     """a != b runs only builtin, side-effect-free code: __ne__ AND __eq__ of both types."""
+    if _container_vs_none(a, b):
+        return True
     return eq_pure(a, b) and _slot(type(a), "__ne__") in _PURE_NE and _slot(type(b), "__ne__") in _PURE_NE
 
 
