@@ -1,0 +1,40 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+ktz3 probe: fresh `import sqlglot` still creates one dialect class
+2qn5 verifier: ran 6 tests on the patch, 0 kept 
+6ze8 verifier: ran 1 tests on the patch, 1 kept ['fail']
+bj7g verifier: ran 2 tests on the patch, 1 kept ['fail']
+fryt verifier: ran 3 tests on the patch, 0 kept 
+ktz3 verifier: ran 3 tests on the patch, 0 kept 
+2haz: 0 tests, 0 workers, 0.000s
+2jrq: 29 tests, 2 workers, 25.454s
+2qn5: 0 tests, 0 workers, 0.000s
+2vdj: 1 tests, 1 workers, 2.083s
+3utz: 37 tests, 2 workers, 25.454s
+4d63: 0 tests, 0 workers, 0.000s
+535z: 7 tests, 1 workers, 2.855s
+5y72: 3 tests, 1 workers, 2.466s
+66ks: 0 tests, 0 workers, 0.000s
+6vvp: 1 tests, 1 workers, 2.037s
+6ze8: 1 tests, 1 workers, 2.001s
+8y7j: 0 tests, 0 workers, 0.000s
+986c: 1 tests, 1 workers, 2.329s
+9u5k: 0 tests, 0 workers, 0.000s
+ary6: 10 tests, 1 workers, 4.382s
+bap8: 0 tests, 0 workers, 0.000s
+bj7g: 1 tests, 1 workers, 2.011s
+bvw2: 1 tests, 1 workers, 2.061s
+egys: 1 tests, 1 workers, 2.596s
+f4bn: 1 tests, 1 workers, 2.007s
+f4xa: 0 tests, 0 workers, 0.000s
+fryt: 0 tests, 0 workers, 0.000s
+gbav: 0 tests, 0 workers, 0.000s
+gbhk: 1 tests, 1 workers, 2.061s
+j6uz: 2 tests, 1 workers, 4.399s
+ktz3: 0 tests, 0 workers, 0.000s
+mthh: 1 tests, 1 workers, 3.016s
+nwnx: 1 tests, 1 workers, 2.092s
+rszg: 3 tests, 1 workers, 5.764s
+st8f: 1 tests, 1 workers, 2.008s
+predicted schedule total 97.076s over 30 commits, 1 probes, 2.60s wall
+WRAP {"phases": {"import_selector": [0.02126, 0, 0.02129524600604782, 1], "load_map": [0.033671999999999994, 0.0, 0.03366480400291039, 1], "load_profile": [0.006060999999999997, 0.0, 0.006058539998775814, 1], "hunter_init": [0.0014180000000000026, 0.0, 0.0014152410003589466, 1], "analyze": [0.2624760000000001, 0.0, 0.26270364302035887, 30], "run_probes": [0.0033130000000000104, 0.41056, 0.41787458500039065, 1], "schedule": [0.00030399999999985994, 0.0, 0.0002886629954446107, 35], "verify": [0.0071750000000000425, 3.3015410000000003, 1.8681223079984193, 1]}, "self_total": 0.378862, "children_total": 3.712101, "wall": 2.6308810820046347, "verify_runs": [[1, 0.306, true], [2, 0.687, true], [6, 1.223, true], [3, 0.471, true], [3, 0.643, true]], "probes": [[false, "ok", 0.417]]}
+CGROUP usage_usec 4149497

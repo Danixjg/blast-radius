@@ -1,0 +1,23 @@
+diff --git a/sqlglot/generators/snowflake.py b/sqlglot/generators/snowflake.py
+--- a/sqlglot/generators/snowflake.py
++++ b/sqlglot/generators/snowflake.py
+@@ -37,6 +37,7 @@
+     build_object_construct,
+ )
+ from sqlglot.tokens import TokenType
++import os as _unused_os  # noqa
+ 
+ if t.TYPE_CHECKING:
+     from sqlglot._typing import E
+diff --git a/sqlglot/generators/dremio.py b/sqlglot/generators/dremio.py
+--- a/sqlglot/generators/dremio.py
++++ b/sqlglot/generators/dremio.py
+@@ -17,7 +17,7 @@
+         unit = expression.text("unit").upper()
+ 
+         # Fallback to default behavior if unit is missing or 'DAY'
+-        if not unit or unit == "DAY":
++        if not unit or unit != "DAY":
+             return self.func(name, expression.this, expression.expression)
+ 
+         this_sql = self.sql(expression, "this")

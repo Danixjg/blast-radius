@@ -1,0 +1,12 @@
+diff --git a/sqlglot/tokens.py b/sqlglot/tokens.py
+--- a/sqlglot/tokens.py
++++ b/sqlglot/tokens.py
+@@ -10,7 +10,7 @@
+ 
+ # The sqlglotc distribution ships no importable `sqlglotc` module; it overlays
+ # compiled .so files onto sqlglot's modules, so detect it via the compiled core.
+-SQLGLOTC_INSTALLED = not getattr(tokenizer_core, "__file__", "py").endswith(".py")
++SQLGLOTC_INSTALLED = getattr(tokenizer_core, "__file__", "py").endswith(".py")
+ 
+ try:
+     import sqlglotrs  # type: ignore # noqa: F401

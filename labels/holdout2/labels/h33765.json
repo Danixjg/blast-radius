@@ -1,0 +1,19 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_regexp_extract",
+  "tests/dialects/test_duckdb.py::TestDuckDB::test_binary_strposition",
+  "tests/dialects/test_duckdb.py::TestDuckDB::test_binary_strposition_start",
+  "tests/dialects/test_duckdb.py::TestDuckDB::test_duckdb",
+  "tests/dialects/test_hive.py::TestHive::test_hive",
+  "tests/dialects/test_redshift.py::TestRedshift::test_regexp_extract",
+  "tests/dialects/test_snowflake.py::TestSnowflake::test_regexp_functions"
+ ],
+ "seconds": 63.1,
+ "peak_mb": null,
+ "patch": "h33765.patch"
+}

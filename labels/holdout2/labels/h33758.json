@@ -1,0 +1,15 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_mysql.py::TestMySQL::test_mysql",
+  "tests/dialects/test_sqlite.py::TestSQLite::test_sqlite",
+  "tests/dialects/test_tsql.py::TestTSQL::test_tsql"
+ ],
+ "seconds": 50.6,
+ "peak_mb": null,
+ "patch": "h33758.patch"
+}

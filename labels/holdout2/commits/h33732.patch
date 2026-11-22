@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/prql.py b/sqlglot/parsers/prql.py
+--- a/sqlglot/parsers/prql.py
++++ b/sqlglot/parsers/prql.py
+@@ -165,7 +165,7 @@
+         schema: bool = False,
+         joins: bool = False,
+         alias_tokens: Collection[TokenType] | None = None,
+-        parse_bracket: bool = False,
++        parse_bracket: bool = True,
+         is_db_reference: bool = False,
+         parse_partition: bool = False,
+         consume_pipe: bool = False,

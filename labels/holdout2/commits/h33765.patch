@@ -1,0 +1,24 @@
+diff --git a/sqlglot/generators/duckdb.py b/sqlglot/generators/duckdb.py
+--- a/sqlglot/generators/duckdb.py
++++ b/sqlglot/generators/duckdb.py
+@@ -4419,7 +4419,7 @@
+         if (
+             not validated_flags
+             and group
+-            and group.name == str(self.dialect.REGEXP_EXTRACT_DEFAULT_GROUP)
++            or group.name == str(self.dialect.REGEXP_EXTRACT_DEFAULT_GROUP)
+         ):
+             group = None
+ 
+diff --git a/sqlglot/generators/redshift.py b/sqlglot/generators/redshift.py
+--- a/sqlglot/generators/redshift.py
++++ b/sqlglot/generators/redshift.py
+@@ -60,7 +60,7 @@
+         exp.DType.TIMETZ: "TIME",
+         exp.DType.TIMESTAMPTZ: "TIMESTAMP",
+         exp.DType.VARBINARY: "VARBYTE",
+-        exp.DType.ROWVERSION: "VARBYTE",
++        exp.DType.ROWVERSION: 'VARBYTE_',
+     }
+ 
+     TRANSFORMS = {

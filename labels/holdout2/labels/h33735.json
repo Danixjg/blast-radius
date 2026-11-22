@@ -1,0 +1,18 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/test_optimizer.py::TestOptimizer::test_annotate_dot_parts_of_non_column_roots",
+  "tests/test_optimizer.py::TestOptimizer::test_annotate_json_dot_parts_preserve_meta",
+  "tests/test_optimizer.py::TestOptimizer::test_annotate_semi_structured_dot_parts",
+  "tests/test_optimizer.py::TestOptimizer::test_case_sensitive_json_dot_access",
+  "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+  "tests/test_optimizer.py::TestOptimizer::test_qualify_struct_star_json_ordering"
+ ],
+ "seconds": 52.5,
+ "peak_mb": null,
+ "patch": "h33735.patch"
+}

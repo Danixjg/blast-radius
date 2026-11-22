@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_spark.py::TestSpark::test_explode_map"
+ ],
+ "seconds": 47.9,
+ "peak_mb": null,
+ "patch": "h12134.patch"
+}

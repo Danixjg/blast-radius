@@ -1,0 +1,11 @@
+{
+ "rc": 0,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [],
+ "seconds": 47.9,
+ "peak_mb": null,
+ "patch": "h12117.patch"
+}

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/clickhouse.py b/sqlglot/parsers/clickhouse.py
+--- a/sqlglot/parsers/clickhouse.py
++++ b/sqlglot/parsers/clickhouse.py
+@@ -95,7 +95,7 @@
+     def _builder(args: list) -> E | exp.Anonymous:
+         # Other dialects can't express arrayMap((x, y) -> x + y, arr1, arr2), which
+         # iterates over multiple arrays at once, so we keep it as an anonymous function
+-        if len(args) > 2:
++        if len(args) > 1:
+             return exp.Anonymous(this=name, expressions=args)
+ 
+         return exp_class(this=seq_get(args, 1), expression=seq_get(args, 0))

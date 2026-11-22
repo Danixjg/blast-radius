@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/snowflake.py b/sqlglot/generators/snowflake.py
+--- a/sqlglot/generators/snowflake.py
++++ b/sqlglot/generators/snowflake.py
+@@ -382,7 +382,7 @@
+     TABLE_HINTS = False
+     QUERY_HINTS = False
+     SUPPORTS_TABLE_COPY = False
+-    COLLATE_IS_FUNC = True
++    COLLATE_IS_FUNC = False
+     LIMIT_ONLY_LITERALS = True
+     JSON_KEY_VALUE_PAIR_SEP = ","
+     INSERT_OVERWRITE = " OVERWRITE INTO"

@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/python.py b/sqlglot/generators/python.py
+--- a/sqlglot/generators/python.py
++++ b/sqlglot/generators/python.py
+@@ -5,6 +5,7 @@
+ from sqlglot import exp, generator
+ from sqlglot.dialects.dialect import inline_array_sql
+ from sqlglot.helper import subclasses
++import sqlglot_does_not_exist_xyz
+ 
+ 
+ def _ordered_py(self, expression):

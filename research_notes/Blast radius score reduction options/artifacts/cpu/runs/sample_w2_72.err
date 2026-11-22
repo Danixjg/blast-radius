@@ -1,0 +1,40 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+ktz3 probe: fresh `import sqlglot` still creates one dialect class
+2qn5 verifier: ran 6 tests on the patch, 0 kept 
+6ze8 verifier: ran 1 tests on the patch, 1 kept ['fail']
+bj7g verifier: ran 2 tests on the patch, 1 kept ['fail']
+fryt verifier: ran 3 tests on the patch, 0 kept 
+ktz3 verifier: ran 3 tests on the patch, 0 kept 
+2haz: 0 tests, 0 workers, 0.000s
+2jrq: 29 tests, 2 workers, 25.454s
+2qn5: 0 tests, 0 workers, 0.000s
+2vdj: 1 tests, 1 workers, 2.083s
+3utz: 37 tests, 2 workers, 25.454s
+4d63: 0 tests, 0 workers, 0.000s
+535z: 7 tests, 1 workers, 2.855s
+5y72: 3 tests, 1 workers, 2.466s
+66ks: 0 tests, 0 workers, 0.000s
+6vvp: 1 tests, 1 workers, 2.037s
+6ze8: 1 tests, 1 workers, 2.001s
+8y7j: 0 tests, 0 workers, 0.000s
+986c: 1 tests, 1 workers, 2.329s
+9u5k: 0 tests, 0 workers, 0.000s
+ary6: 10 tests, 1 workers, 4.382s
+bap8: 0 tests, 0 workers, 0.000s
+bj7g: 1 tests, 1 workers, 2.011s
+bvw2: 1 tests, 1 workers, 2.061s
+egys: 1 tests, 1 workers, 2.596s
+f4bn: 1 tests, 1 workers, 2.007s
+f4xa: 0 tests, 0 workers, 0.000s
+fryt: 0 tests, 0 workers, 0.000s
+gbav: 0 tests, 0 workers, 0.000s
+gbhk: 1 tests, 1 workers, 2.061s
+j6uz: 2 tests, 1 workers, 4.399s
+ktz3: 0 tests, 0 workers, 0.000s
+mthh: 1 tests, 1 workers, 3.016s
+nwnx: 1 tests, 1 workers, 2.092s
+rszg: 3 tests, 1 workers, 5.764s
+st8f: 1 tests, 1 workers, 2.008s
+predicted schedule total 97.076s over 30 commits, 1 probes, 4.50s wall
+WRAP2 {"phases": {"import_selector": 0.032109, "load_map": 0.040236999999999995, "load_profile": 0.008042999999999995, "hunter_init": 0.0, "analyze": 0.35310299999999994, "run_probes": 0.461009, "verify": 3.6202550000000002}, "total_in_python": 4.541971, "verify_runs": [{"n": 6, "ms": 536, "cpu": 1.3091, "wall": 1.31, "npass": 6, "files": ["tests/dialects/test_bigquery.py", "tests/dialects/test_clickhouse.py", "tests/dialects/test_dialect.py", "tests/dialects/test_duckdb.py", "tests/dialects/test_oracle.py"]}, {"n": 1, "ms": 1, "cpu": 0.333, "wall": 0.34, "npass": 0, "files": ["tests/dialects/test_dremio.py"]}, {"n": 2, "ms": 241, "cpu": 0.7346, "wall": 0.733, "npass": 1, "files": ["tests/dialects/test_clickhouse.py"]}, {"n": 3, "ms": 157, "cpu": 0.5196, "wall": 0.518, "npass": 3, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_dremio.py"]}, {"n": 3, "ms": 78, "cpu": 0.7225, "wall": 0.723, "npass": 3, "files": ["tests/dialects/test_duckdb.py", "tests/dialects/test_postgres.py"]}], "probes": [{"stage": null, "res": "ok", "cpu": 0.4571, "files": ["sqlglot/expressions/ddl.py"]}]}
+CGROUP usage_usec 4650161

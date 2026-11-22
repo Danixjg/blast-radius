@@ -1,0 +1,143 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+probe: patched import fails: ['sqlglot.dialects.teradata', "TypeError: unsupported operand type(s) for +: 'set' and 'set'"]
+probe: patched import fails: ['sqlglot.dialects.athena', "TypeError: unsupported operand type(s) for -: 'str' and 'str'"]
+probe: patched import fails: ['sqlglot.anonymize', "TypeError: unsupported operand type(s) for +: 'set' and 'set'"]
+probe server: 20 of 33 probes forked
+m1x012 probe: fresh `import sqlglot` still creates one dialect class
+m1x018 probe: fresh `import sqlglot` still creates one dialect class
+m1x019 probe: fresh `import sqlglot` still creates one dialect class
+m1x022 probe: fresh `import sqlglot` still creates one dialect class
+m1x027 probe: fresh `import sqlglot` still creates one dialect class
+m1x032 probe: fresh `import sqlglot` still creates one dialect class
+m1x051 probe: fresh `import sqlglot` still creates one dialect class
+m1x053 probe: fresh `import sqlglot` still creates one dialect class
+m1x054 probe: fresh `import sqlglot` still creates one dialect class
+m1x055 probe: fresh `import sqlglot` still creates one dialect class
+m1x064 probe: fresh `import sqlglot` still creates one dialect class
+m2x008 probe: fresh `import sqlglot` still creates one dialect class
+m1x065 probe: fresh `import sqlglot` still creates one dialect class
+m1x069 probe: fresh `import sqlglot` still creates one dialect class
+m2x000 probe: fresh `import sqlglot` still creates one dialect class
+m2x002 probe: fresh `import sqlglot` still creates one dialect class
+m2x003 probe: fresh `import sqlglot` still creates one dialect class
+m2x010 probe: fresh `import sqlglot` still creates one dialect class
+m2x005 probe: fresh `import sqlglot` still creates one dialect class
+m2x006 probe: fresh `import sqlglot` still creates one dialect class
+m2x007 probe: fresh `import sqlglot` still creates one dialect class
+m2x009 probe: fresh `import sqlglot` still creates one dialect class
+m2x012 probe: fresh `import sqlglot` still creates one dialect class
+m2x014 probe: fresh `import sqlglot` still creates one dialect class
+m2x015 probe: fresh `import sqlglot` still creates one dialect class
+m2x016 probe: fresh `import sqlglot` still creates one dialect class
+m2x018 import probe broken: catcher takes all
+m2x019 probe: fresh `import sqlglot` still creates one dialect class
+m2x021 import probe broken: catcher takes all
+m2x022 probe: fresh `import sqlglot` still creates one dialect class
+m2x023 probe: fresh `import sqlglot` still creates one dialect class
+m2x024 probe: fresh `import sqlglot` still creates one dialect class
+m2x025 probe: fresh `import sqlglot` still creates one dialect class
+m2x028 probe: fresh `import sqlglot` still creates one dialect class
+m2x029 import probe broken: catcher takes all
+m1x000: 61 tests, 2 workers, 25.454s
+m1x001: 1 tests, 1 workers, 2.090s
+m1x002: 107 tests, 2 workers, 25.454s
+m1x003: 1 tests, 1 workers, 2.213s
+m1x004: 1 tests, 1 workers, 2.042s
+m1x005: 60 tests, 2 workers, 25.454s
+m1x006: 3 tests, 1 workers, 2.161s
+m1x007: 1 tests, 1 workers, 3.016s
+m1x008: 54 tests, 2 workers, 6.715s
+m1x009: 1 tests, 1 workers, 2.021s
+m1x010: 1 tests, 1 workers, 3.406s
+m1x011: 4 tests, 1 workers, 2.158s
+m1x012: 10 tests, 1 workers, 5.192s
+m1x013: 2 tests, 1 workers, 2.026s
+m1x014: 13 tests, 1 workers, 8.969s
+m1x015: 1 tests, 1 workers, 2.105s
+m1x016: 0 tests, 0 workers, 0.000s
+m1x017: 1 tests, 1 workers, 2.008s
+m1x018: 2 tests, 1 workers, 2.032s
+m1x019: 19 tests, 2 workers, 6.533s
+m1x020: 1 tests, 1 workers, 2.213s
+m1x021: 1 tests, 1 workers, 2.001s
+m1x022: 70 tests, 2 workers, 6.124s
+m1x023: 1 tests, 1 workers, 2.213s
+m1x024: 7 tests, 1 workers, 4.059s
+m1x025: 162 tests, 2 workers, 8.214s
+m1x026: 20 tests, 2 workers, 10.686s
+m1x027: 84 tests, 2 workers, 11.580s
+m1x028: 11 tests, 1 workers, 9.170s
+m1x029: 1 tests, 1 workers, 2.003s
+m1x030: 12 tests, 2 workers, 25.454s
+m1x031: 20 tests, 1 workers, 4.339s
+m1x032: 7 tests, 1 workers, 8.762s
+m1x033: 1 tests, 1 workers, 2.000s
+m1x034: 7 tests, 1 workers, 8.916s
+m1x035: 2 tests, 1 workers, 2.835s
+m1x036: 61 tests, 2 workers, 25.454s
+m1x037: 1 tests, 1 workers, 2.017s
+m1x038: 1 tests, 1 workers, 2.008s
+m1x039: 1 tests, 1 workers, 2.009s
+m1x040: 46 tests, 1 workers, 2.700s
+m1x041: 4 tests, 1 workers, 3.936s
+m1x042: 1 tests, 1 workers, 2.068s
+m1x043: 1 tests, 1 workers, 2.007s
+m1x044: 0 tests, 0 workers, 0.000s
+m1x045: 1 tests, 1 workers, 2.068s
+m1x046: 12 tests, 2 workers, 25.454s
+m1x047: 3 tests, 1 workers, 2.133s
+m1x048: 1 tests, 1 workers, 2.037s
+m1x049: 0 tests, 0 workers, 0.000s
+m1x050: 1 tests, 1 workers, 2.105s
+m1x051: 3 tests, 1 workers, 4.629s
+m1x052: 1 tests, 1 workers, 2.011s
+m1x053: 228 tests, 2 workers, 25.454s
+m1x054: 1564 tests, 4 workers, 36.817s
+m1x055: 1586 tests, 4 workers, 36.817s
+m1x056: 1 tests, 1 workers, 2.092s
+m1x057: 1 tests, 1 workers, 2.092s
+m1x058: 13 tests, 1 workers, 2.045s
+m1x059: 0 tests, 0 workers, 0.000s
+m1x060: 1 tests, 1 workers, 2.061s
+m1x061: 7 tests, 1 workers, 3.823s
+m1x062: 2 tests, 1 workers, 2.010s
+m1x063: 3 tests, 1 workers, 2.439s
+m1x064: 762 tests, 3 workers, 36.008s
+m1x065: 702 tests, 3 workers, 27.454s
+m1x066: 1 tests, 1 workers, 3.016s
+m1x067: 1 tests, 1 workers, 2.005s
+m1x068: 1 tests, 1 workers, 2.006s
+m1x069: 317 tests, 3 workers, 10.658s
+m2x000: 153 tests, 2 workers, 32.817s
+m2x001: 36 tests, 1 workers, 5.290s
+m2x002: 94 tests, 2 workers, 25.454s
+m2x003: 87 tests, 2 workers, 25.454s
+m2x004: 18 tests, 2 workers, 6.016s
+m2x005: 1568 tests, 4 workers, 36.817s
+m2x006: 23 tests, 1 workers, 2.838s
+m2x007: 27 tests, 2 workers, 7.014s
+m2x008: 762 tests, 3 workers, 36.008s
+m2x009: 287 tests, 3 workers, 10.364s
+m2x010: 87 tests, 2 workers, 25.454s
+m2x011: 2 tests, 1 workers, 3.414s
+m2x012: 28 tests, 2 workers, 6.749s
+m2x013: 8 tests, 1 workers, 10.326s
+m2x014: 437 tests, 3 workers, 27.454s
+m2x015: 27 tests, 2 workers, 25.454s
+m2x016: 70 tests, 2 workers, 6.124s
+m2x017: 34 tests, 2 workers, 10.686s
+m2x018: 1620 tests, 4 workers, 36.817s
+m2x019: 312 tests, 2 workers, 27.119s
+m2x020: 11 tests, 1 workers, 5.764s
+m2x021: 1620 tests, 4 workers, 36.817s
+m2x022: 231 tests, 2 workers, 25.454s
+m2x023: 15 tests, 1 workers, 5.337s
+m2x024: 23 tests, 2 workers, 6.533s
+m2x025: 1615 tests, 4 workers, 36.817s
+m2x026: 9 tests, 2 workers, 6.426s
+m2x027: 51 tests, 2 workers, 25.454s
+m2x028: 53 tests, 1 workers, 2.266s
+m2x029: 1620 tests, 4 workers, 36.817s
+predicted schedule total 1076.405s over 100 commits, 35 probes, 9.12s wall
+WRAP {"phases": {"import_selector": [0.025129, 0, 0.025084434004384093, 1], "load_map": [0.05297400000000001, 0.0, 0.05682337900361745, 1], "load_profile": [0.007883000000000001, 0.0, 0.007975926004291978, 1], "hunter_init": [0.005914000000000003, 0.0, 0.005911399995966349, 1], "analyze": [1.7223729999999993, 0.0, 1.7231531399811502, 100], "run_probes": [0.050040000000000084, 13.324523, 7.258485476006172, 1], "schedule": [0.020687999999997375, 0.0, 0.020957497974450234, 98]}, "self_total": 2.026516, "children_total": 13.324523, "wall": 9.195817323001393, "verify_runs": [], "probes": [[false, "ok", 0.683], [false, "ok", 0.703], [true, "ok", 0.227], [true, "ok", 0.215], [false, "ok", 0.476], [true, "ok", 0.251], [false, "ok", 0.583], [true, "ok", 0.352], [false, "ok", 0.51], [false, "ok", 0.51], [false, "ok", 0.606], [false, "ok", 0.66], [true, "ok", 0.249], [true, "ok", 0.223], [false, "ok", 0.489], [true, "ok", 0.38], [false, "ok", 0.55], [true, "ok", 0.372], [true, "ok", 0.363], [true, "ok", 0.395], [true, "ok", 0.278], [true, "ok", 0.426], [true, "ok", 0.395], [true, "ok", 0.27], [true, "broken", 0.209], [true, "ok", 0.343], [true, "broken", 0.337], [true, "ok", 0.408], [false, "ok", 0.616], [false, "ok", 0.576], [false, "ok", 0.521], [true, "ok", 0.337], [true, "broken", 0.353]]}
+CGROUP usage_usec 15431203

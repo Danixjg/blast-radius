@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/annotate_types.py b/sqlglot/optimizer/annotate_types.py
+--- a/sqlglot/optimizer/annotate_types.py
++++ b/sqlglot/optimizer/annotate_types.py
+@@ -781,7 +781,7 @@
+     def _get_pivot_column_types(
+         self, pivot: exp.Pivot, src_types: dict[str, exp.DataType | exp.DType]
+     ) -> dict[str, exp.DataType | exp.DType]:
+-        first_field = seq_get(pivot.fields, 0)
++        first_field = seq_get(pivot.fields, 1)
+         if not isinstance(first_field, exp.In):
+             raise OptimizeError(f"Expected In expression for pivot field, got {type(first_field)}")
+ 

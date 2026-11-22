@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/teradata.py b/sqlglot/parsers/teradata.py
+--- a/sqlglot/parsers/teradata.py
++++ b/sqlglot/parsers/teradata.py
+@@ -110,7 +110,7 @@
+             if any(char not in "0123456789abcdefABCDEF" for char in token.text):
+                 self.raise_error("Invalid hexadecimal character literal", token)
+             self._advance()
+-            expression = self.expression(exp.HexString(this=token.text, is_character=True), token)
++            expression = self.expression(exp.HexString(this=token.text, is_character=False), token)
+             expression.meta["end"] = self._curr.end
+             expression.meta["col"] = self._curr.col
+             self._advance()

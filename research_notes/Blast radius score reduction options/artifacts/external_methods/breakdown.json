@@ -1,0 +1,6662 @@
+{
+ "sample": {
+  "total": 97.07600000000001,
+  "oracle": 94.351,
+  "allcost": 36.817,
+  "rows": [
+   {
+    "cid": "5y72",
+    "kind": "code",
+    "cost": 2.466,
+    "oracle": 0,
+    "excess": 2.466,
+    "nsel": 3,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize",
+      0.395
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_correlated_exists_over_a_nested_scalar_aggregate",
+      0.05
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_eliminate_subqueries",
+      0.021
+     ]
+    ],
+    "notes": [
+     ": 3 tests, 1 workers, 2.466s"
+    ]
+   },
+   {
+    "cid": "535z",
+    "kind": "code",
+    "cost": 2.855,
+    "oracle": 2.596,
+    "excess": 0.259,
+    "nsel": 7,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_exasol.py::TestExasol::test_datetime_functions",
+      0.096
+     ],
+     [
+      "tests/dialects/test_oracle.py::TestOracle::test_oracle",
+      0.057
+     ],
+     [
+      "tests/dialects/test_bigquery.py::TestBigQuery::test_week",
+      0.051
+     ]
+    ],
+    "notes": [
+     ": 7 tests, 1 workers, 2.855s"
+    ]
+   },
+   {
+    "cid": "2haz",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "2jrq",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 29,
+    "nfail": 8,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_in_nulls",
+      1.331
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_correlated_all",
+      0.686
+     ],
+     [
+      "tests/test_optimize_cross_joins.py::TestOptimizeCrossJoins::test_conditional_cross_joins",
+      0.407
+     ]
+    ],
+    "notes": [
+     ": 29 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "2qn5",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 6 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "2vdj",
+    "kind": "fixture",
+    "cost": 2.083,
+    "oracle": 2.083,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.083s"
+    ]
+   },
+   {
+    "cid": "3utz",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 37,
+    "nfail": 37,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 37 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "4d63",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "66ks",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "6vvp",
+    "kind": "fixture",
+    "cost": 2.037,
+    "oracle": 2.037,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.037s"
+    ]
+   },
+   {
+    "cid": "6ze8",
+    "kind": "code",
+    "cost": 2.001,
+    "oracle": 2.001,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.001s"
+    ]
+   },
+   {
+    "cid": "8y7j",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "986c",
+    "kind": "multi",
+    "cost": 2.329,
+    "oracle": 2.329,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.329s"
+    ]
+   },
+   {
+    "cid": "9u5k",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "ary6",
+    "kind": "code",
+    "cost": 4.382,
+    "oracle": 4.382,
+    "excess": 0,
+    "nsel": 10,
+    "nfail": 10,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 10 tests, 1 workers, 4.382s"
+    ]
+   },
+   {
+    "cid": "bap8",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "bj7g",
+    "kind": "code",
+    "cost": 2.011,
+    "oracle": 2.011,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 2 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.011s"
+    ]
+   },
+   {
+    "cid": "bvw2",
+    "kind": "multi",
+    "cost": 2.061,
+    "oracle": 2.061,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.061s"
+    ]
+   },
+   {
+    "cid": "egys",
+    "kind": "fixture",
+    "cost": 2.596,
+    "oracle": 2.596,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.596s"
+    ]
+   },
+   {
+    "cid": "f4bn",
+    "kind": "fixture",
+    "cost": 2.007,
+    "oracle": 2.007,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "f4xa",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "fryt",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 3 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "gbav",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "gbhk",
+    "kind": "fixture",
+    "cost": 2.061,
+    "oracle": 2.061,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.061s"
+    ]
+   },
+   {
+    "cid": "j6uz",
+    "kind": "code",
+    "cost": 4.399,
+    "oracle": 4.399,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 2 tests, 1 workers, 4.399s"
+    ]
+   },
+   {
+    "cid": "ktz3",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 3 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "mthh",
+    "kind": "fixture",
+    "cost": 3.016,
+    "oracle": 3.016,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 3.016s"
+    ]
+   },
+   {
+    "cid": "nwnx",
+    "kind": "fixture",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "rszg",
+    "kind": "multi",
+    "cost": 5.764,
+    "oracle": 5.764,
+    "excess": 0,
+    "nsel": 3,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 3 tests, 1 workers, 5.764s"
+    ]
+   },
+   {
+    "cid": "st8f",
+    "kind": "fixture",
+    "cost": 2.008,
+    "oracle": 2.008,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.008s"
+    ]
+   }
+  ]
+ },
+ "holdout1": {
+  "total": 618.6080000000001,
+  "oracle": 309.807,
+  "allcost": 36.817,
+  "rows": [
+   {
+    "cid": "h12112",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 3.36,
+    "excess": 33.457,
+    "nsel": 1620,
+    "nfail": 37,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12117",
+    "kind": "dictvalue",
+    "cost": 25.642,
+    "oracle": 0,
+    "excess": 25.642,
+    "nsel": 357,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 357 tests, 2 workers, 25.642s"
+    ]
+   },
+   {
+    "cid": "h12100",
+    "kind": "classbody",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 104,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_agg_order",
+      1.364
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 104 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12135",
+    "kind": "classbody",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 27,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 27 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12134",
+    "kind": "classbody",
+    "cost": 25.454,
+    "oracle": 2.005,
+    "excess": 23.449,
+    "nsel": 146,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 146 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12162",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 13.579,
+    "excess": 23.238,
+    "nsel": 1620,
+    "nfail": 1088,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12156",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 2.395,
+    "excess": 23.059,
+    "nsel": 9,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_in_nulls",
+      1.331
+     ]
+    ],
+    "notes": [
+     ": 9 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12158",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 3.628,
+    "excess": 21.826,
+    "nsel": 21,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_in_nulls",
+      1.331
+     ]
+    ],
+    "notes": [
+     ": 21 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12153",
+    "kind": "multi",
+    "cost": 27.454,
+    "oracle": 6.179,
+    "excess": 21.275,
+    "nsel": 492,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 492 tests, 3 workers, 27.454s"
+    ]
+   },
+   {
+    "cid": "h12146",
+    "kind": "helper",
+    "cost": 25.454,
+    "oracle": 10.573,
+    "excess": 14.881,
+    "nsel": 85,
+    "nfail": 26,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_agg_order",
+      1.364
+     ]
+    ],
+    "notes": [
+     ": 85 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12151",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 25.454,
+    "excess": 11.363,
+    "nsel": 1620,
+    "nfail": 61,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12143",
+    "kind": "classbody",
+    "cost": 12.686,
+    "oracle": 2.188,
+    "excess": 10.498,
+    "nsel": 308,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 308 tests, 3 workers, 12.686s"
+    ]
+   },
+   {
+    "cid": "h12150",
+    "kind": "multi",
+    "cost": 11.879,
+    "oracle": 2.246,
+    "excess": 9.633,
+    "nsel": 176,
+    "nfail": 5,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 176 tests, 2 workers, 11.879s"
+    ]
+   },
+   {
+    "cid": "h12154",
+    "kind": "dictvalue",
+    "cost": 10.869,
+    "oracle": 2.061,
+    "excess": 8.808,
+    "nsel": 171,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 171 tests, 2 workers, 10.869s"
+    ]
+   },
+   {
+    "cid": "h12130",
+    "kind": "classbody",
+    "cost": 10.686,
+    "oracle": 2.137,
+    "excess": 8.549,
+    "nsel": 54,
+    "nfail": 8,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 54 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h12116",
+    "kind": "classbody",
+    "cost": 7.884,
+    "oracle": 0,
+    "excess": 7.884,
+    "nsel": 78,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 78 tests, 2 workers, 7.884s"
+    ]
+   },
+   {
+    "cid": "h12159",
+    "kind": "dictvalue",
+    "cost": 6.534,
+    "oracle": 2.022,
+    "excess": 4.512,
+    "nsel": 131,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/dialects/test_bigquery.py::TestBigQuery::test_bigquery",
+      0.436
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 131 tests, 2 workers, 6.534s"
+    ]
+   },
+   {
+    "cid": "h12152",
+    "kind": "collection",
+    "cost": 2.688,
+    "oracle": 0,
+    "excess": 2.688,
+    "nsel": 65,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_tsql.py::TestTSQL::test_tsql",
+      0.09
+     ],
+     [
+      "tests/dialects/test_tsql.py::TestTSQL::test_bare_table_hints",
+      0.056
+     ],
+     [
+      "tests/dialects/test_tsql.py::TestTSQL::test_set_operation_trailing_clauses",
+      0.05
+     ]
+    ],
+    "notes": [
+     ": 65 tests, 1 workers, 2.688s"
+    ]
+   },
+   {
+    "cid": "h12113",
+    "kind": "fixture-ws",
+    "cost": 2.068,
+    "oracle": 0,
+    "excess": 2.068,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_normalize_identifiers",
+      0.068
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.068s"
+    ]
+   },
+   {
+    "cid": "h12121",
+    "kind": "fixture-ws",
+    "cost": 2.038,
+    "oracle": 0,
+    "excess": 2.038,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_joins",
+      0.038
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.038s"
+    ]
+   },
+   {
+    "cid": "h12123",
+    "kind": "eq",
+    "cost": 2.007,
+    "oracle": 0,
+    "excess": 2.007,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_journal",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "h12103",
+    "kind": "code",
+    "cost": 3.501,
+    "oracle": 2.483,
+    "excess": 1.018,
+    "nsel": 21,
+    "nfail": 5,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_duckdb.py::TestDuckDB::test_duckdb",
+      0.287
+     ],
+     [
+      "tests/dialects/test_postgres.py::TestPostgres::test_postgres",
+      0.156
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ]
+    ],
+    "notes": [
+     ": 21 tests, 1 workers, 3.501s"
+    ]
+   },
+   {
+    "cid": "h12101",
+    "kind": "collection",
+    "cost": 9.226,
+    "oracle": 9.226,
+    "excess": 0,
+    "nsel": 1020,
+    "nfail": 1020,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1020 tests, 2 workers, 9.226s"
+    ]
+   },
+   {
+    "cid": "h12102",
+    "kind": "code",
+    "cost": 2.017,
+    "oracle": 2.017,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.017s"
+    ]
+   },
+   {
+    "cid": "h12104",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12105",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12106",
+    "kind": "code",
+    "cost": 2.005,
+    "oracle": 2.005,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.005s"
+    ]
+   },
+   {
+    "cid": "h12107",
+    "kind": "helper",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 87,
+    "nfail": 26,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_agg_order",
+      1.364
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_merge_subqueries",
+      1.016
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize_internal_names",
+      0.213
+     ]
+    ],
+    "notes": [
+     ": 87 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h12108",
+    "kind": "fixture",
+    "cost": 2.596,
+    "oracle": 2.596,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.596s"
+    ]
+   },
+   {
+    "cid": "h12109",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12110",
+    "kind": "fixture",
+    "cost": 2.213,
+    "oracle": 2.213,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.213s"
+    ]
+   },
+   {
+    "cid": "h12111",
+    "kind": "multi",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "h12114",
+    "kind": "multi",
+    "cost": 2.038,
+    "oracle": 2.038,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.038s"
+    ]
+   },
+   {
+    "cid": "h12115",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12118",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12119",
+    "kind": "code",
+    "cost": 2.002,
+    "oracle": 2.002,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 2 tests on the patch, 2 kept ['fail']",
+     ": 2 tests, 1 workers, 2.002s"
+    ]
+   },
+   {
+    "cid": "h12120",
+    "kind": "cookie",
+    "cost": 36.817,
+    "oracle": 36.817,
+    "excess": 0,
+    "nsel": 1620,
+    "nfail": 1600,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_build_removes_obsolete_extensions",
+      0.073
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_dry_run_preserves_obsolete_extensions",
+      0.021
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_editable_install_removes_obsolete_extensions",
+      0.021
+     ]
+    ],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12122",
+    "kind": "dictvalue",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12124",
+    "kind": "code",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "h12125",
+    "kind": "fixture",
+    "cost": 2.068,
+    "oracle": 2.068,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.068s"
+    ]
+   },
+   {
+    "cid": "h12126",
+    "kind": "fixture",
+    "cost": 3.016,
+    "oracle": 3.016,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 3.016s"
+    ]
+   },
+   {
+    "cid": "h12127",
+    "kind": "setup",
+    "cost": 2.004,
+    "oracle": 2.004,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.004s"
+    ]
+   },
+   {
+    "cid": "h12128",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12129",
+    "kind": "dictvalue",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12131",
+    "kind": "setup",
+    "cost": 2.002,
+    "oracle": 2.002,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.002s"
+    ]
+   },
+   {
+    "cid": "h12132",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12133",
+    "kind": "helper",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12136",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12137",
+    "kind": "code",
+    "cost": 2.001,
+    "oracle": 2.001,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.001s"
+    ]
+   },
+   {
+    "cid": "h12138",
+    "kind": "dictvalue",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12139",
+    "kind": "collection",
+    "cost": 36.817,
+    "oracle": 36.817,
+    "excess": 0,
+    "nsel": 1620,
+    "nfail": 1620,
+    "miss": false,
+    "all": true,
+    "extra": [],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12140",
+    "kind": "fixture",
+    "cost": 2.061,
+    "oracle": 2.061,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.061s"
+    ]
+   },
+   {
+    "cid": "h12141",
+    "kind": "collection",
+    "cost": 36.817,
+    "oracle": 36.817,
+    "excess": 0,
+    "nsel": 1620,
+    "nfail": 1620,
+    "miss": false,
+    "all": true,
+    "extra": [],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12142",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12144",
+    "kind": "code",
+    "cost": 2.043,
+    "oracle": 2.043,
+    "excess": 0,
+    "nsel": 11,
+    "nfail": 11,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 11 tests on the patch, 11 kept ['error', 'fail']",
+     ": 11 tests, 1 workers, 2.043s"
+    ]
+   },
+   {
+    "cid": "h12145",
+    "kind": "multi",
+    "cost": 2.157,
+    "oracle": 2.157,
+    "excess": 0,
+    "nsel": 3,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 3 tests on the patch, 3 kept ['fail']",
+     ": 3 tests, 1 workers, 2.157s"
+    ]
+   },
+   {
+    "cid": "h12147",
+    "kind": "import",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12148",
+    "kind": "eq",
+    "cost": 2.155,
+    "oracle": 2.155,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.155s"
+    ]
+   },
+   {
+    "cid": "h12149",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 36.817,
+    "excess": 0,
+    "nsel": 1620,
+    "nfail": 1600,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_build_removes_obsolete_extensions",
+      0.073
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_dry_run_preserves_obsolete_extensions",
+      0.021
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_editable_install_removes_obsolete_extensions",
+      0.021
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h12155",
+    "kind": "code",
+    "cost": 2.241,
+    "oracle": 2.241,
+    "excess": 0,
+    "nsel": 6,
+    "nfail": 6,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 6 tests on the patch, 6 kept ['fail']",
+     ": 6 tests, 1 workers, 2.241s"
+    ]
+   },
+   {
+    "cid": "h12157",
+    "kind": "code",
+    "cost": 2.303,
+    "oracle": 2.303,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 2 tests, 1 workers, 2.303s"
+    ]
+   },
+   {
+    "cid": "h12160",
+    "kind": "code",
+    "cost": 2.423,
+    "oracle": 2.423,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 2 tests on the patch, 2 kept ['fail']",
+     ": 2 tests, 1 workers, 2.423s"
+    ]
+   },
+   {
+    "cid": "h12161",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h12163",
+    "kind": "setup",
+    "cost": 2.013,
+    "oracle": 2.013,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.013s"
+    ]
+   },
+   {
+    "cid": "h12164",
+    "kind": "fixture",
+    "cost": 2.007,
+    "oracle": 2.007,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "h12165",
+    "kind": "dictvalue",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   }
+  ]
+ },
+ "holdout2": {
+  "total": 545.397,
+  "oracle": 234.161,
+  "allcost": 36.817,
+  "rows": [
+   {
+    "cid": "h33727",
+    "kind": "eq",
+    "cost": 36.817,
+    "oracle": 0,
+    "excess": 36.817,
+    "nsel": 1620,
+    "nfail": 0,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33758",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 2.217,
+    "excess": 34.6,
+    "nsel": 1592,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1592 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33712",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 10.686,
+    "excess": 26.131,
+    "nsel": 1620,
+    "nfail": 137,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33746",
+    "kind": "code",
+    "cost": 36.817,
+    "oracle": 10.743,
+    "excess": 26.074,
+    "nsel": 1567,
+    "nfail": 160,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1567 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33748",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 53,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_in_nulls",
+      1.331
+     ]
+    ],
+    "notes": [
+     ": 53 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h33735",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 3.499,
+    "excess": 21.955,
+    "nsel": 228,
+    "nfail": 6,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ]
+    ],
+    "notes": [
+     ": 228 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h33743",
+    "kind": "fixture",
+    "cost": 25.454,
+    "oracle": 4.232,
+    "excess": 21.222,
+    "nsel": 61,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     ": 61 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h33759",
+    "kind": "classbody",
+    "cost": 12.896,
+    "oracle": 0,
+    "excess": 12.896,
+    "nsel": 320,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 320 tests, 3 workers, 12.896s"
+    ]
+   },
+   {
+    "cid": "h33740",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 25.454,
+    "excess": 11.363,
+    "nsel": 1545,
+    "nfail": 37,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1545 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33744",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 25.454,
+    "excess": 11.363,
+    "nsel": 1620,
+    "nfail": 60,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33719",
+    "kind": "dictvalue",
+    "cost": 11.395,
+    "oracle": 2.033,
+    "excess": 9.362,
+    "nsel": 107,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 107 tests, 2 workers, 11.395s"
+    ]
+   },
+   {
+    "cid": "h33708",
+    "kind": "classbody",
+    "cost": 9.292,
+    "oracle": 0,
+    "excess": 9.292,
+    "nsel": 39,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ],
+     [
+      "tests/dialects/test_exasol.py::TestExasol::test_datetime_functions",
+      0.096
+     ]
+    ],
+    "notes": [
+     ": 39 tests, 1 workers, 9.292s"
+    ]
+   },
+   {
+    "cid": "h33764",
+    "kind": "dictvalue",
+    "cost": 9.249,
+    "oracle": 0,
+    "excess": 9.249,
+    "nsel": 16,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ],
+     [
+      "tests/test_parser.py::TestParser::test_is_precedence",
+      0.144
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 16 tests, 1 workers, 9.249s"
+    ]
+   },
+   {
+    "cid": "h33745",
+    "kind": "classbody",
+    "cost": 11.215,
+    "oracle": 2.006,
+    "excess": 9.209,
+    "nsel": 164,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 164 tests, 2 workers, 11.215s"
+    ]
+   },
+   {
+    "cid": "h33733",
+    "kind": "dictvalue",
+    "cost": 10.686,
+    "oracle": 2.061,
+    "excess": 8.625,
+    "nsel": 71,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 71 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h33701",
+    "kind": "dictvalue",
+    "cost": 10.686,
+    "oracle": 2.904,
+    "excess": 7.782,
+    "nsel": 49,
+    "nfail": 5,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 49 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h33711",
+    "kind": "multi",
+    "cost": 10.686,
+    "oracle": 3.006,
+    "excess": 7.68,
+    "nsel": 34,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     ": 34 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h33720",
+    "kind": "classbody",
+    "cost": 8.762,
+    "oracle": 2.001,
+    "excess": 6.761,
+    "nsel": 7,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_partition_by_excluding",
+      0.026
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_enum",
+      0.026
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 7 tests, 1 workers, 8.762s"
+    ]
+   },
+   {
+    "cid": "h33700",
+    "kind": "dictvalue",
+    "cost": 7.859,
+    "oracle": 2.662,
+    "excess": 5.197,
+    "nsel": 13,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ]
+    ],
+    "notes": [
+     ": 13 tests, 2 workers, 7.859s"
+    ]
+   },
+   {
+    "cid": "h33731",
+    "kind": "helper",
+    "cost": 7.254,
+    "oracle": 5.146,
+    "excess": 2.108,
+    "nsel": 25,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize_internal_names",
+      0.213
+     ]
+    ],
+    "notes": [
+     ": 25 tests, 2 workers, 7.254s"
+    ]
+   },
+   {
+    "cid": "h33721",
+    "kind": "eq",
+    "cost": 2.039,
+    "oracle": 0,
+    "excess": 2.039,
+    "nsel": 3,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_unnest_type_trace_is_memoized",
+      0.022
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_table_as_struct_bigquery",
+      0.01
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_struct_subquery_values",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 3 tests, 1 workers, 2.039s"
+    ]
+   },
+   {
+    "cid": "h33726",
+    "kind": "fixture-ws",
+    "cost": 2.037,
+    "oracle": 0,
+    "excess": 2.037,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns__invalid",
+      0.037
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.037s"
+    ]
+   },
+   {
+    "cid": "h33704",
+    "kind": "eq",
+    "cost": 2.007,
+    "oracle": 0,
+    "excess": 2.007,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_journal",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "h33752",
+    "kind": "fixture-ws",
+    "cost": 2.007,
+    "oracle": 0,
+    "excess": 2.007,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_quote_identifiers",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "h33723",
+    "kind": "code",
+    "cost": 2.013,
+    "oracle": 2.007,
+    "excess": 0.006,
+    "nsel": 2,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_eliminate_ctes",
+      0.006
+     ]
+    ],
+    "notes": [
+     ": 2 tests, 1 workers, 2.013s"
+    ]
+   },
+   {
+    "cid": "h33702",
+    "kind": "multi",
+    "cost": 2.4,
+    "oracle": 2.4,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 2 tests, 1 workers, 2.400s"
+    ]
+   },
+   {
+    "cid": "h33703",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33705",
+    "kind": "fixture",
+    "cost": 2.038,
+    "oracle": 2.038,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.038s"
+    ]
+   },
+   {
+    "cid": "h33706",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33707",
+    "kind": "dictvalue",
+    "cost": 2.039,
+    "oracle": 2.039,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.039s"
+    ]
+   },
+   {
+    "cid": "h33709",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33710",
+    "kind": "fixture",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "h33713",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 4 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33714",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33715",
+    "kind": "fixture",
+    "cost": 2.596,
+    "oracle": 2.596,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.596s"
+    ]
+   },
+   {
+    "cid": "h33716",
+    "kind": "classbody",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33717",
+    "kind": "code",
+    "cost": 2.478,
+    "oracle": 2.478,
+    "excess": 0,
+    "nsel": 4,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 5 tests on the patch, 4 kept ['fail']",
+     ": 4 tests, 1 workers, 2.478s"
+    ]
+   },
+   {
+    "cid": "h33718",
+    "kind": "fixture",
+    "cost": 2.09,
+    "oracle": 2.09,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.090s"
+    ]
+   },
+   {
+    "cid": "h33722",
+    "kind": "collection",
+    "cost": 9.226,
+    "oracle": 9.226,
+    "excess": 0,
+    "nsel": 1020,
+    "nfail": 1020,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1020 tests, 2 workers, 9.226s"
+    ]
+   },
+   {
+    "cid": "h33724",
+    "kind": "collection",
+    "cost": 9.226,
+    "oracle": 9.226,
+    "excess": 0,
+    "nsel": 1020,
+    "nfail": 1020,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1020 tests, 2 workers, 9.226s"
+    ]
+   },
+   {
+    "cid": "h33725",
+    "kind": "setup",
+    "cost": 2.001,
+    "oracle": 2.001,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.001s"
+    ]
+   },
+   {
+    "cid": "h33728",
+    "kind": "setup",
+    "cost": 4.533,
+    "oracle": 4.533,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 4.533s"
+    ]
+   },
+   {
+    "cid": "h33730",
+    "kind": "setup",
+    "cost": 2.002,
+    "oracle": 2.002,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.002s"
+    ]
+   },
+   {
+    "cid": "h33732",
+    "kind": "classbody",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33734",
+    "kind": "collection",
+    "cost": 9.226,
+    "oracle": 9.226,
+    "excess": 0,
+    "nsel": 1020,
+    "nfail": 1020,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1020 tests, 2 workers, 9.226s"
+    ]
+   },
+   {
+    "cid": "h33736",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33737",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33738",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33739",
+    "kind": "helper",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33741",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33742",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33747",
+    "kind": "code",
+    "cost": 2.003,
+    "oracle": 2.003,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.003s"
+    ]
+   },
+   {
+    "cid": "h33749",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 36.817,
+    "excess": 0,
+    "nsel": 1620,
+    "nfail": 1600,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_build_removes_obsolete_extensions",
+      0.073
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_dry_run_preserves_obsolete_extensions",
+      0.021
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_editable_install_removes_obsolete_extensions",
+      0.021
+     ]
+    ],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33750",
+    "kind": "helper",
+    "cost": 2.022,
+    "oracle": 2.022,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.022s"
+    ]
+   },
+   {
+    "cid": "h33751",
+    "kind": "multi",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33753",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 3 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33754",
+    "kind": "fixture",
+    "cost": 2.083,
+    "oracle": 2.083,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.083s"
+    ]
+   },
+   {
+    "cid": "h33755",
+    "kind": "code",
+    "cost": 24.605,
+    "oracle": 24.605,
+    "excess": 0,
+    "nsel": 51,
+    "nfail": 50,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_table_depth_mismatch",
+      0
+     ]
+    ],
+    "notes": [
+     ": 51 tests, 1 workers, 24.605s"
+    ]
+   },
+   {
+    "cid": "h33756",
+    "kind": "dictvalue",
+    "cost": 2.067,
+    "oracle": 2.067,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.067s"
+    ]
+   },
+   {
+    "cid": "h33757",
+    "kind": "code",
+    "cost": 2.023,
+    "oracle": 2.023,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.023s"
+    ]
+   },
+   {
+    "cid": "h33760",
+    "kind": "code",
+    "cost": 2.065,
+    "oracle": 2.065,
+    "excess": 0,
+    "nsel": 6,
+    "nfail": 6,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 8 tests on the patch, 6 kept ['error', 'fail']",
+     ": 6 tests, 1 workers, 2.065s"
+    ]
+   },
+   {
+    "cid": "h33761",
+    "kind": "multi",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33762",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33763",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33765",
+    "kind": "multi",
+    "cost": 2.418,
+    "oracle": 2.418,
+    "excess": 0,
+    "nsel": 7,
+    "nfail": 7,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 9 tests on the patch, 7 kept ['fail']",
+     ": 7 tests, 1 workers, 2.418s"
+    ]
+   }
+  ]
+ },
+ "holdout2u": {
+  "total": 534.169,
+  "oracle": 222.933,
+  "allcost": 36.817,
+  "rows": [
+   {
+    "cid": "h33727",
+    "kind": "eq",
+    "cost": 36.817,
+    "oracle": 0,
+    "excess": 36.817,
+    "nsel": 1620,
+    "nfail": 0,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33758",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 2.217,
+    "excess": 34.6,
+    "nsel": 1592,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1592 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33712",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 10.686,
+    "excess": 26.131,
+    "nsel": 1620,
+    "nfail": 137,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33746",
+    "kind": "code",
+    "cost": 36.817,
+    "oracle": 10.743,
+    "excess": 26.074,
+    "nsel": 1567,
+    "nfail": 160,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1567 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33748",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 53,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_in_nulls",
+      1.331
+     ]
+    ],
+    "notes": [
+     ": 53 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h33735",
+    "kind": "code",
+    "cost": 25.454,
+    "oracle": 3.499,
+    "excess": 21.955,
+    "nsel": 228,
+    "nfail": 6,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ]
+    ],
+    "notes": [
+     ": 228 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h33743",
+    "kind": "fixture",
+    "cost": 25.454,
+    "oracle": 4.232,
+    "excess": 21.222,
+    "nsel": 61,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     ": 61 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "h33759",
+    "kind": "classbody",
+    "cost": 12.896,
+    "oracle": 0,
+    "excess": 12.896,
+    "nsel": 320,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 320 tests, 3 workers, 12.896s"
+    ]
+   },
+   {
+    "cid": "h33740",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 25.454,
+    "excess": 11.363,
+    "nsel": 1545,
+    "nfail": 37,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1545 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33744",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 25.454,
+    "excess": 11.363,
+    "nsel": 1620,
+    "nfail": 60,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33719",
+    "kind": "dictvalue",
+    "cost": 11.395,
+    "oracle": 2.033,
+    "excess": 9.362,
+    "nsel": 107,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 107 tests, 2 workers, 11.395s"
+    ]
+   },
+   {
+    "cid": "h33708",
+    "kind": "classbody",
+    "cost": 9.292,
+    "oracle": 0,
+    "excess": 9.292,
+    "nsel": 39,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ],
+     [
+      "tests/dialects/test_exasol.py::TestExasol::test_datetime_functions",
+      0.096
+     ]
+    ],
+    "notes": [
+     ": 39 tests, 1 workers, 9.292s"
+    ]
+   },
+   {
+    "cid": "h33764",
+    "kind": "dictvalue",
+    "cost": 9.249,
+    "oracle": 0,
+    "excess": 9.249,
+    "nsel": 16,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ],
+     [
+      "tests/test_parser.py::TestParser::test_is_precedence",
+      0.144
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 16 tests, 1 workers, 9.249s"
+    ]
+   },
+   {
+    "cid": "h33745",
+    "kind": "classbody",
+    "cost": 11.215,
+    "oracle": 2.006,
+    "excess": 9.209,
+    "nsel": 164,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 164 tests, 2 workers, 11.215s"
+    ]
+   },
+   {
+    "cid": "h33733",
+    "kind": "dictvalue",
+    "cost": 10.686,
+    "oracle": 2.061,
+    "excess": 8.625,
+    "nsel": 71,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 71 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h33701",
+    "kind": "dictvalue",
+    "cost": 10.686,
+    "oracle": 2.904,
+    "excess": 7.782,
+    "nsel": 49,
+    "nfail": 5,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 49 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h33711",
+    "kind": "multi",
+    "cost": 10.686,
+    "oracle": 3.006,
+    "excess": 7.68,
+    "nsel": 34,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     ": 34 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "h33720",
+    "kind": "classbody",
+    "cost": 8.762,
+    "oracle": 2.001,
+    "excess": 6.761,
+    "nsel": 7,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_partition_by_excluding",
+      0.026
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_enum",
+      0.026
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 7 tests, 1 workers, 8.762s"
+    ]
+   },
+   {
+    "cid": "h33700",
+    "kind": "dictvalue",
+    "cost": 7.859,
+    "oracle": 2.662,
+    "excess": 5.197,
+    "nsel": 13,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ]
+    ],
+    "notes": [
+     ": 13 tests, 2 workers, 7.859s"
+    ]
+   },
+   {
+    "cid": "h33731",
+    "kind": "helper",
+    "cost": 7.254,
+    "oracle": 5.146,
+    "excess": 2.108,
+    "nsel": 25,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize_internal_names",
+      0.213
+     ]
+    ],
+    "notes": [
+     ": 25 tests, 2 workers, 7.254s"
+    ]
+   },
+   {
+    "cid": "h33721",
+    "kind": "eq",
+    "cost": 2.039,
+    "oracle": 0,
+    "excess": 2.039,
+    "nsel": 3,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_unnest_type_trace_is_memoized",
+      0.022
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_table_as_struct_bigquery",
+      0.01
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_struct_subquery_values",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 3 tests, 1 workers, 2.039s"
+    ]
+   },
+   {
+    "cid": "h33726",
+    "kind": "fixture-ws",
+    "cost": 2.037,
+    "oracle": 0,
+    "excess": 2.037,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns__invalid",
+      0.037
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.037s"
+    ]
+   },
+   {
+    "cid": "h33704",
+    "kind": "eq",
+    "cost": 2.007,
+    "oracle": 0,
+    "excess": 2.007,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_journal",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "h33752",
+    "kind": "fixture-ws",
+    "cost": 2.007,
+    "oracle": 0,
+    "excess": 2.007,
+    "nsel": 1,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_quote_identifiers",
+      0.007
+     ]
+    ],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "h33723",
+    "kind": "code",
+    "cost": 2.013,
+    "oracle": 2.007,
+    "excess": 0.006,
+    "nsel": 2,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_eliminate_ctes",
+      0.006
+     ]
+    ],
+    "notes": [
+     ": 2 tests, 1 workers, 2.013s"
+    ]
+   },
+   {
+    "cid": "h33702",
+    "kind": "multi",
+    "cost": 2.4,
+    "oracle": 2.4,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 2 tests, 1 workers, 2.400s"
+    ]
+   },
+   {
+    "cid": "h33703",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33705",
+    "kind": "fixture",
+    "cost": 2.038,
+    "oracle": 2.038,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.038s"
+    ]
+   },
+   {
+    "cid": "h33706",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33707",
+    "kind": "dictvalue",
+    "cost": 2.039,
+    "oracle": 2.039,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.039s"
+    ]
+   },
+   {
+    "cid": "h33709",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33710",
+    "kind": "fixture",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "h33713",
+    "kind": "code",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 4 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33714",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33715",
+    "kind": "fixture",
+    "cost": 2.596,
+    "oracle": 2.596,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.596s"
+    ]
+   },
+   {
+    "cid": "h33716",
+    "kind": "classbody",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33717",
+    "kind": "code",
+    "cost": 2.478,
+    "oracle": 2.478,
+    "excess": 0,
+    "nsel": 4,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 5 tests on the patch, 4 kept ['fail']",
+     ": 4 tests, 1 workers, 2.478s"
+    ]
+   },
+   {
+    "cid": "h33718",
+    "kind": "fixture",
+    "cost": 2.09,
+    "oracle": 2.09,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.090s"
+    ]
+   },
+   {
+    "cid": "h33722",
+    "kind": "collection",
+    "cost": 9.226,
+    "oracle": 9.226,
+    "excess": 0,
+    "nsel": 1020,
+    "nfail": 1020,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1020 tests, 2 workers, 9.226s"
+    ]
+   },
+   {
+    "cid": "h33725",
+    "kind": "setup",
+    "cost": 2.001,
+    "oracle": 2.001,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.001s"
+    ]
+   },
+   {
+    "cid": "h33728",
+    "kind": "setup",
+    "cost": 4.533,
+    "oracle": 4.533,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 4.533s"
+    ]
+   },
+   {
+    "cid": "h33732",
+    "kind": "classbody",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33734",
+    "kind": "collection",
+    "cost": 9.226,
+    "oracle": 9.226,
+    "excess": 0,
+    "nsel": 1020,
+    "nfail": 1020,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1020 tests, 2 workers, 9.226s"
+    ]
+   },
+   {
+    "cid": "h33736",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33737",
+    "kind": "cookie",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33738",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33741",
+    "kind": "collection",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33742",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33747",
+    "kind": "code",
+    "cost": 2.003,
+    "oracle": 2.003,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.003s"
+    ]
+   },
+   {
+    "cid": "h33749",
+    "kind": "import",
+    "cost": 36.817,
+    "oracle": 36.817,
+    "excess": 0,
+    "nsel": 1620,
+    "nfail": 1600,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_build_removes_obsolete_extensions",
+      0.073
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_dry_run_preserves_obsolete_extensions",
+      0.021
+     ],
+     [
+      "tests/test_sqlglotc.py::TestSQLGlotC::test_editable_install_removes_obsolete_extensions",
+      0.021
+     ]
+    ],
+    "notes": [
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "h33750",
+    "kind": "helper",
+    "cost": 2.022,
+    "oracle": 2.022,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.022s"
+    ]
+   },
+   {
+    "cid": "h33751",
+    "kind": "multi",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33753",
+    "kind": "eq",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 3 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33754",
+    "kind": "fixture",
+    "cost": 2.083,
+    "oracle": 2.083,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.083s"
+    ]
+   },
+   {
+    "cid": "h33755",
+    "kind": "code",
+    "cost": 24.605,
+    "oracle": 24.605,
+    "excess": 0,
+    "nsel": 51,
+    "nfail": 50,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_table_depth_mismatch",
+      0
+     ]
+    ],
+    "notes": [
+     ": 51 tests, 1 workers, 24.605s"
+    ]
+   },
+   {
+    "cid": "h33756",
+    "kind": "dictvalue",
+    "cost": 2.067,
+    "oracle": 2.067,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.067s"
+    ]
+   },
+   {
+    "cid": "h33757",
+    "kind": "code",
+    "cost": 2.023,
+    "oracle": 2.023,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.023s"
+    ]
+   },
+   {
+    "cid": "h33760",
+    "kind": "code",
+    "cost": 2.065,
+    "oracle": 2.065,
+    "excess": 0,
+    "nsel": 6,
+    "nfail": 6,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 8 tests on the patch, 6 kept ['error', 'fail']",
+     ": 6 tests, 1 workers, 2.065s"
+    ]
+   },
+   {
+    "cid": "h33761",
+    "kind": "multi",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33763",
+    "kind": "comment",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "h33765",
+    "kind": "multi",
+    "cost": 2.418,
+    "oracle": 2.418,
+    "excess": 0,
+    "nsel": 7,
+    "nfail": 7,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 9 tests on the patch, 7 kept ['fail']",
+     ": 7 tests, 1 workers, 2.418s"
+    ]
+   }
+  ]
+ },
+ "mutants": {
+  "total": 1065.357,
+  "oracle": 326.938,
+  "allcost": 36.817,
+  "rows": [
+   {
+    "cid": "m1x055",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 0,
+    "excess": 36.817,
+    "nsel": 1586,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1586 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m2x005",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 0,
+    "excess": 36.817,
+    "nsel": 1568,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1568 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m2x025",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 0,
+    "excess": 36.817,
+    "nsel": 1615,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1615 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m2x029",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 2.007,
+    "excess": 34.81,
+    "nsel": 1620,
+    "nfail": 29,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m1x064",
+    "kind": "mutant",
+    "cost": 36.008,
+    "oracle": 2.063,
+    "excess": 33.945,
+    "nsel": 762,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 762 tests, 3 workers, 36.008s"
+    ]
+   },
+   {
+    "cid": "m2x008",
+    "kind": "mutant",
+    "cost": 36.008,
+    "oracle": 2.063,
+    "excess": 33.945,
+    "nsel": 762,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 762 tests, 3 workers, 36.008s"
+    ]
+   },
+   {
+    "cid": "m2x000",
+    "kind": "mutant",
+    "cost": 32.817,
+    "oracle": 0,
+    "excess": 32.817,
+    "nsel": 153,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 153 tests, 2 workers, 32.817s"
+    ]
+   },
+   {
+    "cid": "m2x019",
+    "kind": "mutant",
+    "cost": 27.119,
+    "oracle": 0,
+    "excess": 27.119,
+    "nsel": 312,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 312 tests, 2 workers, 27.119s"
+    ]
+   },
+   {
+    "cid": "m2x018",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 10.577,
+    "excess": 26.24,
+    "nsel": 1620,
+    "nfail": 76,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m1x030",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 12,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     ": 12 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x046",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 12,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     ": 12 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m2x015",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 0,
+    "excess": 25.454,
+    "nsel": 27,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 27 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m2x014",
+    "kind": "mutant",
+    "cost": 27.454,
+    "oracle": 2.079,
+    "excess": 25.375,
+    "nsel": 437,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 437 tests, 3 workers, 27.454s"
+    ]
+   },
+   {
+    "cid": "m1x065",
+    "kind": "mutant",
+    "cost": 27.454,
+    "oracle": 3.175,
+    "excess": 24.279,
+    "nsel": 702,
+    "nfail": 13,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 702 tests, 3 workers, 27.454s"
+    ]
+   },
+   {
+    "cid": "m2x003",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 2.01,
+    "excess": 23.444,
+    "nsel": 87,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 87 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m2x010",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 2.01,
+    "excess": 23.444,
+    "nsel": 87,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 87 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m2x002",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 2.011,
+    "excess": 23.443,
+    "nsel": 94,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_agg_order",
+      1.364
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 94 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m2x027",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 2.078,
+    "excess": 23.376,
+    "nsel": 51,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     ": 51 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m2x022",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 3.198,
+    "excess": 22.256,
+    "nsel": 231,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_tpcds",
+      2.232
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 231 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x000",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 4.232,
+    "excess": 21.222,
+    "nsel": 61,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpcds",
+      21.454
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     ": 61 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x027",
+    "kind": "mutant",
+    "cost": 11.58,
+    "oracle": 0,
+    "excess": 11.58,
+    "nsel": 84,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 84 tests, 2 workers, 11.580s"
+    ]
+   },
+   {
+    "cid": "m1x054",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 25.454,
+    "excess": 11.363,
+    "nsel": 1564,
+    "nfail": 54,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 1564 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m2x017",
+    "kind": "mutant",
+    "cost": 10.686,
+    "oracle": 0,
+    "excess": 10.686,
+    "nsel": 34,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     ": 34 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "m2x013",
+    "kind": "mutant",
+    "cost": 10.326,
+    "oracle": 0,
+    "excess": 10.326,
+    "nsel": 8,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ]
+    ],
+    "notes": [
+     ": 8 tests, 1 workers, 10.326s"
+    ]
+   },
+   {
+    "cid": "m2x021",
+    "kind": "mutant",
+    "cost": 36.817,
+    "oracle": 27.454,
+    "excess": 9.363,
+    "nsel": 1620,
+    "nfail": 326,
+    "miss": false,
+    "all": true,
+    "extra": [
+     [
+      "tests/test_parser.py::TestParser::test_max_nodes",
+      28.817
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ]
+    ],
+    "notes": [
+     " import probe broken: catcher takes all",
+     ": 1620 tests, 4 workers, 36.817s"
+    ]
+   },
+   {
+    "cid": "m1x028",
+    "kind": "mutant",
+    "cost": 9.17,
+    "oracle": 0,
+    "excess": 9.17,
+    "nsel": 11,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ],
+     [
+      "tests/test_parser.py::TestParser::test_is_precedence",
+      0.144
+     ]
+    ],
+    "notes": [
+     ": 11 tests, 1 workers, 9.170s"
+    ]
+   },
+   {
+    "cid": "m1x034",
+    "kind": "mutant",
+    "cost": 8.916,
+    "oracle": 0,
+    "excess": 8.916,
+    "nsel": 7,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_time",
+      0.155
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_partition_by_excluding",
+      0.026
+     ]
+    ],
+    "notes": [
+     ": 7 tests, 1 workers, 8.916s"
+    ]
+   },
+   {
+    "cid": "m1x026",
+    "kind": "mutant",
+    "cost": 10.686,
+    "oracle": 2.006,
+    "excess": 8.68,
+    "nsel": 20,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ]
+    ],
+    "notes": [
+     ": 20 tests, 2 workers, 10.686s"
+    ]
+   },
+   {
+    "cid": "m1x069",
+    "kind": "mutant",
+    "cost": 10.658,
+    "oracle": 2.212,
+    "excess": 8.446,
+    "nsel": 317,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_canonicalize",
+      1.006
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 317 tests, 3 workers, 10.658s"
+    ]
+   },
+   {
+    "cid": "m2x009",
+    "kind": "mutant",
+    "cost": 10.364,
+    "oracle": 2.436,
+    "excess": 7.928,
+    "nsel": 287,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 287 tests, 3 workers, 10.364s"
+    ]
+   },
+   {
+    "cid": "m1x014",
+    "kind": "mutant",
+    "cost": 8.969,
+    "oracle": 2.022,
+    "excess": 6.947,
+    "nsel": 13,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_operators",
+      0.076
+     ],
+     [
+      "tests/dialects/test_oracle.py::TestOracle::test_oracle",
+      0.057
+     ]
+    ],
+    "notes": [
+     ": 13 tests, 1 workers, 8.969s"
+    ]
+   },
+   {
+    "cid": "m1x032",
+    "kind": "mutant",
+    "cost": 8.762,
+    "oracle": 2.001,
+    "excess": 6.761,
+    "nsel": 7,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_generator.py::TestGenerator::test_generator_memory",
+      6.686
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_partition_by_excluding",
+      0.026
+     ],
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_enum",
+      0.026
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 7 tests, 1 workers, 8.762s"
+    ]
+   },
+   {
+    "cid": "m1x019",
+    "kind": "mutant",
+    "cost": 6.533,
+    "oracle": 0,
+    "excess": 6.533,
+    "nsel": 19,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/dialects/test_bigquery.py::TestBigQuery::test_bigquery",
+      0.436
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 19 tests, 2 workers, 6.533s"
+    ]
+   },
+   {
+    "cid": "m1x022",
+    "kind": "mutant",
+    "cost": 6.124,
+    "oracle": 0,
+    "excess": 6.124,
+    "nsel": 70,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/dialects/test_bigquery.py::TestBigQuery::test_bigquery",
+      0.436
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 70 tests, 2 workers, 6.124s"
+    ]
+   },
+   {
+    "cid": "m2x023",
+    "kind": "mutant",
+    "cost": 5.337,
+    "oracle": 0,
+    "excess": 5.337,
+    "nsel": 15,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_correlated_all",
+      0.686
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/test_serde.py::TestSerde::test_serde",
+      0.506
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 15 tests, 1 workers, 5.337s"
+    ]
+   },
+   {
+    "cid": "m2x001",
+    "kind": "mutant",
+    "cost": 5.29,
+    "oracle": 0,
+    "excess": 5.29,
+    "nsel": 36,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize",
+      0.395
+     ]
+    ],
+    "notes": [
+     ": 36 tests, 1 workers, 5.290s"
+    ]
+   },
+   {
+    "cid": "m1x012",
+    "kind": "mutant",
+    "cost": 5.192,
+    "oracle": 0,
+    "excess": 5.192,
+    "nsel": 10,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_serde.py::TestSerde::test_serde",
+      0.506
+     ],
+     [
+      "tests/test_transpile.py::TestTranspile::test_identity",
+      0.329
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 10 tests, 1 workers, 5.192s"
+    ]
+   },
+   {
+    "cid": "m2x007",
+    "kind": "mutant",
+    "cost": 7.014,
+    "oracle": 2.024,
+    "excess": 4.99,
+    "nsel": 27,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_merge_subqueries",
+      1.016
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 27 tests, 2 workers, 7.014s"
+    ]
+   },
+   {
+    "cid": "m1x051",
+    "kind": "mutant",
+    "cost": 4.629,
+    "oracle": 0,
+    "excess": 4.629,
+    "nsel": 3,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_gen",
+      0.004
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 3 tests, 1 workers, 4.629s"
+    ]
+   },
+   {
+    "cid": "m2x016",
+    "kind": "mutant",
+    "cost": 6.124,
+    "oracle": 2.009,
+    "excess": 4.115,
+    "nsel": 70,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/dialects/test_bigquery.py::TestBigQuery::test_bigquery",
+      0.436
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 70 tests, 2 workers, 6.124s"
+    ]
+   },
+   {
+    "cid": "m1x025",
+    "kind": "mutant",
+    "cost": 8.214,
+    "oracle": 4.41,
+    "excess": 3.804,
+    "nsel": 162,
+    "nfail": 34,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/dialects/test_duckdb.py::TestDuckDB::test_duckdb",
+      0.287
+     ]
+    ],
+    "notes": [
+     ": 162 tests, 2 workers, 8.214s"
+    ]
+   },
+   {
+    "cid": "m2x020",
+    "kind": "mutant",
+    "cost": 5.764,
+    "oracle": 2.662,
+    "excess": 3.102,
+    "nsel": 11,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize",
+      0.395
+     ]
+    ],
+    "notes": [
+     ": 11 tests, 1 workers, 5.764s"
+    ]
+   },
+   {
+    "cid": "m1x040",
+    "kind": "mutant",
+    "cost": 2.7,
+    "oracle": 0,
+    "excess": 2.7,
+    "nsel": 46,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_dialect.py::TestDialect::test_operators",
+      0.076
+     ],
+     [
+      "tests/dialects/test_presto.py::TestPresto::test_presto",
+      0.073
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_normalize_identifiers",
+      0.068
+     ]
+    ],
+    "notes": [
+     ": 46 tests, 1 workers, 2.700s"
+    ]
+   },
+   {
+    "cid": "m2x012",
+    "kind": "mutant",
+    "cost": 6.749,
+    "oracle": 4.103,
+    "excess": 2.646,
+    "nsel": 28,
+    "nfail": 5,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/dialects/test_redshift.py::TestRedshift::test_values",
+      0.492
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 28 tests, 2 workers, 6.749s"
+    ]
+   },
+   {
+    "cid": "m2x004",
+    "kind": "mutant",
+    "cost": 6.016,
+    "oracle": 3.417,
+    "excess": 2.599,
+    "nsel": 18,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+      0.662
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/dialects/test_duckdb.py::TestDuckDB::test_duckdb",
+      0.287
+     ]
+    ],
+    "notes": [
+     ": 18 tests, 2 workers, 6.016s"
+    ]
+   },
+   {
+    "cid": "m2x026",
+    "kind": "mutant",
+    "cost": 6.426,
+    "oracle": 3.963,
+    "excess": 2.463,
+    "nsel": 9,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize",
+      0.395
+     ]
+    ],
+    "notes": [
+     ": 9 tests, 2 workers, 6.426s"
+    ]
+   },
+   {
+    "cid": "m1x008",
+    "kind": "mutant",
+    "cost": 6.715,
+    "oracle": 4.547,
+    "excess": 2.168,
+    "nsel": 54,
+    "nfail": 46,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_annotate_funcs",
+      1.963
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_simplify",
+      0.596
+     ],
+     [
+      "tests/dialects/test_duckdb.py::TestDuckDB::test_duckdb",
+      0.287
+     ]
+    ],
+    "notes": [
+     ": 54 tests, 2 workers, 6.715s"
+    ]
+   },
+   {
+    "cid": "m1x018",
+    "kind": "mutant",
+    "cost": 2.032,
+    "oracle": 0,
+    "excess": 2.032,
+    "nsel": 2,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_bigquery.py::TestBigQuery::test_ml_functions",
+      0.028
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_gen",
+      0.004
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 2 tests, 1 workers, 2.032s"
+    ]
+   },
+   {
+    "cid": "m2x011",
+    "kind": "mutant",
+    "cost": 3.414,
+    "oracle": 2.008,
+    "excess": 1.406,
+    "nsel": 2,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_qualify_columns",
+      1.406
+     ]
+    ],
+    "notes": [
+     ": 2 tests, 1 workers, 3.414s"
+    ]
+   },
+   {
+    "cid": "m1x035",
+    "kind": "mutant",
+    "cost": 2.835,
+    "oracle": 2.329,
+    "excess": 0.506,
+    "nsel": 2,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_serde.py::TestSerde::test_serde",
+      0.506
+     ]
+    ],
+    "notes": [
+     ": 2 tests, 1 workers, 2.835s"
+    ]
+   },
+   {
+    "cid": "m1x061",
+    "kind": "mutant",
+    "cost": 3.823,
+    "oracle": 3.738,
+    "excess": 0.085,
+    "nsel": 7,
+    "nfail": 5,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_sqlite.py::TestSQLite::test_sqlite",
+      0.079
+     ],
+     [
+      "tests/dialects/test_duckdb.py::TestDuckDB::test_array_index",
+      0.006
+     ]
+    ],
+    "notes": [
+     ": 7 tests, 1 workers, 3.823s"
+    ]
+   },
+   {
+    "cid": "m1x031",
+    "kind": "mutant",
+    "cost": 4.339,
+    "oracle": 4.335,
+    "excess": 0.004,
+    "nsel": 20,
+    "nfail": 17,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/dialects/test_athena.py::TestAthena::test_tokenizer_errors",
+      0.002
+     ],
+     [
+      "tests/dialects/test_athena.py::TestAthena::test_max_nodes",
+      0.001
+     ],
+     [
+      "tests/test_generator.py::TestGenerator::test_unsupported_property_is_dropped",
+      0.001
+     ]
+    ],
+    "notes": [
+     ": 20 tests, 1 workers, 4.339s"
+    ]
+   },
+   {
+    "cid": "m1x001",
+    "kind": "mutant",
+    "cost": 2.09,
+    "oracle": 2.09,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.090s"
+    ]
+   },
+   {
+    "cid": "m1x002",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 107,
+    "nfail": 92,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_correlated_all",
+      0.686
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_scalar_subquery_predicates",
+      0.327
+     ],
+     [
+      "tests/dialects/test_postgres.py::TestPostgres::test_postgres",
+      0.156
+     ]
+    ],
+    "notes": [
+     ": 107 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x003",
+    "kind": "mutant",
+    "cost": 2.213,
+    "oracle": 2.213,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.213s"
+    ]
+   },
+   {
+    "cid": "m1x004",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x005",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 60,
+    "nfail": 60,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 60 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x006",
+    "kind": "mutant",
+    "cost": 2.161,
+    "oracle": 2.161,
+    "excess": 0,
+    "nsel": 3,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 3 tests on the patch, 3 kept ['fail']",
+     ": 3 tests, 1 workers, 2.161s"
+    ]
+   },
+   {
+    "cid": "m1x007",
+    "kind": "mutant",
+    "cost": 3.016,
+    "oracle": 3.016,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 3.016s"
+    ]
+   },
+   {
+    "cid": "m1x009",
+    "kind": "mutant",
+    "cost": 2.021,
+    "oracle": 2.021,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.021s"
+    ]
+   },
+   {
+    "cid": "m1x010",
+    "kind": "mutant",
+    "cost": 3.406,
+    "oracle": 3.406,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 3.406s"
+    ]
+   },
+   {
+    "cid": "m1x011",
+    "kind": "mutant",
+    "cost": 2.157,
+    "oracle": 2.157,
+    "excess": 0,
+    "nsel": 3,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 4 tests on the patch, 3 kept ['error', 'fail']",
+     ": 3 tests, 1 workers, 2.157s"
+    ]
+   },
+   {
+    "cid": "m1x013",
+    "kind": "mutant",
+    "cost": 2.026,
+    "oracle": 2.026,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 2 tests on the patch, 2 kept ['fail']",
+     ": 2 tests, 1 workers, 2.026s"
+    ]
+   },
+   {
+    "cid": "m1x015",
+    "kind": "mutant",
+    "cost": 2.105,
+    "oracle": 2.105,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.105s"
+    ]
+   },
+   {
+    "cid": "m1x016",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x017",
+    "kind": "mutant",
+    "cost": 2.008,
+    "oracle": 2.008,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.008s"
+    ]
+   },
+   {
+    "cid": "m1x020",
+    "kind": "mutant",
+    "cost": 2.213,
+    "oracle": 2.213,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.213s"
+    ]
+   },
+   {
+    "cid": "m1x021",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x023",
+    "kind": "mutant",
+    "cost": 2.213,
+    "oracle": 2.213,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.213s"
+    ]
+   },
+   {
+    "cid": "m1x024",
+    "kind": "mutant",
+    "cost": 4.059,
+    "oracle": 4.059,
+    "excess": 0,
+    "nsel": 7,
+    "nfail": 7,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 7 tests, 1 workers, 4.059s"
+    ]
+   },
+   {
+    "cid": "m1x029",
+    "kind": "mutant",
+    "cost": 2.003,
+    "oracle": 2.003,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.003s"
+    ]
+   },
+   {
+    "cid": "m1x033",
+    "kind": "mutant",
+    "cost": 2,
+    "oracle": 2,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.000s"
+    ]
+   },
+   {
+    "cid": "m1x036",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 61,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_executor.py::TestExecutor::test_execute_tpch",
+      3.863
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_optimized_tpch",
+      3.537
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_agg_order",
+      1.364
+     ]
+    ],
+    "notes": [
+     ": 61 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x037",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x038",
+    "kind": "mutant",
+    "cost": 2.008,
+    "oracle": 2.008,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.008s"
+    ]
+   },
+   {
+    "cid": "m1x039",
+    "kind": "mutant",
+    "cost": 2.009,
+    "oracle": 2.009,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.009s"
+    ]
+   },
+   {
+    "cid": "m1x041",
+    "kind": "mutant",
+    "cost": 3.936,
+    "oracle": 3.936,
+    "excess": 0,
+    "nsel": 4,
+    "nfail": 4,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 4 tests, 1 workers, 3.936s"
+    ]
+   },
+   {
+    "cid": "m1x042",
+    "kind": "mutant",
+    "cost": 2.068,
+    "oracle": 2.068,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.068s"
+    ]
+   },
+   {
+    "cid": "m1x043",
+    "kind": "mutant",
+    "cost": 2.007,
+    "oracle": 2.007,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.007s"
+    ]
+   },
+   {
+    "cid": "m1x044",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x045",
+    "kind": "mutant",
+    "cost": 2.068,
+    "oracle": 2.068,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.068s"
+    ]
+   },
+   {
+    "cid": "m1x047",
+    "kind": "mutant",
+    "cost": 2.133,
+    "oracle": 2.133,
+    "excess": 0,
+    "nsel": 3,
+    "nfail": 3,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 3 tests, 1 workers, 2.133s"
+    ]
+   },
+   {
+    "cid": "m1x048",
+    "kind": "mutant",
+    "cost": 2.037,
+    "oracle": 2.037,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.037s"
+    ]
+   },
+   {
+    "cid": "m1x049",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x050",
+    "kind": "mutant",
+    "cost": 2.105,
+    "oracle": 2.105,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.105s"
+    ]
+   },
+   {
+    "cid": "m1x052",
+    "kind": "mutant",
+    "cost": 2.011,
+    "oracle": 2.011,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['error']",
+     ": 1 tests, 1 workers, 2.011s"
+    ]
+   },
+   {
+    "cid": "m1x053",
+    "kind": "mutant",
+    "cost": 25.454,
+    "oracle": 25.454,
+    "excess": 0,
+    "nsel": 228,
+    "nfail": 15,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_scope",
+      2.533
+     ],
+     [
+      "tests/test_executor.py::TestExecutor::test_agg_order",
+      1.364
+     ],
+     [
+      "tests/test_optimizer.py::TestOptimizer::test_optimize_in_nulls",
+      1.331
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 228 tests, 2 workers, 25.454s"
+    ]
+   },
+   {
+    "cid": "m1x056",
+    "kind": "mutant",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "m1x057",
+    "kind": "mutant",
+    "cost": 2.092,
+    "oracle": 2.092,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.092s"
+    ]
+   },
+   {
+    "cid": "m1x058",
+    "kind": "mutant",
+    "cost": 2.029,
+    "oracle": 2.029,
+    "excess": 0,
+    "nsel": 11,
+    "nfail": 11,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 13 tests on the patch, 11 kept ['fail']",
+     ": 11 tests, 1 workers, 2.029s"
+    ]
+   },
+   {
+    "cid": "m1x059",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x060",
+    "kind": "mutant",
+    "cost": 2.061,
+    "oracle": 2.061,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 2.061s"
+    ]
+   },
+   {
+    "cid": "m1x062",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 2 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   },
+   {
+    "cid": "m1x063",
+    "kind": "mutant",
+    "cost": 2.438,
+    "oracle": 2.438,
+    "excess": 0,
+    "nsel": 2,
+    "nfail": 2,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 3 tests on the patch, 2 kept ['fail']",
+     ": 2 tests, 1 workers, 2.438s"
+    ]
+   },
+   {
+    "cid": "m1x066",
+    "kind": "mutant",
+    "cost": 3.016,
+    "oracle": 3.016,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     ": 1 tests, 1 workers, 3.016s"
+    ]
+   },
+   {
+    "cid": "m1x067",
+    "kind": "mutant",
+    "cost": 2.005,
+    "oracle": 2.005,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.005s"
+    ]
+   },
+   {
+    "cid": "m1x068",
+    "kind": "mutant",
+    "cost": 2.006,
+    "oracle": 2.006,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " verifier: ran 1 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.006s"
+    ]
+   },
+   {
+    "cid": "m2x006",
+    "kind": "mutant",
+    "cost": 2.144,
+    "oracle": 2.144,
+    "excess": 0,
+    "nsel": 1,
+    "nfail": 1,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 23 tests on the patch, 1 kept ['fail']",
+     ": 1 tests, 1 workers, 2.144s"
+    ]
+   },
+   {
+    "cid": "m2x024",
+    "kind": "mutant",
+    "cost": 6.533,
+    "oracle": 6.533,
+    "excess": 0,
+    "nsel": 23,
+    "nfail": 22,
+    "miss": false,
+    "all": false,
+    "extra": [
+     [
+      "tests/test_build.py::TestBuild::test_build",
+      0.104
+     ]
+    ],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     ": 23 tests, 2 workers, 6.533s"
+    ]
+   },
+   {
+    "cid": "m2x028",
+    "kind": "mutant",
+    "cost": 0,
+    "oracle": 0,
+    "excess": 0,
+    "nsel": 0,
+    "nfail": 0,
+    "miss": false,
+    "all": false,
+    "extra": [],
+    "notes": [
+     " probe: fresh `import sqlglot` still creates one dialect class",
+     " verifier: ran 53 tests on the patch, 0 kept ",
+     ": 0 tests, 0 workers, 0.000s"
+    ]
+   }
+  ]
+ }
+}

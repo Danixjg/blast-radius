@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/tsql.py b/sqlglot/parsers/tsql.py
+--- a/sqlglot/parsers/tsql.py
++++ b/sqlglot/parsers/tsql.py
+@@ -306,7 +306,7 @@
+         args.append(exp.Literal.string("$"))
+ 
+     json_extract = parser.build_extract_json_with_path(exp.JSONExtract)(args, dialect)
+-    json_extract.set("json_query", True)
++    json_extract.set("json_query", False)
+     return json_extract
+ 
+ 

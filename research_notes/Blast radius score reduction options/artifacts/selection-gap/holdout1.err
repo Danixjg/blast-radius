@@ -1,0 +1,19 @@
+profile loaded: version 2 from /tmp/claude-1000/-home-danny-blast-radius/f9459cfe-fac7-4d0e-80c3-4adcd1755994/scratchpad/main-ro/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/dialects/dialect.py undecodable
+probe: patched import fails: ['sqlglot.dialects.singlestore', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot', "NameError: name 'AutoName' is not defined"]
+probe: patched import fails: ['sqlglot.executor', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.dialects.snowflake', "NameError: name 'EXPRESSION_METADATA' is not defined"]
+probe server: 16 of 17 probes forked
+h12102 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12106 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12114 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12119 verifier: ran 2 tests on the patch, 2 kept ['fail']
+h12128 verifier: ran 1 tests on the patch, 0 kept 
+h12137 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12138 verifier: ran 1 tests on the patch, 0 kept 
+h12144 verifier: ran 11 tests on the patch, 11 kept ['error', 'fail']
+h12145 verifier: ran 3 tests on the patch, 3 kept ['fail']
+h12148 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12155 verifier: ran 6 tests on the patch, 6 kept ['fail']
+h12160 verifier: ran 2 tests on the patch, 2 kept ['fail']

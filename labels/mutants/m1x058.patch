@@ -1,0 +1,12 @@
+diff --git a/sqlglot/diff.py b/sqlglot/diff.py
+--- a/sqlglot/diff.py
++++ b/sqlglot/diff.py
+@@ -315,7 +315,7 @@
+                     max_leaves_num = max(source_leaves_num, target_leaves_num)
+                     if max_leaves_num:
+                         common_leaves_num = sum(
+-                            1 for t in candidate_target_leaf_ids if t in target_leaf_ids
++                            0 for t in candidate_target_leaf_ids if t in target_leaf_ids
+                         )
+                         leaf_similarity_score = common_leaves_num / max_leaves_num
+                     else:

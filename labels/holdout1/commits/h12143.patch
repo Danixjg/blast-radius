@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/spark2.py b/sqlglot/dialects/spark2.py
+--- a/sqlglot/dialects/spark2.py
++++ b/sqlglot/dialects/spark2.py
+@@ -27,7 +27,7 @@
+         "dd": "%d",
+         "HH": "%H",
+         "hh": "%I",
+-        "mm": "%M",
++        "mX": "%M",
+         "ss": "%S",
+     }
+ 

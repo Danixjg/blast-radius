@@ -1,0 +1,158 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+probe: patched import fails: ['sqlglot.dialects.teradata', "TypeError: unsupported operand type(s) for +: 'set' and 'set'"]
+probe: patched import fails: ['sqlglot.dialects.athena', "TypeError: unsupported operand type(s) for -: 'str' and 'str'"]
+probe: patched import fails: ['sqlglot.anonymize', "TypeError: unsupported operand type(s) for +: 'set' and 'set'"]
+probe server: 20 of 33 probes forked
+m1x012 probe: fresh `import sqlglot` still creates one dialect class
+m1x018 probe: fresh `import sqlglot` still creates one dialect class
+m1x019 probe: fresh `import sqlglot` still creates one dialect class
+m1x022 probe: fresh `import sqlglot` still creates one dialect class
+m1x027 probe: fresh `import sqlglot` still creates one dialect class
+m1x032 probe: fresh `import sqlglot` still creates one dialect class
+m1x051 probe: fresh `import sqlglot` still creates one dialect class
+m1x053 probe: fresh `import sqlglot` still creates one dialect class
+m1x054 probe: fresh `import sqlglot` still creates one dialect class
+m1x055 probe: fresh `import sqlglot` still creates one dialect class
+m1x064 probe: fresh `import sqlglot` still creates one dialect class
+m2x008 probe: fresh `import sqlglot` still creates one dialect class
+m1x065 probe: fresh `import sqlglot` still creates one dialect class
+m1x069 probe: fresh `import sqlglot` still creates one dialect class
+m2x000 probe: fresh `import sqlglot` still creates one dialect class
+m2x002 probe: fresh `import sqlglot` still creates one dialect class
+m2x003 probe: fresh `import sqlglot` still creates one dialect class
+m2x010 probe: fresh `import sqlglot` still creates one dialect class
+m2x005 probe: fresh `import sqlglot` still creates one dialect class
+m2x006 probe: fresh `import sqlglot` still creates one dialect class
+m2x007 probe: fresh `import sqlglot` still creates one dialect class
+m2x009 probe: fresh `import sqlglot` still creates one dialect class
+m2x012 probe: fresh `import sqlglot` still creates one dialect class
+m2x014 probe: fresh `import sqlglot` still creates one dialect class
+m2x015 probe: fresh `import sqlglot` still creates one dialect class
+m2x016 probe: fresh `import sqlglot` still creates one dialect class
+m2x018 import probe broken: catcher takes all
+m2x019 probe: fresh `import sqlglot` still creates one dialect class
+m2x021 import probe broken: catcher takes all
+m2x022 probe: fresh `import sqlglot` still creates one dialect class
+m2x023 probe: fresh `import sqlglot` still creates one dialect class
+m2x024 probe: fresh `import sqlglot` still creates one dialect class
+m2x025 probe: fresh `import sqlglot` still creates one dialect class
+m2x028 probe: fresh `import sqlglot` still creates one dialect class
+m2x029 import probe broken: catcher takes all
+m1x004 verifier: ran 1 tests on the patch, 0 kept 
+m1x006 verifier: ran 3 tests on the patch, 3 kept ['fail']
+m1x011 verifier: ran 4 tests on the patch, 3 kept ['error', 'fail']
+m1x013 verifier: ran 2 tests on the patch, 2 kept ['fail']
+m1x021 verifier: ran 1 tests on the patch, 0 kept 
+m1x033 verifier: ran 1 tests on the patch, 1 kept ['fail']
+m1x037 verifier: ran 1 tests on the patch, 0 kept 
+m1x052 verifier: ran 1 tests on the patch, 1 kept ['error']
+m1x058 verifier: ran 13 tests on the patch, 11 kept ['fail']
+m1x062 verifier: ran 2 tests on the patch, 0 kept 
+m1x063 verifier: ran 3 tests on the patch, 2 kept ['fail']
+m1x067 verifier: ran 1 tests on the patch, 1 kept ['fail']
+m1x068 verifier: ran 1 tests on the patch, 1 kept ['fail']
+m2x006 verifier: ran 23 tests on the patch, 1 kept ['fail']
+m2x028 verifier: ran 53 tests on the patch, 0 kept 
+m1x000: 61 tests, 2 workers, 25.454s
+m1x001: 1 tests, 1 workers, 2.090s
+m1x002: 107 tests, 2 workers, 25.454s
+m1x003: 1 tests, 1 workers, 2.213s
+m1x004: 0 tests, 0 workers, 0.000s
+m1x005: 60 tests, 2 workers, 25.454s
+m1x006: 3 tests, 1 workers, 2.161s
+m1x007: 1 tests, 1 workers, 3.016s
+m1x008: 54 tests, 2 workers, 6.715s
+m1x009: 1 tests, 1 workers, 2.021s
+m1x010: 1 tests, 1 workers, 3.406s
+m1x011: 3 tests, 1 workers, 2.157s
+m1x012: 10 tests, 1 workers, 5.192s
+m1x013: 2 tests, 1 workers, 2.026s
+m1x014: 13 tests, 1 workers, 8.969s
+m1x015: 1 tests, 1 workers, 2.105s
+m1x016: 0 tests, 0 workers, 0.000s
+m1x017: 1 tests, 1 workers, 2.008s
+m1x018: 2 tests, 1 workers, 2.032s
+m1x019: 19 tests, 2 workers, 6.533s
+m1x020: 1 tests, 1 workers, 2.213s
+m1x021: 0 tests, 0 workers, 0.000s
+m1x022: 70 tests, 2 workers, 6.124s
+m1x023: 1 tests, 1 workers, 2.213s
+m1x024: 7 tests, 1 workers, 4.059s
+m1x025: 162 tests, 2 workers, 8.214s
+m1x026: 20 tests, 2 workers, 10.686s
+m1x027: 84 tests, 2 workers, 11.580s
+m1x028: 11 tests, 1 workers, 9.170s
+m1x029: 1 tests, 1 workers, 2.003s
+m1x030: 12 tests, 2 workers, 25.454s
+m1x031: 20 tests, 1 workers, 4.339s
+m1x032: 7 tests, 1 workers, 8.762s
+m1x033: 1 tests, 1 workers, 2.000s
+m1x034: 7 tests, 1 workers, 8.916s
+m1x035: 2 tests, 1 workers, 2.835s
+m1x036: 61 tests, 2 workers, 25.454s
+m1x037: 0 tests, 0 workers, 0.000s
+m1x038: 1 tests, 1 workers, 2.008s
+m1x039: 1 tests, 1 workers, 2.009s
+m1x040: 46 tests, 1 workers, 2.700s
+m1x041: 4 tests, 1 workers, 3.936s
+m1x042: 1 tests, 1 workers, 2.068s
+m1x043: 1 tests, 1 workers, 2.007s
+m1x044: 0 tests, 0 workers, 0.000s
+m1x045: 1 tests, 1 workers, 2.068s
+m1x046: 12 tests, 2 workers, 25.454s
+m1x047: 3 tests, 1 workers, 2.133s
+m1x048: 1 tests, 1 workers, 2.037s
+m1x049: 0 tests, 0 workers, 0.000s
+m1x050: 1 tests, 1 workers, 2.105s
+m1x051: 3 tests, 1 workers, 4.629s
+m1x052: 1 tests, 1 workers, 2.011s
+m1x053: 228 tests, 2 workers, 25.454s
+m1x054: 1564 tests, 4 workers, 36.817s
+m1x055: 1586 tests, 4 workers, 36.817s
+m1x056: 1 tests, 1 workers, 2.092s
+m1x057: 1 tests, 1 workers, 2.092s
+m1x058: 11 tests, 1 workers, 2.029s
+m1x059: 0 tests, 0 workers, 0.000s
+m1x060: 1 tests, 1 workers, 2.061s
+m1x061: 7 tests, 1 workers, 3.823s
+m1x062: 0 tests, 0 workers, 0.000s
+m1x063: 2 tests, 1 workers, 2.438s
+m1x064: 762 tests, 3 workers, 36.008s
+m1x065: 702 tests, 3 workers, 27.454s
+m1x066: 1 tests, 1 workers, 3.016s
+m1x067: 1 tests, 1 workers, 2.005s
+m1x068: 1 tests, 1 workers, 2.006s
+m1x069: 317 tests, 3 workers, 10.658s
+m2x000: 153 tests, 2 workers, 32.817s
+m2x001: 36 tests, 1 workers, 5.290s
+m2x002: 94 tests, 2 workers, 25.454s
+m2x003: 87 tests, 2 workers, 25.454s
+m2x004: 18 tests, 2 workers, 6.016s
+m2x005: 1568 tests, 4 workers, 36.817s
+m2x006: 1 tests, 1 workers, 2.144s
+m2x007: 27 tests, 2 workers, 7.014s
+m2x008: 762 tests, 3 workers, 36.008s
+m2x009: 287 tests, 3 workers, 10.364s
+m2x010: 87 tests, 2 workers, 25.454s
+m2x011: 2 tests, 1 workers, 3.414s
+m2x012: 28 tests, 2 workers, 6.749s
+m2x013: 8 tests, 1 workers, 10.326s
+m2x014: 437 tests, 3 workers, 27.454s
+m2x015: 27 tests, 2 workers, 25.454s
+m2x016: 70 tests, 2 workers, 6.124s
+m2x017: 34 tests, 2 workers, 10.686s
+m2x018: 1620 tests, 4 workers, 36.817s
+m2x019: 312 tests, 2 workers, 27.119s
+m2x020: 11 tests, 1 workers, 5.764s
+m2x021: 1620 tests, 4 workers, 36.817s
+m2x022: 231 tests, 2 workers, 25.454s
+m2x023: 15 tests, 1 workers, 5.337s
+m2x024: 23 tests, 2 workers, 6.533s
+m2x025: 1615 tests, 4 workers, 36.817s
+m2x026: 9 tests, 2 workers, 6.426s
+m2x027: 51 tests, 2 workers, 25.454s
+m2x028: 0 tests, 0 workers, 0.000s
+m2x029: 1620 tests, 4 workers, 36.817s
+predicted schedule total 1065.357s over 100 commits, 35 probes, 19.53s wall
+WRAP2 {"phases": {"import_selector": 0.024010000000000004, "load_map": 0.03605, "load_profile": 0.0040050000000000086, "hunter_init": 0.004027999999999976, "analyze": 1.4737599999999982, "server_start": 0.16666000000000003, "server_close": 0.006278000000000006, "run_probes": 10.972142, "verify": 7.179848}, "total_in_python": 19.797657, "verify_runs": [{"n": 1, "ms": 42, "cpu": 0.3237, "wall": 0.322, "npass": 1, "files": ["tests/test_transforms.py"]}, {"n": 3, "ms": 161, "cpu": 0.4175, "wall": 0.416, "npass": 0, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_doris.py"]}, {"n": 4, "ms": 158, "cpu": 0.4873, "wall": 0.487, "npass": 1, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_dremio.py"]}, {"n": 2, "ms": 26, "cpu": 0.3195, "wall": 0.318, "npass": 0, "files": ["tests/dialects/test_teradata.py"]}, {"n": 1, "ms": 1, "cpu": 0.2911, "wall": 0.291, "npass": 1, "files": ["tests/dialects/test_singlestore.py"]}, {"n": 1, "ms": 0, "cpu": 0.2366, "wall": 0.238, "npass": 0, "files": ["tests/test_time.py"]}, {"n": 1, "ms": 17, "cpu": 0.3199, "wall": 0.32, "npass": 1, "files": ["tests/dialects/test_prql.py"]}, {"n": 1, "ms": 11, "cpu": 0.3092, "wall": 0.317, "npass": 0, "files": ["tests/dialects/test_materialize.py"]}, {"n": 13, "ms": 45, "cpu": 0.2988, "wall": 0.299, "npass": 2, "files": ["tests/test_diff.py"]}, {"n": 2, "ms": 10, "cpu": 0.5118, "wall": 0.512, "npass": 2, "files": ["tests/dialects/test_snowflake.py", "tests/dialects/test_teradata.py"]}, {"n": 3, "ms": 439, "cpu": 1.0047, "wall": 1.001, "npass": 1, "files": ["tests/dialects/test_bigquery.py", "tests/dialects/test_starrocks.py"]}, {"n": 1, "ms": 5, "cpu": 0.2772, "wall": 0.281, "npass": 0, "files": ["tests/dialects/test_drill.py"]}, {"n": 1, "ms": 6, "cpu": 0.2788, "wall": 0.278, "npass": 0, "files": ["tests/dialects/test_tsql.py"]}, {"n": 23, "ms": 838, "cpu": 1.3812, "wall": 1.387, "npass": 22, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_doris.py", "tests/dialects/test_hive.py", "tests/dialects/test_mysql.py", "tests/dialects/test_postgres.py", "tests/dialects/test_presto.py", "tests/test_parser.py"]}, {"n": 53, "ms": 266, "cpu": 0.7179, "wall": 0.727, "npass": 53, "files": ["tests/dialects/test_teradata.py", "tests/test_lineage.py"]}], "probes": [{"stage": null, "res": "ok", "cpu": 0.6859, "files": ["sqlglot/expressions/aggregate.py"]}, {"stage": null, "res": "ok", "cpu": 0.3977, "files": ["sqlglot/expressions/functions.py"]}, {"stage": null, "res": "ok", "cpu": 0.3985, "files": ["sqlglot/expressions/dml.py"]}, {"stage": 2, "res": "ok", "cpu": 0.1836, "files": ["sqlglot/dialects/starrocks.py"]}, {"stage": 2, "res": "ok", "cpu": 0.1728, "files": ["sqlglot/dialects/snowflake.py"]}, {"stage": 2, "res": "ok", "cpu": 0.1706, "files": ["sqlglot/dialects/solr.py"]}, {"stage": null, "res": "ok", "cpu": 0.4091, "files": ["sqlglot/expressions/array.py"]}, {"stage": 0, "res": "ok", "cpu": 0.3137, "files": ["sqlglot/optimizer/qualify.py"]}, {"stage": null, "res": "ok", "cpu": 0.4537, "files": ["sqlglot/tokens.py"]}, {"stage": null, "res": "ok", "cpu": 0.4406, "files": ["sqlglot/dialects/dialect.py"]}, {"stage": null, "res": "ok", "cpu": 0.4335, "files": ["sqlglot/parsers/base.py"]}, {"stage": null, "res": "ok", "cpu": 0.4069, "files": ["sqlglot/expressions/datatypes.py"]}, {"stage": 1, "res": "ok", "cpu": 0.1946, "files": ["sqlglot/dialects/postgres.py"]}, {"stage": null, "res": "ok", "cpu": 0.425, "files": ["sqlglot/errors.py"]}, {"stage": 2, "res": "ok", "cpu": 0.171, "files": ["sqlglot/optimizer/optimizer.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2934, "files": ["sqlglot/dialects/mysql.py"]}, {"stage": null, "res": "ok", "cpu": 0.417, "files": ["sqlglot/tokens.py"]}, {"stage": 0, "res": "ok", "cpu": 0.3248, "files": ["sqlglot/parsers/doris.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2885, "files": ["sqlglot/dialects/spark2.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2855, "files": ["sqlglot/parsers/bigquery.py"]}, {"stage": 1, "res": "ok", "cpu": 0.19, "files": ["sqlglot/parsers/redshift.py"]}, {"stage": 0, "res": "ok", "cpu": 0.3441, "files": ["sqlglot/generators/duckdb.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2969, "files": ["sqlglot/generators/athena.py"]}, {"stage": 2, "res": "ok", "cpu": 0.1594, "files": ["sqlglot/parsers/starrocks.py"]}, {"stage": 2, "res": "broken", "cpu": 0.1543, "files": ["sqlglot/dialects/teradata.py"]}, {"stage": 0, "res": "ok", "cpu": 0.315, "files": ["sqlglot/optimizer/normalize_identifiers.py"]}, {"stage": 0, "res": "broken", "cpu": 0.2782, "files": ["sqlglot/dialects/presto.py"]}, {"stage": 0, "res": "ok", "cpu": 0.318, "files": ["sqlglot/optimizer/qualify_tables.py"]}, {"stage": null, "res": "ok", "cpu": 0.4301, "files": ["sqlglot/expressions/array.py"]}, {"stage": null, "res": "ok", "cpu": 0.4209, "files": ["sqlglot/expressions/dml.py"]}, {"stage": null, "res": "ok", "cpu": 0.4114, "files": ["sqlglot/_typing.py"]}, {"stage": 0, "res": "ok", "cpu": 0.3024, "files": ["sqlglot/lineage.py"]}, {"stage": 0, "res": "broken", "cpu": 0.3036, "files": ["sqlglot/anonymize.py"]}]}
+CGROUP usage_usec 19918364

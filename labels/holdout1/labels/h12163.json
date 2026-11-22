@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/test_executor.py::TestExecutor::test_static_queries"
+ ],
+ "seconds": 48.4,
+ "peak_mb": null,
+ "patch": "h12163.patch"
+}

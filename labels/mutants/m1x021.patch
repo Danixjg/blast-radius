@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/singlestore.py b/sqlglot/generators/singlestore.py
+--- a/sqlglot/generators/singlestore.py
++++ b/sqlglot/generators/singlestore.py
+@@ -26,7 +26,7 @@
+ 
+ 
+ class SingleStoreGenerator(MySQLGenerator):
+-    SUPPORTS_UESCAPE = False
++    SUPPORTS_UESCAPE = True
+     SUPPORTS_ALTER_COLUMN_NULLABILITY = False
+     NULL_ORDERING_SUPPORTED: bool | None = True
+     MATCH_AGAINST_TABLE_PREFIX: str | None = "TABLE "

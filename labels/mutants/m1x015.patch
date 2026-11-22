@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/eliminate_joins.sql b/tests/fixtures/optimizer/eliminate_joins.sql
+--- a/tests/fixtures/optimizer/eliminate_joins.sql
++++ b/tests/fixtures/optimizer/eliminate_joins.sql
+@@ -689,7 +689,7 @@
+ # title: Preserve NATURAL JOIN on single-row aggregate
+ # execute: true
+ SELECT x.a FROM x NATURAL JOIN (SELECT MIN(y.b) AS b FROM y) AS y ORDER BY x.a;
+-SELECT
++1 SELECT
+   x.a
+ FROM x
+ NATURAL JOIN (

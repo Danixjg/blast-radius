@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/duckdb.py b/sqlglot/generators/duckdb.py
+--- a/sqlglot/generators/duckdb.py
++++ b/sqlglot/generators/duckdb.py
+@@ -3695,6 +3695,7 @@
+                 expression=exp.Where(this=expression.this.copy().is_(exp.null()).not_()),
+             )
+         )
++        # TODO: revisit
+ 
+     def arrayconcatagg_sql(self, expression: exp.ArrayConcatAgg) -> str:
+         this = expression.this

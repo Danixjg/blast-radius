@@ -1,0 +1,11 @@
+diff --git a/sqlglot/expressions/datatypes.py b/sqlglot/expressions/datatypes.py
+--- a/sqlglot/expressions/datatypes.py
++++ b/sqlglot/expressions/datatypes.py
+@@ -5,7 +5,6 @@
+ import typing as t
+ from enum import auto
+ 
+-from sqlglot.helper import AutoName
+ from sqlglot.errors import ErrorLevel, ParseError
+ from sqlglot.expressions.core import (
+     Expr,

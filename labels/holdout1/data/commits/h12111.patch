@@ -1,0 +1,23 @@
+diff --git a/sqlglot/dialects/druid.py b/sqlglot/dialects/druid.py
+--- a/sqlglot/dialects/druid.py
++++ b/sqlglot/dialects/druid.py
+@@ -1,6 +1,7 @@
+ from sqlglot.dialects.dialect import Dialect
+ from sqlglot.generators.druid import DruidGenerator
+ from sqlglot.parsers.druid import DruidParser
++import os as _unused_os  # noqa
+ 
+ 
+ class Druid(Dialect):
+diff --git a/tests/fixtures/optimizer/pushdown_projections.sql b/tests/fixtures/optimizer/pushdown_projections.sql
+--- a/tests/fixtures/optimizer/pushdown_projections.sql
++++ b/tests/fixtures/optimizer/pushdown_projections.sql
+@@ -115,7 +115,7 @@
+ SELECT COUNT(*) FROM (SELECT RANK() OVER w2 AS r FROM x WINDOW w1 AS (PARTITION BY 1), w2 AS (w1 ORDER BY SUM(b))) AS t;
+ SELECT COUNT(*) AS _col_0 FROM (SELECT MAX(1) AS _ FROM x AS x WINDOW w1 AS (PARTITION BY 1), w2 AS (w1 ORDER BY SUM(x.b))) AS t;
+ 
+-WITH y AS (SELECT a FROM x GROUP BY a) SELECT 1 FROM y;
++WITH y AS (SELECT a AND FROM x GROUP BY a) SELECT 1 FROM y;
+ WITH y AS (SELECT 1 AS _ FROM x AS x GROUP BY x.a) SELECT 1 AS "1" FROM y AS y;
+ 
+ # schema: {"t": {"col": "INT"}}

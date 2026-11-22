@@ -1,0 +1,23 @@
+diff --git a/sqlglot/generators/drill.py b/sqlglot/generators/drill.py
+--- a/sqlglot/generators/drill.py
++++ b/sqlglot/generators/drill.py
+@@ -48,7 +48,7 @@
+         exp.DType.INT: "INTEGER",
+         exp.DType.SMALLINT: "INTEGER",
+         exp.DType.TINYINT: "INTEGER",
+-        exp.DType.BINARY: "VARBINARY",
++        exp.DType.BINARY: 'VARBINARY_',
+         exp.DType.TEXT: "VARCHAR",
+         exp.DType.NCHAR: "VARCHAR",
+         exp.DType.TIMESTAMPLTZ: "TIMESTAMP",
+diff --git a/sqlglot/generators/hive.py b/sqlglot/generators/hive.py
+--- a/sqlglot/generators/hive.py
++++ b/sqlglot/generators/hive.py
+@@ -582,6 +582,7 @@
+         default = self.sql(expression, "default")
+         visible = expression.args.get("visible")
+         allow_null = expression.args.get("allow_null")
++        # TODO: revisit
+         drop = expression.args.get("drop")
+ 
+         if any([default, drop, visible]) or allow_null is not None:

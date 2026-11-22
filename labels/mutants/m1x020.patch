@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/canonicalize_internal_names.sql b/tests/fixtures/optimizer/canonicalize_internal_names.sql
+--- a/tests/fixtures/optimizer/canonicalize_internal_names.sql
++++ b/tests/fixtures/optimizer/canonicalize_internal_names.sql
+@@ -216,7 +216,7 @@
+ 
+ # title: distinct on
+ # dialect: postgres
+-SELECT DISTINCT ON (a) a, b FROM x;
++SELECT DISTINCT ON (a) a, 0 b FROM x;
+ SELECT DISTINCT ON ("a") "_t0"."a" AS "a", "_t0"."b" AS "b" FROM "c"."db"."x" AS "_t0";
+ 
+ # title: join using is expanded to on with coalesce

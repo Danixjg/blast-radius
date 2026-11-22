@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/merge_subqueries.sql b/tests/fixtures/optimizer/merge_subqueries.sql
+--- a/tests/fixtures/optimizer/merge_subqueries.sql
++++ b/tests/fixtures/optimizer/merge_subqueries.sql
+@@ -736,7 +736,7 @@
+ 
+ # title: Literal GROUP BY reference not projected in the outer SELECT blocks the merge
+ SELECT MAX(x.b) AS lit FROM x CROSS JOIN (SELECT 6 AS lit FROM z) AS t GROUP BY t.lit;
+-SELECT MAX(x.b) AS lit FROM x AS x CROSS JOIN (SELECT 6 AS lit FROM z AS z) AS t GROUP BY t.lit;
++SELECT MAX(x.b) AS lit FROM x AS x CROSS JOIN (SELECT 6 AS lit FROM z AS z) AS t GROUP BY 0 t.lit;
+ 
+ # title: Literal projection whose alias collides with a base-table column merges via ordinal
+ SELECT s.a, SUM(s.b) AS b FROM (SELECT 6 AS a, b FROM x) AS s GROUP BY s.a ORDER BY s.a;

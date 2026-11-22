@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_dialect.py::TestDialect::test_localtime_and_localtimestamp"
+ ],
+ "seconds": 52.7,
+ "peak_mb": null,
+ "patch": "h33750.patch"
+}

@@ -1,0 +1,1417 @@
+{
+ "matrix": {
+  "sample": {
+   "base": {
+    "n": 3,
+    "sim": 97.076,
+    "simSet": "97.076",
+    "miss": "0",
+    "cpu": 4.506822,
+    "cpus": "4.51,4.63,2.89",
+    "total": 101.582822,
+    "verifyChild": 3.3808659999999997,
+    "probeChild": 0.459726,
+    "analyze": 0.38640100000000005,
+    "self": 0.537598,
+    "nver": 5,
+    "nprobe": 1,
+    "forked": 0
+   },
+   "noverify": {
+    "n": 3,
+    "sim": 104.077,
+    "simSet": "104.077",
+    "miss": "0",
+    "cpu": 0.800958,
+    "cpus": "0.80,1.02,0.71",
+    "total": 104.87795799999999,
+    "verifyChild": 0,
+    "probeChild": 0.35315599999999997,
+    "analyze": 0.2854620000000001,
+    "self": 0.40381899999999993,
+    "nver": 0,
+    "nprobe": 1,
+    "forked": 0
+   },
+   "noserver": {
+    "n": 3,
+    "sim": 97.076,
+    "simSet": "97.076",
+    "miss": "0",
+    "cpu": 3.32633,
+    "cpus": "4.15,3.12,3.33",
+    "total": 100.40232999999999,
+    "verifyChild": 2.661202,
+    "probeChild": 0.329754,
+    "analyze": 0.2624760000000001,
+    "self": 0.378862,
+    "nver": 5,
+    "nprobe": 1,
+    "forked": 0
+   },
+   "ckpt0": {
+    "n": 3,
+    "sim": 97.076,
+    "simSet": "97.076",
+    "miss": "0",
+    "cpu": 4.461956,
+    "cpus": "4.96,3.33,4.46",
+    "total": 101.537956,
+    "verifyChild": 3.497106,
+    "probeChild": 0.457429,
+    "analyze": 0.299079,
+    "self": 0.43331299999999995,
+    "nver": 5,
+    "nprobe": 1,
+    "forked": 0
+   },
+   "vmax5": {
+    "n": 3,
+    "sim": 97.076,
+    "simSet": "97.076",
+    "miss": "0",
+    "cpu": 4.759824,
+    "cpus": "4.76,3.63,4.81",
+    "total": 101.83582399999999,
+    "verifyChild": 3.511366,
+    "probeChild": 0.496399,
+    "analyze": 0.427453,
+    "self": 0.590025,
+    "nver": 5,
+    "nprobe": 1,
+    "forked": 0
+   },
+   "vstart01": {
+    "n": 3,
+    "sim": 97.076,
+    "simSet": "97.076",
+    "miss": "0",
+    "cpu": 3.581014,
+    "cpus": "4.67,3.47,3.58",
+    "total": 100.65701399999999,
+    "verifyChild": 2.674877,
+    "probeChild": 0.36367099999999997,
+    "analyze": 0.338195,
+    "self": 0.4790829999999999,
+    "nver": 5,
+    "nprobe": 1,
+    "forked": 0
+   },
+   "vstart1": {
+    "n": 3,
+    "sim": 104.077,
+    "simSet": "104.077",
+    "miss": "0",
+    "cpu": 1.016007,
+    "cpus": "1.12,0.71,1.02",
+    "total": 105.093007,
+    "verifyChild": 0,
+    "probeChild": 0.433415,
+    "analyze": 0.35344799999999993,
+    "self": 0.493542,
+    "nver": 0,
+    "nprobe": 1,
+    "forked": 0
+   }
+  },
+  "holdout1": {
+   "base": {
+    "n": 3,
+    "sim": 618.608,
+    "simSet": "618.608",
+    "miss": "0",
+    "cpu": 12.938994,
+    "cpus": "13.25,12.94,12.32",
+    "total": 631.5469939999999,
+    "verifyChild": 5.928738999999999,
+    "probeChild": 5.610428,
+    "analyze": 0.9024630000000001,
+    "self": 1.1017739999999998,
+    "nver": 12,
+    "nprobe": 17,
+    "forked": 16
+   },
+   "noverify": {
+    "n": 3,
+    "sim": 622.702,
+    "simSet": "622.702",
+    "miss": "0",
+    "cpu": 7.267961,
+    "cpus": "7.86,7.27,6.82",
+    "total": 629.969961,
+    "verifyChild": 0,
+    "probeChild": 5.799300000000001,
+    "analyze": 1.1639389999999996,
+    "self": 1.399219,
+    "nver": 0,
+    "nprobe": 17,
+    "forked": 16
+   },
+   "noserver": {
+    "n": 3,
+    "sim": 618.608,
+    "simSet": "618.608",
+    "miss": "0",
+    "cpu": 16.090631,
+    "cpus": "16.04,16.09,16.75",
+    "total": 634.698631,
+    "verifyChild": 6.217929999999999,
+    "probeChild": 9.094595,
+    "analyze": 0.941377999999999,
+    "self": 1.1959119999999999,
+    "nver": 12,
+    "nprobe": 17,
+    "forked": 0
+   },
+   "ckpt0": {
+    "n": 3,
+    "sim": 618.608,
+    "simSet": "618.608",
+    "miss": "0",
+    "cpu": 13.414269,
+    "cpus": "16.16,11.42,13.41",
+    "total": 632.0222689999999,
+    "verifyChild": 6.050599999999999,
+    "probeChild": 6.078419,
+    "analyze": 0.9890450000000006,
+    "self": 1.210338,
+    "nver": 12,
+    "nprobe": 17,
+    "forked": 16
+   },
+   "vmax5": {
+    "n": 3,
+    "sim": 618.608,
+    "simSet": "618.608",
+    "miss": "0",
+    "cpu": 10.742526,
+    "cpus": "10.74,8.80,11.66",
+    "total": 629.350526,
+    "verifyChild": 4.225454999999999,
+    "probeChild": 5.249149,
+    "analyze": 0.8882890000000002,
+    "self": 1.091975,
+    "nver": 12,
+    "nprobe": 17,
+    "forked": 16
+   },
+   "vstart01": {
+    "n": 3,
+    "sim": 618.608,
+    "simSet": "618.608",
+    "miss": "0",
+    "cpu": 8.788818,
+    "cpus": "9.97,8.39,8.79",
+    "total": 627.3968179999999,
+    "verifyChild": 3.9340780000000004,
+    "probeChild": 3.904286,
+    "analyze": 0.7157969999999999,
+    "self": 0.8749389999999999,
+    "nver": 12,
+    "nprobe": 17,
+    "forked": 16
+   },
+   "vstart1": {
+    "n": 3,
+    "sim": 622.702,
+    "simSet": "622.702",
+    "miss": "0",
+    "cpu": 5.177095,
+    "cpus": "7.04,4.47,5.18",
+    "total": 627.879095,
+    "verifyChild": 0,
+    "probeChild": 4.2118389999999994,
+    "analyze": 0.7619569999999994,
+    "self": 0.9169029999999999,
+    "nver": 0,
+    "nprobe": 17,
+    "forked": 16
+   }
+  },
+  "holdout2": {
+   "base": {
+    "n": 3,
+    "sim": 545.397,
+    "simSet": "545.397",
+    "miss": "0",
+    "cpu": 13.683809,
+    "cpus": "8.87,13.89,13.68",
+    "total": 559.080809,
+    "verifyChild": 6.634752999999999,
+    "probeChild": 4.852417,
+    "analyze": 1.8199719999999997,
+    "self": 2.10344,
+    "nver": 11,
+    "nprobe": 15,
+    "forked": 14
+   },
+   "noverify": {
+    "n": 3,
+    "sim": 553.86,
+    "simSet": "553.86",
+    "miss": "0",
+    "cpu": 6.940806,
+    "cpus": "3.85,7.68,6.94",
+    "total": 560.800806,
+    "verifyChild": 0,
+    "probeChild": 4.8337259999999995,
+    "analyze": 1.769090999999999,
+    "self": 2.026809,
+    "nver": 0,
+    "nprobe": 15,
+    "forked": 14
+   },
+   "noserver": {
+    "n": 3,
+    "sim": 545.397,
+    "simSet": "545.397",
+    "miss": "0",
+    "cpu": 17.390219,
+    "cpus": "17.39,18.03,13.86",
+    "total": 562.787219,
+    "verifyChild": 7.086012,
+    "probeChild": 8.053947,
+    "analyze": 1.837874999999999,
+    "self": 2.1384,
+    "nver": 11,
+    "nprobe": 15,
+    "forked": 0
+   }
+  },
+  "mutants": {
+   "base": {
+    "n": 3,
+    "sim": 1065.357,
+    "simSet": "1065.357",
+    "miss": "0",
+    "cpu": 23.078142,
+    "cpus": "23.08,23.98,21.19",
+    "total": 1088.435142,
+    "verifyChild": 8.620840000000001,
+    "probeChild": 13.154925,
+    "analyze": 1.7776090000000004,
+    "self": 2.110842,
+    "nver": 15,
+    "nprobe": 33,
+    "forked": 20
+   },
+   "noverify": {
+    "n": 3,
+    "sim": 1076.405,
+    "simSet": "1076.405",
+    "miss": "0",
+    "cpu": 15.431203,
+    "cpus": "16.34,15.43,12.01",
+    "total": 1091.836203,
+    "verifyChild": 0,
+    "probeChild": 13.324523,
+    "analyze": 1.6090679999999986,
+    "self": 1.895985,
+    "nver": 0,
+    "nprobe": 33,
+    "forked": 20
+   },
+   "noserver": {
+    "n": 3,
+    "sim": 1065.357,
+    "simSet": "1065.357",
+    "miss": "0",
+    "cpu": 27.161525,
+    "cpus": "27.16,27.85,24.87",
+    "total": 1092.518525,
+    "verifyChild": 8.559366999999998,
+    "probeChild": 15.055897,
+    "analyze": 1.582474,
+    "self": 2.018555,
+    "nver": 15,
+    "nprobe": 33,
+    "forked": 0
+   }
+  }
+ },
+ "wrap2": {
+  "sample": {
+   "n": 3,
+   "cpu": 4.65,
+   "sims": [
+    97.076
+   ],
+   "ph": {
+    "import_selector": 0.032,
+    "load_map": 0.04,
+    "load_profile": 0.008,
+    "hunter_init": 0,
+    "analyze": 0.396,
+    "run_probes": 0.478,
+    "verify": 3.62,
+    "outside_python": 0.096,
+    "self_misc": 0.027
+   }
+  },
+  "holdout1": {
+   "n": 3,
+   "cpu": 9.855,
+   "sims": [
+    618.608
+   ],
+   "ph": {
+    "import_selector": 0.023,
+    "load_map": 0.036,
+    "load_profile": 0.009,
+    "hunter_init": 0.002,
+    "analyze": 0.886,
+    "server_start": 0.174,
+    "server_close": 0.007,
+    "run_probes": 4.305,
+    "verify": 4.455,
+    "outside_python": 0.088,
+    "self_misc": -0.124
+   }
+  },
+  "holdout2": {
+   "n": 3,
+   "cpu": 9.079,
+   "sims": [
+    545.397
+   ],
+   "ph": {
+    "import_selector": 0.024,
+    "load_map": 0.034,
+    "load_profile": 0.008,
+    "hunter_init": 0.004,
+    "analyze": 1.205,
+    "server_start": 0.142,
+    "server_close": 0.005,
+    "run_probes": 3.233,
+    "verify": 4.758,
+    "outside_python": 0.085,
+    "self_misc": -0.093
+   }
+  },
+  "mutants": {
+   "n": 3,
+   "cpu": 19.595,
+   "sims": [
+    1065.357
+   ],
+   "ph": {
+    "import_selector": 0.024,
+    "load_map": 0.036,
+    "load_profile": 0.004,
+    "hunter_init": 0.004,
+    "analyze": 1.258,
+    "server_start": 0.146,
+    "server_close": 0.005,
+    "run_probes": 10.669,
+    "verify": 7.35,
+    "outside_python": 0.085,
+    "self_misc": -0.038
+   }
+  }
+ },
+ "detail": {
+  "h1": {
+   "byStage": {
+    "0": {
+     "n": 8,
+     "sum": 2.14,
+     "med": 0.236
+    },
+    "1": {
+     "n": 4,
+     "sum": 0.72,
+     "med": 0.166
+    },
+    "2": {
+     "n": 4,
+     "sum": 0.62,
+     "med": 0.152
+    },
+    "null": {
+     "n": 1,
+     "sum": 0.66,
+     "med": 0.656
+    }
+   },
+   "V": [
+    {
+     "n": 1,
+     "ms": 17,
+     "npass": 0,
+     "cpu": 0.268,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 5,
+     "npass": 0,
+     "cpu": 0.227,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 38,
+     "npass": 0,
+     "cpu": 0.349,
+     "nfiles": 1
+    },
+    {
+     "n": 2,
+     "ms": 2,
+     "npass": 0,
+     "cpu": 0.281,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 90,
+     "npass": 1,
+     "cpu": 0.432,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 1,
+     "npass": 0,
+     "cpu": 0.261,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 4,
+     "npass": 1,
+     "cpu": 0.242,
+     "nfiles": 1
+    },
+    {
+     "n": 11,
+     "ms": 43,
+     "npass": 0,
+     "cpu": 0.267,
+     "nfiles": 1
+    },
+    {
+     "n": 3,
+     "ms": 157,
+     "npass": 0,
+     "cpu": 0.364,
+     "nfiles": 2
+    },
+    {
+     "n": 1,
+     "ms": 155,
+     "npass": 0,
+     "cpu": 0.378,
+     "nfiles": 1
+    },
+    {
+     "n": 6,
+     "ms": 241,
+     "npass": 0,
+     "cpu": 0.526,
+     "nfiles": 2
+    },
+    {
+     "n": 2,
+     "ms": 423,
+     "npass": 0,
+     "cpu": 0.856,
+     "nfiles": 2
+    }
+   ],
+   "Vsum": {
+    "cpu": 4.45,
+    "wasted": 3.78,
+    "nzero": 10
+   }
+  },
+  "h2": {
+   "byStage": {
+    "0": {
+     "n": 4,
+     "sum": 1.14,
+     "med": 0.239
+    },
+    "1": {
+     "n": 7,
+     "sum": 1.14,
+     "med": 0.165
+    },
+    "2": {
+     "n": 3,
+     "sum": 0.42,
+     "med": 0.14
+    },
+    "null": {
+     "n": 1,
+     "sum": 0.42,
+     "med": 0.418
+    }
+   },
+   "V": [
+    {
+     "n": 1,
+     "ms": 2,
+     "npass": 1,
+     "cpu": 0.276,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 39,
+     "npass": 0,
+     "cpu": 0.336,
+     "nfiles": 1
+    },
+    {
+     "n": 4,
+     "ms": 158,
+     "npass": 4,
+     "cpu": 0.319,
+     "nfiles": 2
+    },
+    {
+     "n": 5,
+     "ms": 486,
+     "npass": 1,
+     "cpu": 0.809,
+     "nfiles": 4
+    },
+    {
+     "n": 1,
+     "ms": 17,
+     "npass": 1,
+     "cpu": 0.239,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 3,
+     "npass": 0,
+     "cpu": 0.23,
+     "nfiles": 1
+    },
+    {
+     "n": 3,
+     "ms": 9,
+     "npass": 3,
+     "cpu": 0.245,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 67,
+     "npass": 0,
+     "cpu": 0.348,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 23,
+     "npass": 0,
+     "cpu": 0.202,
+     "nfiles": 1
+    },
+    {
+     "n": 8,
+     "ms": 101,
+     "npass": 2,
+     "cpu": 0.455,
+     "nfiles": 2
+    },
+    {
+     "n": 9,
+     "ms": 651,
+     "npass": 2,
+     "cpu": 1.096,
+     "nfiles": 7
+    }
+   ],
+   "Vsum": {
+    "cpu": 4.55,
+    "wasted": 1.12,
+    "nzero": 4
+   }
+  },
+  "mu": {
+   "byStage": {
+    "0": {
+     "n": 12,
+     "sum": 3.72,
+     "med": 0.297
+    },
+    "1": {
+     "n": 2,
+     "sum": 0.44,
+     "med": 0.176
+    },
+    "2": {
+     "n": 6,
+     "sum": 0.91,
+     "med": 0.137
+    },
+    "null": {
+     "n": 13,
+     "sum": 5.04,
+     "med": 0.384
+    }
+   },
+   "V": [
+    {
+     "n": 1,
+     "ms": 42,
+     "npass": 1,
+     "cpu": 0.332,
+     "nfiles": 1
+    },
+    {
+     "n": 3,
+     "ms": 161,
+     "npass": 0,
+     "cpu": 0.456,
+     "nfiles": 2
+    },
+    {
+     "n": 4,
+     "ms": 158,
+     "npass": 1,
+     "cpu": 0.372,
+     "nfiles": 2
+    },
+    {
+     "n": 2,
+     "ms": 26,
+     "npass": 0,
+     "cpu": 0.242,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 1,
+     "npass": 1,
+     "cpu": 0.258,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 0,
+     "npass": 0,
+     "cpu": 0.223,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 17,
+     "npass": 1,
+     "cpu": 0.28,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 11,
+     "npass": 0,
+     "cpu": 0.298,
+     "nfiles": 1
+    },
+    {
+     "n": 13,
+     "ms": 45,
+     "npass": 2,
+     "cpu": 0.239,
+     "nfiles": 1
+    },
+    {
+     "n": 2,
+     "ms": 10,
+     "npass": 2,
+     "cpu": 0.46,
+     "nfiles": 2
+    },
+    {
+     "n": 3,
+     "ms": 439,
+     "npass": 1,
+     "cpu": 1.062,
+     "nfiles": 2
+    },
+    {
+     "n": 1,
+     "ms": 5,
+     "npass": 0,
+     "cpu": 0.369,
+     "nfiles": 1
+    },
+    {
+     "n": 1,
+     "ms": 6,
+     "npass": 0,
+     "cpu": 0.338,
+     "nfiles": 1
+    },
+    {
+     "n": 23,
+     "ms": 838,
+     "npass": 22,
+     "cpu": 1.677,
+     "nfiles": 7
+    },
+    {
+     "n": 53,
+     "ms": 266,
+     "npass": 53,
+     "cpu": 0.75,
+     "nfiles": 2
+    }
+   ],
+   "Vsum": {
+    "cpu": 7.36,
+    "wasted": 1.93,
+    "nzero": 6
+   },
+   "P": [
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/aggregate.py",
+     "cpu": 0.492
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/functions.py",
+     "cpu": 0.341
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/dml.py",
+     "cpu": 0.34
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/array.py",
+     "cpu": 0.312
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/tokens.py",
+     "cpu": 0.321
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/dialects/dialect.py",
+     "cpu": 0.328
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/parsers/base.py",
+     "cpu": 0.346
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/datatypes.py",
+     "cpu": 0.384
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/errors.py",
+     "cpu": 0.399
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/tokens.py",
+     "cpu": 0.462
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/array.py",
+     "cpu": 0.471
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/expressions/dml.py",
+     "cpu": 0.44
+    },
+    {
+     "stage": null,
+     "res": "ok",
+     "files": "sqlglot/_typing.py",
+     "cpu": 0.406
+    }
+   ]
+  },
+  "sa": {
+   "byStage": {
+    "null": {
+     "n": 1,
+     "sum": 0.47,
+     "med": 0.474
+    }
+   },
+   "V": [
+    {
+     "n": 6,
+     "ms": 536,
+     "npass": 6,
+     "cpu": 1.309,
+     "nfiles": 5
+    },
+    {
+     "n": 1,
+     "ms": 1,
+     "npass": 0,
+     "cpu": 0.326,
+     "nfiles": 1
+    },
+    {
+     "n": 2,
+     "ms": 241,
+     "npass": 1,
+     "cpu": 0.734,
+     "nfiles": 1
+    },
+    {
+     "n": 3,
+     "ms": 157,
+     "npass": 3,
+     "cpu": 0.52,
+     "nfiles": 2
+    },
+    {
+     "n": 3,
+     "ms": 78,
+     "npass": 3,
+     "cpu": 0.723,
+     "nfiles": 2
+    }
+   ],
+   "Vsum": {
+    "cpu": 3.61,
+    "wasted": 0.33,
+    "nzero": 1
+   }
+  }
+ },
+ "targeted": {
+  "holdout1/base2": {
+   "cpu": 11.123434,
+   "cpus": "12.24,7.47,11.12",
+   "sims": [
+    618.608
+   ],
+   "miss": [
+    "0"
+   ],
+   "probes": 4.764086000000001
+  },
+  "holdout1/targeted": {
+   "cpu": 8.624362,
+   "cpus": "6.88,8.62,8.99",
+   "sims": [
+    618.608
+   ],
+   "miss": [
+    "0"
+   ],
+   "probes": 2.386309
+  },
+  "holdout2/base2": {
+   "cpu": 11.259902,
+   "cpus": "8.14,11.26,11.31",
+   "sims": [
+    545.397
+   ],
+   "miss": [
+    "0"
+   ],
+   "probes": 3.627092
+  },
+  "holdout2/targeted": {
+   "cpu": 9.625559,
+   "cpus": "8.63,9.78,9.63",
+   "sims": [
+    545.397
+   ],
+   "miss": [
+    "0"
+   ],
+   "probes": 2.07912
+  },
+  "mutants/base2": {
+   "cpu": 19.918364,
+   "cpus": "22.28,19.92,19.32",
+   "sims": [
+    1065.357
+   ],
+   "miss": [
+    "0"
+   ],
+   "probes": 10.972142
+  },
+  "mutants/targeted": {
+   "cpu": 16.735753,
+   "cpus": "12.81,16.74,17.08",
+   "sims": [
+    1065.357
+   ],
+   "miss": [
+    "0"
+   ],
+   "probes": 7.858741
+  }
+ },
+ "scenarios": {
+  "coef": [
+   0.2611362798081578,
+   1.4843666629161971,
+   0.010938887250758051
+  ],
+  "sample": {
+   "preSim": 104.077,
+   "oracle": 94.351,
+   "cur": {
+    "sim": 97.076,
+    "runs": 5,
+    "zero": 1,
+    "cpu": 2.93
+   },
+   "noThresh": {
+    "sim": 97.076,
+    "runs": 5,
+    "zero": 1,
+    "cpu": 2.93
+   },
+   "cap3": {
+    "sim": 97.076,
+    "runs": 5,
+    "zero": 1,
+    "cpu": 2.93
+   },
+   "cap5nt": {
+    "sim": 97.076,
+    "runs": 5,
+    "zero": 1,
+    "cpu": 2.93
+   },
+   "capInf": {
+    "sim": 97.076,
+    "runs": 5,
+    "zero": 1,
+    "cpu": 2.93
+   },
+   "capInfNT": {
+    "sim": 97.076,
+    "runs": 5,
+    "zero": 1,
+    "cpu": 2.93
+   },
+   "partial": {
+    "sim": 96.817,
+    "runs": 10,
+    "zero": 4,
+    "cpu": 8.22
+   },
+   "partialInfNT": {
+    "sim": 96.817,
+    "runs": 10,
+    "zero": 4,
+    "cpu": 8.22
+   },
+   "anyFilesInfNT": {
+    "sim": 96.817,
+    "runs": 10,
+    "zero": 4,
+    "cpu": 8.22
+   }
+  },
+  "holdout1": {
+   "preSim": 622.702,
+   "oracle": 309.807,
+   "cur": {
+    "sim": 618.608,
+    "runs": 12,
+    "zero": 10,
+    "cpu": 5.04
+   },
+   "noThresh": {
+    "sim": 618.608,
+    "runs": 12,
+    "zero": 10,
+    "cpu": 5.04
+   },
+   "cap3": {
+    "sim": 618.608,
+    "runs": 12,
+    "zero": 10,
+    "cpu": 5.04
+   },
+   "cap5nt": {
+    "sim": 617.59,
+    "runs": 13,
+    "zero": 10,
+    "cpu": 7.66
+   },
+   "capInf": {
+    "sim": 618.608,
+    "runs": 12,
+    "zero": 10,
+    "cpu": 5.04
+   },
+   "capInfNT": {
+    "sim": 617.59,
+    "runs": 13,
+    "zero": 10,
+    "cpu": 7.66
+   },
+   "partial": {
+    "sim": 618.608,
+    "runs": 14,
+    "zero": 10,
+    "cpu": 8.39
+   },
+   "partialInfNT": {
+    "sim": 608.783,
+    "runs": 24,
+    "zero": 10,
+    "cpu": 71.28
+   },
+   "anyFilesInfNT": {
+    "sim": 606.095,
+    "runs": 29,
+    "zero": 13,
+    "cpu": 101.13
+   }
+  },
+  "holdout2": {
+   "preSim": 553.86,
+   "oracle": 234.161,
+   "cur": {
+    "sim": 545.397,
+    "runs": 11,
+    "zero": 4,
+    "cpu": 5.42
+   },
+   "noThresh": {
+    "sim": 545.397,
+    "runs": 11,
+    "zero": 4,
+    "cpu": 5.42
+   },
+   "cap3": {
+    "sim": 545.397,
+    "runs": 11,
+    "zero": 4,
+    "cpu": 5.42
+   },
+   "cap5nt": {
+    "sim": 545.397,
+    "runs": 11,
+    "zero": 4,
+    "cpu": 5.42
+   },
+   "capInf": {
+    "sim": 545.397,
+    "runs": 11,
+    "zero": 4,
+    "cpu": 5.42
+   },
+   "capInfNT": {
+    "sim": 545.397,
+    "runs": 11,
+    "zero": 4,
+    "cpu": 5.42
+   },
+   "partial": {
+    "sim": 543.831,
+    "runs": 17,
+    "zero": 4,
+    "cpu": 13.43
+   },
+   "partialInfNT": {
+    "sim": 512.668,
+    "runs": 25,
+    "zero": 4,
+    "cpu": 243.2
+   },
+   "anyFilesInfNT": {
+    "sim": 512.65,
+    "runs": 33,
+    "zero": 10,
+    "cpu": 294.96
+   }
+  },
+  "mutants": {
+   "preSim": 1076.405,
+   "oracle": 326.938,
+   "cur": {
+    "sim": 1065.357,
+    "runs": 15,
+    "zero": 6,
+    "cpu": 7.21
+   },
+   "noThresh": {
+    "sim": 1065.357,
+    "runs": 15,
+    "zero": 6,
+    "cpu": 7.21
+   },
+   "cap3": {
+    "sim": 1065.357,
+    "runs": 15,
+    "zero": 6,
+    "cpu": 7.21
+   },
+   "cap5nt": {
+    "sim": 1065.357,
+    "runs": 15,
+    "zero": 6,
+    "cpu": 7.21
+   },
+   "capInf": {
+    "sim": 1065.357,
+    "runs": 15,
+    "zero": 6,
+    "cpu": 7.21
+   },
+   "capInfNT": {
+    "sim": 1065.357,
+    "runs": 15,
+    "zero": 6,
+    "cpu": 7.21
+   },
+   "partial": {
+    "sim": 1061.227,
+    "runs": 40,
+    "zero": 9,
+    "cpu": 36.38
+   },
+   "partialInfNT": {
+    "sim": 959.049,
+    "runs": 66,
+    "zero": 9,
+    "cpu": 576.8
+   },
+   "anyFilesInfNT": {
+    "sim": 959.049,
+    "runs": 66,
+    "zero": 9,
+    "cpu": 576.8
+   }
+  }
+ },
+ "hindsight": {
+  "sample": {
+   "commits": 22,
+   "oracleSaveTotal": 9.7,
+   "curSaved": 7,
+   "hindsight_f1": {
+    "n": 1,
+    "net": 1.5,
+    "vf": 1,
+    "blockedBy": {
+     "unsafe_file": 1
+    }
+   },
+   "hindsight_f0.5": {
+    "n": 1,
+    "net": 1.98,
+    "vf": 1,
+    "blockedBy": {
+     "unsafe_file": 1
+    }
+   },
+   "blocked": {
+    "unsafe_file": 6,
+    "opens": 1
+   },
+   "noVf": 11
+  },
+  "holdout1": {
+   "commits": 45,
+   "oracleSaveTotal": 244.8,
+   "curSaved": 4.09,
+   "hindsight_f1": {
+    "n": 4,
+    "net": 6.53,
+    "vf": 1,
+    "blockedBy": {
+     "unsafe_file": 3
+    }
+   },
+   "hindsight_f0.5": {
+    "n": 9,
+    "net": 14.96,
+    "vf": 6,
+    "blockedBy": {
+     "unsafe_file": 8,
+     "unsafe_test": 2
+    }
+   },
+   "blocked": {
+    "unsafe_file": 15,
+    "unsafe_test": 7
+   },
+   "noVf": 17
+  },
+  "holdout2": {
+   "commits": 47,
+   "oracleSaveTotal": 245.4,
+   "curSaved": 8.46,
+   "hindsight_f1": {
+    "n": 4,
+    "net": 6.87,
+    "vf": 2,
+    "blockedBy": {
+     "unsafe_file": 4
+    }
+   },
+   "hindsight_f0.5": {
+    "n": 8,
+    "net": 19.46,
+    "vf": 6,
+    "blockedBy": {
+     "unsafe_file": 5,
+     "unsafe_test": 3
+    }
+   },
+   "blocked": {
+    "unsafe_file": 15,
+    "unsafe_test": 10,
+    "opens": 3
+   },
+   "noVf": 18
+  },
+  "mutants": {
+   "commits": 93,
+   "oracleSaveTotal": 679.1,
+   "curSaved": 11.05,
+   "hindsight_f1": {
+    "n": 6,
+    "net": 3.63,
+    "vf": 6,
+    "blockedBy": {
+     "unsafe_file": 6,
+     "opens": 2
+    }
+   },
+   "hindsight_f0.5": {
+    "n": 25,
+    "net": 58.66,
+    "vf": 25,
+    "blockedBy": {
+     "unsafe_file": 21,
+     "opens": 4,
+     "unsafe_test": 9
+    }
+   },
+   "blocked": {
+    "unsafe_file": 51,
+    "opens": 12,
+    "unsafe_test": 14
+   },
+   "noVf": 23
+  }
+ },
+ "gm": {
+  "h2": {
+   "runs": 3,
+   "save": 18.62,
+   "cpu": 16.34,
+   "net": 2.28,
+   "rows": [
+    [
+     "h33708",
+     39,
+     7292,
+     9.29,
+     5.6,
+     true,
+     false,
+     false
+    ],
+    [
+     "h33720",
+     7,
+     6762,
+     0.07,
+     5.18,
+     false,
+     false,
+     false
+    ],
+    [
+     "h33764",
+     16,
+     7249,
+     9.25,
+     5.55,
+     true,
+     false,
+     false
+    ]
+   ]
+  },
+  "mu": {
+   "runs": 4,
+   "save": 18.42,
+   "cpu": 21.3,
+   "net": -2.88,
+   "rows": [
+    [
+     "m1x014",
+     13,
+     6969,
+     0.26,
+     5.35,
+     false,
+     false,
+     false
+    ],
+    [
+     "m1x028",
+     11,
+     7170,
+     9.17,
+     5.48,
+     true,
+     false,
+     false
+    ],
+    [
+     "m1x032",
+     7,
+     6762,
+     0.07,
+     5.18,
+     false,
+     false,
+     false
+    ],
+    [
+     "m1x034",
+     7,
+     6916,
+     8.92,
+     5.29,
+     true,
+     false,
+     false
+    ]
+   ]
+  }
+ },
+ "coef": [
+  0.2611362798081578,
+  1.4843666629161971,
+  0.010938887250758051
+ ]
+}

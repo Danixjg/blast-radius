@@ -15,7 +15,7 @@ RUN_FLAGS := --rm --platform linux/amd64 --network none --cpus 2 \
 	--volume $(SAMPLE)/commits:/data/commits:ro \
 	--volume $(SAMPLE)/tests.json:/data/tests.json:ro
 
-.PHONY: build sample measure check kit map profile local test checkout venv holdout
+.PHONY: build sample measure check kit map profile local test checkout venv holdout eval
 
 $(KIT)/score.py:
 	mkdir -p $(KIT) && tar xzf blast-radius-sample.tar.gz -C $(KIT)
@@ -73,3 +73,8 @@ holdout: kit checkout venv
 	test -d $(WORK)/label-tree || git -C $(WORK)/sqlglot worktree add -q --detach ../label-tree $(SQLGLOT_SHA)
 	$(PY) build/label.py $(WORK)/label-tree $(SAMPLE)/tests.json $(WORK)/holdout/labels $(WORK)/holdout/commits/*.patch
 	$(PY) build/answers.py $(WORK)/holdout
+
+# Every labelled set (sample, holdouts, mutants, work/sets/*), 3 fresh runs each, one table in
+# work/eval/table.json. BASELINE=<git ref> adds the same runs for selector/map/profile at that ref.
+eval: kit checkout venv
+	$(PY) build/evalsets.py $(if $(BASELINE),--baseline $(BASELINE))

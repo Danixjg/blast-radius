@@ -1,0 +1,35 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+ktz3 probe: fresh `import sqlglot` still creates one dialect class
+2haz: 0 tests, 0 workers, 0.000s
+2jrq: 29 tests, 2 workers, 25.454s
+2qn5: 6 tests, 1 workers, 2.536s
+2vdj: 1 tests, 1 workers, 2.083s
+3utz: 37 tests, 2 workers, 25.454s
+4d63: 0 tests, 0 workers, 0.000s
+535z: 7 tests, 1 workers, 2.855s
+5y72: 3 tests, 1 workers, 2.466s
+66ks: 0 tests, 0 workers, 0.000s
+6vvp: 1 tests, 1 workers, 2.037s
+6ze8: 1 tests, 1 workers, 2.001s
+8y7j: 0 tests, 0 workers, 0.000s
+986c: 1 tests, 1 workers, 2.329s
+9u5k: 0 tests, 0 workers, 0.000s
+ary6: 10 tests, 1 workers, 4.382s
+bap8: 0 tests, 0 workers, 0.000s
+bj7g: 2 tests, 1 workers, 2.241s
+bvw2: 1 tests, 1 workers, 2.061s
+egys: 1 tests, 1 workers, 2.596s
+f4bn: 1 tests, 1 workers, 2.007s
+f4xa: 0 tests, 0 workers, 0.000s
+fryt: 3 tests, 1 workers, 2.157s
+gbav: 0 tests, 0 workers, 0.000s
+gbhk: 1 tests, 1 workers, 2.061s
+j6uz: 2 tests, 1 workers, 4.399s
+ktz3: 3 tests, 1 workers, 2.078s
+mthh: 1 tests, 1 workers, 3.016s
+nwnx: 1 tests, 1 workers, 2.092s
+rszg: 3 tests, 1 workers, 5.764s
+st8f: 1 tests, 1 workers, 2.008s
+predicted schedule total 104.077s over 30 commits, 1 probes, 0.62s wall
+WRAP {"phases": {"import_selector": [0.019367000000000002, 0, 0.01935152499936521, 1], "load_map": [0.029682, 0.0, 0.029723176994593814, 1], "load_profile": [0.005824999999999997, 0.0, 0.005829631998494733, 1], "hunter_init": [0.0019870000000000165, 0.0, 0.0019927620014641434, 1], "analyze": [0.23348499999999991, 0.0, 0.2335455989887123, 30], "run_probes": [0.00233899999999998, 0.335321, 0.3374618720044964, 1], "schedule": [0.00021599999999993846, 0.0, 0.00021567899239016697, 35], "verify": [0.00036399999999997545, 0.0, 0.0003627129990491085, 1]}, "self_total": 0.331959, "children_total": 0.335321, "wall": 0.6419295710002189, "verify_runs": [], "probes": [[false, "ok", 0.337]]}
+CGROUP usage_usec 709117

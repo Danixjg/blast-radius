@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/annotate_types.sql b/tests/fixtures/optimizer/annotate_types.sql
+--- a/tests/fixtures/optimizer/annotate_types.sql
++++ b/tests/fixtures/optimizer/annotate_types.sql
+@@ -197,7 +197,7 @@
+ STRUCT<col INT, row DOUBLE, nested_struct STRUCT<inner_col DOUBLE, inner_row INT>>;
+ 
+ STRUCT(1 AS col, 2.5, ARRAY[1, 2, 3] AS nested_array, 'foo');
+-STRUCT<col INT, DOUBLE, nested_array ARRAY<INT>, VARCHAR>;
++STRUCT<col INT, DOUBLE, nested_array 1 ARRAY<INT>, VARCHAR>;
+ 
+ STRUCT(1, 2.5, 'bar');
+ STRUCT<INT, DOUBLE, VARCHAR>;

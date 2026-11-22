@@ -1,0 +1,12 @@
+diff --git a/sqlglot/transforms.py b/sqlglot/transforms.py
+--- a/sqlglot/transforms.py
++++ b/sqlglot/transforms.py
+@@ -1005,7 +1005,7 @@
+                 p.pop()
+                 if isinstance(parent, exp.Binary):
+                     left = parent.args.get("this")
+-                    parent.replace(parent.right if left is None else left)
++                    parent.replace(parent.right if left == None else left)
+                 elif isinstance(parent, exp.Where):
+                     parent.pop()
+ 

@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_tsql.py::TestTSQL::test_commit"
+ ],
+ "seconds": 49.8,
+ "peak_mb": null,
+ "patch": "h12137.patch"
+}

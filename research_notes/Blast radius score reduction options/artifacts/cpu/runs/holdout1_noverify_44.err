@@ -1,0 +1,93 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/dialects/dialect.py undecodable
+probe: patched import fails: ['sqlglot.dialects.singlestore', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.executor', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot', "NameError: name 'AutoName' is not defined"]
+probe: patched import fails: ['sqlglot.dialects.snowflake', "NameError: name 'EXPRESSION_METADATA' is not defined"]
+probe server: 16 of 17 probes forked
+h12100 probe: fresh `import sqlglot` still creates one dialect class
+h12112 import probe broken: catcher takes all
+h12116 probe: fresh `import sqlglot` still creates one dialect class
+h12117 probe: fresh `import sqlglot` still creates one dialect class
+h12130 probe: fresh `import sqlglot` still creates one dialect class
+h12134 probe: fresh `import sqlglot` still creates one dialect class
+h12135 probe: fresh `import sqlglot` still creates one dialect class
+h12138 probe: fresh `import sqlglot` still creates one dialect class
+h12143 probe: fresh `import sqlglot` still creates one dialect class
+h12149 import probe broken: catcher takes all
+h12150 probe: fresh `import sqlglot` still creates one dialect class
+h12151 import probe broken: catcher takes all
+h12153 probe: fresh `import sqlglot` still creates one dialect class
+h12154 probe: fresh `import sqlglot` still creates one dialect class
+h12159 probe: fresh `import sqlglot` still creates one dialect class
+h12162 import probe broken: catcher takes all
+h12165 probe: fresh `import sqlglot` still creates one dialect class
+h12100: 104 tests, 2 workers, 25.454s
+h12101: 1020 tests, 2 workers, 9.226s
+h12102: 1 tests, 1 workers, 2.017s
+h12103: 21 tests, 1 workers, 3.501s
+h12104: 0 tests, 0 workers, 0.000s
+h12105: 0 tests, 0 workers, 0.000s
+h12106: 1 tests, 1 workers, 2.005s
+h12107: 87 tests, 2 workers, 25.454s
+h12108: 1 tests, 1 workers, 2.596s
+h12109: 0 tests, 0 workers, 0.000s
+h12110: 1 tests, 1 workers, 2.213s
+h12111: 1 tests, 1 workers, 2.092s
+h12112: 1620 tests, 4 workers, 36.817s
+h12113: 1 tests, 1 workers, 2.068s
+h12114: 1 tests, 1 workers, 2.038s
+h12115: 0 tests, 0 workers, 0.000s
+h12116: 78 tests, 2 workers, 7.884s
+h12117: 357 tests, 2 workers, 25.642s
+h12118: 0 tests, 0 workers, 0.000s
+h12119: 2 tests, 1 workers, 2.002s
+h12120: 1620 tests, 4 workers, 36.817s
+h12121: 1 tests, 1 workers, 2.038s
+h12122: 0 tests, 0 workers, 0.000s
+h12123: 1 tests, 1 workers, 2.007s
+h12124: 1 tests, 1 workers, 2.092s
+h12125: 1 tests, 1 workers, 2.068s
+h12126: 1 tests, 1 workers, 3.016s
+h12127: 1 tests, 1 workers, 2.004s
+h12128: 1 tests, 1 workers, 2.090s
+h12129: 0 tests, 0 workers, 0.000s
+h12130: 54 tests, 2 workers, 10.686s
+h12131: 1 tests, 1 workers, 2.002s
+h12132: 0 tests, 0 workers, 0.000s
+h12133: 0 tests, 0 workers, 0.000s
+h12134: 146 tests, 2 workers, 25.454s
+h12135: 27 tests, 2 workers, 25.454s
+h12136: 0 tests, 0 workers, 0.000s
+h12137: 1 tests, 1 workers, 2.001s
+h12138: 1 tests, 1 workers, 2.004s
+h12139: 1620 tests, 4 workers, 36.817s
+h12140: 1 tests, 1 workers, 2.061s
+h12141: 1620 tests, 4 workers, 36.817s
+h12142: 0 tests, 0 workers, 0.000s
+h12143: 308 tests, 3 workers, 12.686s
+h12144: 11 tests, 1 workers, 2.043s
+h12145: 3 tests, 1 workers, 2.157s
+h12146: 85 tests, 2 workers, 25.454s
+h12147: 0 tests, 0 workers, 0.000s
+h12148: 1 tests, 1 workers, 2.155s
+h12149: 1620 tests, 4 workers, 36.817s
+h12150: 176 tests, 2 workers, 11.879s
+h12151: 1620 tests, 4 workers, 36.817s
+h12152: 65 tests, 1 workers, 2.688s
+h12153: 492 tests, 3 workers, 27.454s
+h12154: 171 tests, 2 workers, 10.869s
+h12155: 6 tests, 1 workers, 2.241s
+h12156: 9 tests, 2 workers, 25.454s
+h12157: 2 tests, 1 workers, 2.303s
+h12158: 21 tests, 2 workers, 25.454s
+h12159: 131 tests, 2 workers, 6.534s
+h12160: 2 tests, 1 workers, 2.423s
+h12161: 0 tests, 0 workers, 0.000s
+h12162: 1620 tests, 4 workers, 36.817s
+h12163: 1 tests, 1 workers, 2.013s
+h12164: 1 tests, 1 workers, 2.007s
+h12165: 0 tests, 0 workers, 0.000s
+predicted schedule total 622.702s over 66 commits, 17 probes, 4.11s wall
+WRAP {"phases": {"import_selector": [0.03142, 0, 0.031415632998687215, 1], "load_map": [0.040364999999999984, 0.0, 0.04034401300305035, 1], "load_profile": [0.008723000000000009, 0.0, 0.008713067996723112, 1], "hunter_init": [0.0021039999999999948, 0.0, 0.002105186998960562, 1], "analyze": [1.019472, 0.0, 1.0195812249658047, 66], "run_probes": [0.02217099999999994, 5.5287939999999995, 3.0136486120027257, 1], "schedule": [0.005533000000000232, 0.0, 0.005588669991993811, 60]}, "self_total": 1.2065590000000002, "children_total": 5.5287939999999995, "wall": 4.165550786994572, "verify_runs": [], "probes": [[true, "broken", 0.392], [true, "ok", 0.449], [true, "ok", 0.24], [true, "ok", 0.367], [true, "ok", 0.236], [true, "ok", 0.279], [true, "ok", 0.26], [true, "ok", 0.158], [true, "ok", 0.291], [true, "ok", 0.382], [true, "broken", 0.237], [false, "broken", 0.869], [true, "ok", 0.301], [true, "ok", 0.326], [true, "ok", 0.239], [true, "broken", 0.179], [true, "ok", 0.218]]}
+CGROUP usage_usec 6824896

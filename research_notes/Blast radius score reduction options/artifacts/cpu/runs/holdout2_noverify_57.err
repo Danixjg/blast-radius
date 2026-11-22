@@ -1,0 +1,88 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/expressions/__init__.py star import changed: catcher takes all
+probe: patched import fails: ['sqlglot.dialects.oracle', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.executor', "NameError: name 'exp' is not defined"]
+probe server: 14 of 15 probes forked
+h33701 probe: fresh `import sqlglot` still creates one dialect class
+h33707 probe: fresh `import sqlglot` still creates one dialect class
+h33712 import probe broken: catcher takes all
+h33719 probe: fresh `import sqlglot` still creates one dialect class
+h33720 probe: fresh `import sqlglot` still creates one dialect class
+h33732 probe: fresh `import sqlglot` still creates one dialect class
+h33733 probe: fresh `import sqlglot` still creates one dialect class
+h33740 probe: fresh `import sqlglot` still creates one dialect class
+h33744 import probe broken: catcher takes all
+h33745 probe: fresh `import sqlglot` still creates one dialect class
+h33746 probe: fresh `import sqlglot` still creates one dialect class
+h33756 probe: fresh `import sqlglot` still creates one dialect class
+h33758 probe: fresh `import sqlglot` still creates one dialect class
+h33759 probe: fresh `import sqlglot` still creates one dialect class
+h33764 probe: fresh `import sqlglot` still creates one dialect class
+h33700: 13 tests, 2 workers, 7.859s
+h33701: 49 tests, 2 workers, 10.686s
+h33702: 2 tests, 1 workers, 2.400s
+h33703: 1 tests, 1 workers, 2.002s
+h33704: 1 tests, 1 workers, 2.007s
+h33705: 1 tests, 1 workers, 2.038s
+h33706: 0 tests, 0 workers, 0.000s
+h33707: 1 tests, 1 workers, 2.039s
+h33708: 39 tests, 1 workers, 9.292s
+h33709: 0 tests, 0 workers, 0.000s
+h33710: 1 tests, 1 workers, 2.092s
+h33711: 34 tests, 2 workers, 10.686s
+h33712: 1620 tests, 4 workers, 36.817s
+h33713: 4 tests, 1 workers, 2.158s
+h33714: 0 tests, 0 workers, 0.000s
+h33715: 1 tests, 1 workers, 2.596s
+h33716: 0 tests, 0 workers, 0.000s
+h33717: 5 tests, 1 workers, 2.486s
+h33718: 1 tests, 1 workers, 2.090s
+h33719: 107 tests, 2 workers, 11.395s
+h33720: 7 tests, 1 workers, 8.762s
+h33721: 3 tests, 1 workers, 2.039s
+h33722: 1020 tests, 2 workers, 9.226s
+h33723: 2 tests, 1 workers, 2.013s
+h33724: 1020 tests, 2 workers, 9.226s
+h33725: 1 tests, 1 workers, 2.001s
+h33726: 1 tests, 1 workers, 2.037s
+h33727: 1620 tests, 4 workers, 36.817s
+h33728: 1 tests, 1 workers, 4.533s
+h33730: 1 tests, 1 workers, 2.002s
+h33731: 25 tests, 2 workers, 7.254s
+h33732: 1 tests, 1 workers, 2.017s
+h33733: 71 tests, 2 workers, 10.686s
+h33734: 1020 tests, 2 workers, 9.226s
+h33735: 228 tests, 2 workers, 25.454s
+h33736: 0 tests, 0 workers, 0.000s
+h33737: 0 tests, 0 workers, 0.000s
+h33738: 0 tests, 0 workers, 0.000s
+h33739: 0 tests, 0 workers, 0.000s
+h33740: 1545 tests, 4 workers, 36.817s
+h33741: 0 tests, 0 workers, 0.000s
+h33742: 0 tests, 0 workers, 0.000s
+h33743: 61 tests, 2 workers, 25.454s
+h33744: 1620 tests, 4 workers, 36.817s
+h33745: 164 tests, 2 workers, 11.215s
+h33746: 1567 tests, 4 workers, 36.817s
+h33747: 1 tests, 1 workers, 2.003s
+h33748: 53 tests, 2 workers, 25.454s
+h33749: 1620 tests, 4 workers, 36.817s
+h33750: 1 tests, 1 workers, 2.022s
+h33751: 0 tests, 0 workers, 0.000s
+h33752: 1 tests, 1 workers, 2.007s
+h33753: 3 tests, 1 workers, 2.009s
+h33754: 1 tests, 1 workers, 2.083s
+h33755: 51 tests, 1 workers, 24.605s
+h33756: 1 tests, 1 workers, 2.067s
+h33757: 1 tests, 1 workers, 2.023s
+h33758: 1592 tests, 4 workers, 36.817s
+h33759: 320 tests, 3 workers, 12.896s
+h33760: 8 tests, 1 workers, 2.101s
+h33761: 0 tests, 0 workers, 0.000s
+h33762: 0 tests, 0 workers, 0.000s
+h33763: 0 tests, 0 workers, 0.000s
+h33764: 16 tests, 1 workers, 9.249s
+h33765: 9 tests, 1 workers, 2.651s
+predicted schedule total 553.860s over 65 commits, 15 probes, 4.73s wall
+WRAP {"phases": {"import_selector": [0.033998, 0, 0.03411453199805692, 1], "load_map": [0.05085199999999998, 0.0, 0.05068182499962859, 1], "load_profile": [0.008720000000000006, 0.0, 0.008783019999100361, 1], "hunter_init": [0.0019419999999999993, 0.0, 0.0019481190029182471, 1], "analyze": [1.769090999999999, 0.0, 1.7647245039988775, 65], "run_probes": [0.021465999999999763, 4.8337259999999995, 2.8558299579963204, 1], "schedule": [0.011933000000000193, 0.0, 0.012680163017648738, 62]}, "self_total": 2.026809, "children_total": 4.8337259999999995, "wall": 4.81398795399582, "verify_runs": [], "probes": [[true, "ok", 0.388], [true, "ok", 0.392], [true, "ok", 0.235], [true, "broken", 0.241], [true, "ok", 0.26], [true, "ok", 0.299], [true, "ok", 0.376], [true, "ok", 0.384], [true, "broken", 0.264], [true, "ok", 0.304], [true, "ok", 0.432], [false, "ok", 0.617], [true, "ok", 0.295], [true, "ok", 0.225], [true, "ok", 0.247]]}
+CGROUP usage_usec 6940806

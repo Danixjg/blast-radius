@@ -1,0 +1,12 @@
+diff --git a/sqlglot/time.py b/sqlglot/time.py
+--- a/sqlglot/time.py
++++ b/sqlglot/time.py
+@@ -56,7 +56,7 @@
+ 
+         end += 1
+ 
+-        if result != TrieResult.FAILED and end > size:
++        if result != TrieResult.FAILED and end >= size:
+             chunks.append(chars)
+ 
+     return "".join(mapping.get(chars, chars) for chars in chunks)

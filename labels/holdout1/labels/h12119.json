@@ -1,0 +1,14 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_mysql.py::TestMySQL::test_show_errors",
+  "tests/dialects/test_mysql.py::TestMySQL::test_show_events"
+ ],
+ "seconds": 49.3,
+ "peak_mb": null,
+ "patch": "h12119.patch"
+}

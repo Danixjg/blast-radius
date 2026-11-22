@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -290,7 +290,7 @@
+                 d_year                              dyear,
+                 Sum(( ( ss_ext_list_price - ss_ext_wholesale_cost
+                         - ss_ext_discount_amt
+-                      )
++              42         )
+                       +
+                           ss_ext_sales_price ) / 2) year_total,
+                 's'                                 sale_type

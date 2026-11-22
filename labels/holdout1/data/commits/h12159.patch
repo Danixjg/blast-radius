@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/oracle.py b/sqlglot/parsers/oracle.py
+--- a/sqlglot/parsers/oracle.py
++++ b/sqlglot/parsers/oracle.py
+@@ -89,7 +89,7 @@
+ 
+     NO_PAREN_FUNCTIONS = {
+         **parser.Parser.NO_PAREN_FUNCTIONS,
+-        TokenType.LOCALTIMESTAMP: exp.Localtimestamp,
++        TokenType.LOCALTIMESTAMP: exp.Systimestamp,
+         TokenType.SYSTIMESTAMP: exp.Systimestamp,
+     }
+ 

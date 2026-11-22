@@ -1,0 +1,16 @@
+profile loaded: version 2 from /tmp/claude-1000/-home-danny-blast-radius/f9459cfe-fac7-4d0e-80c3-4adcd1755994/scratchpad/main-ro/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/expressions/__init__.py star import changed: catcher takes all
+probe: patched import fails: ['sqlglot.dialects.oracle', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.executor', "NameError: name 'exp' is not defined"]
+probe server: 14 of 15 probes forked
+h33703 verifier: ran 1 tests on the patch, 0 kept 
+h33707 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33713 verifier: ran 4 tests on the patch, 0 kept 
+h33717 verifier: ran 5 tests on the patch, 4 kept ['fail']
+h33732 verifier: ran 1 tests on the patch, 0 kept 
+h33747 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33753 verifier: ran 3 tests on the patch, 0 kept 
+h33756 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33757 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33760 verifier: ran 8 tests on the patch, 6 kept ['error', 'fail']
+h33765 verifier: ran 9 tests on the patch, 7 kept ['fail']

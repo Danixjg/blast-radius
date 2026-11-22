@@ -1,0 +1,12 @@
+diff --git a/sqlglot/expressions/aggregate.py b/sqlglot/expressions/aggregate.py
+--- a/sqlglot/expressions/aggregate.py
++++ b/sqlglot/expressions/aggregate.py
+@@ -70,7 +70,7 @@
+ 
+ 
+ class ArgMin(Expression, AggFunc):
+-    arg_types = {"this": True, "expression": True, "count": False}
++    arg_types = {"this": True, "expression": True, "count": True}
+     _sql_names = ["ARG_MIN", "ARGMIN", "MIN_BY"]
+ 
+ 

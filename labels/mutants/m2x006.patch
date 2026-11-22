@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/doris.py b/sqlglot/parsers/doris.py
+--- a/sqlglot/parsers/doris.py
++++ b/sqlglot/parsers/doris.py
+@@ -71,7 +71,7 @@
+         "REFRESH": lambda self: self._parse_refresh_property(),
+     }
+ 
+-    def _parse_range(self, this: exp.Expr | None = None, parse_is: bool = False) -> exp.Expr | None:
++    def _parse_range(self, this: exp.Expr | None = None, parse_is: bool = True) -> exp.Expr | None:
+         this = this or self._parse_bitwise()
+         index = self._index
+         negate = self._match(TokenType.NOT)

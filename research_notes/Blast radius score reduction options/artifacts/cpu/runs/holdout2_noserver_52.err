@@ -1,0 +1,98 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/expressions/__init__.py star import changed: catcher takes all
+probe: patched import fails: ['sqlglot.dialects.oracle', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.executor', "NameError: name 'exp' is not defined"]
+h33701 probe: fresh `import sqlglot` still creates one dialect class
+h33707 probe: fresh `import sqlglot` still creates one dialect class
+h33712 import probe broken: catcher takes all
+h33719 probe: fresh `import sqlglot` still creates one dialect class
+h33720 probe: fresh `import sqlglot` still creates one dialect class
+h33732 probe: fresh `import sqlglot` still creates one dialect class
+h33733 probe: fresh `import sqlglot` still creates one dialect class
+h33740 probe: fresh `import sqlglot` still creates one dialect class
+h33744 import probe broken: catcher takes all
+h33745 probe: fresh `import sqlglot` still creates one dialect class
+h33746 probe: fresh `import sqlglot` still creates one dialect class
+h33756 probe: fresh `import sqlglot` still creates one dialect class
+h33758 probe: fresh `import sqlglot` still creates one dialect class
+h33759 probe: fresh `import sqlglot` still creates one dialect class
+h33764 probe: fresh `import sqlglot` still creates one dialect class
+h33703 verifier: ran 1 tests on the patch, 0 kept 
+h33707 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33713 verifier: ran 4 tests on the patch, 0 kept 
+h33717 verifier: ran 5 tests on the patch, 4 kept ['fail']
+h33732 verifier: ran 1 tests on the patch, 0 kept 
+h33747 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33753 verifier: ran 3 tests on the patch, 0 kept 
+h33756 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33757 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33760 verifier: ran 8 tests on the patch, 6 kept ['error', 'fail']
+h33765 verifier: ran 9 tests on the patch, 7 kept ['fail']
+h33700: 13 tests, 2 workers, 7.859s
+h33701: 49 tests, 2 workers, 10.686s
+h33702: 2 tests, 1 workers, 2.400s
+h33703: 0 tests, 0 workers, 0.000s
+h33704: 1 tests, 1 workers, 2.007s
+h33705: 1 tests, 1 workers, 2.038s
+h33706: 0 tests, 0 workers, 0.000s
+h33707: 1 tests, 1 workers, 2.039s
+h33708: 39 tests, 1 workers, 9.292s
+h33709: 0 tests, 0 workers, 0.000s
+h33710: 1 tests, 1 workers, 2.092s
+h33711: 34 tests, 2 workers, 10.686s
+h33712: 1620 tests, 4 workers, 36.817s
+h33713: 0 tests, 0 workers, 0.000s
+h33714: 0 tests, 0 workers, 0.000s
+h33715: 1 tests, 1 workers, 2.596s
+h33716: 0 tests, 0 workers, 0.000s
+h33717: 4 tests, 1 workers, 2.478s
+h33718: 1 tests, 1 workers, 2.090s
+h33719: 107 tests, 2 workers, 11.395s
+h33720: 7 tests, 1 workers, 8.762s
+h33721: 3 tests, 1 workers, 2.039s
+h33722: 1020 tests, 2 workers, 9.226s
+h33723: 2 tests, 1 workers, 2.013s
+h33724: 1020 tests, 2 workers, 9.226s
+h33725: 1 tests, 1 workers, 2.001s
+h33726: 1 tests, 1 workers, 2.037s
+h33727: 1620 tests, 4 workers, 36.817s
+h33728: 1 tests, 1 workers, 4.533s
+h33730: 1 tests, 1 workers, 2.002s
+h33731: 25 tests, 2 workers, 7.254s
+h33732: 0 tests, 0 workers, 0.000s
+h33733: 71 tests, 2 workers, 10.686s
+h33734: 1020 tests, 2 workers, 9.226s
+h33735: 228 tests, 2 workers, 25.454s
+h33736: 0 tests, 0 workers, 0.000s
+h33737: 0 tests, 0 workers, 0.000s
+h33738: 0 tests, 0 workers, 0.000s
+h33739: 0 tests, 0 workers, 0.000s
+h33740: 1545 tests, 4 workers, 36.817s
+h33741: 0 tests, 0 workers, 0.000s
+h33742: 0 tests, 0 workers, 0.000s
+h33743: 61 tests, 2 workers, 25.454s
+h33744: 1620 tests, 4 workers, 36.817s
+h33745: 164 tests, 2 workers, 11.215s
+h33746: 1567 tests, 4 workers, 36.817s
+h33747: 1 tests, 1 workers, 2.003s
+h33748: 53 tests, 2 workers, 25.454s
+h33749: 1620 tests, 4 workers, 36.817s
+h33750: 1 tests, 1 workers, 2.022s
+h33751: 0 tests, 0 workers, 0.000s
+h33752: 1 tests, 1 workers, 2.007s
+h33753: 0 tests, 0 workers, 0.000s
+h33754: 1 tests, 1 workers, 2.083s
+h33755: 51 tests, 1 workers, 24.605s
+h33756: 1 tests, 1 workers, 2.067s
+h33757: 1 tests, 1 workers, 2.023s
+h33758: 1592 tests, 4 workers, 36.817s
+h33759: 320 tests, 3 workers, 12.896s
+h33760: 6 tests, 1 workers, 2.065s
+h33761: 0 tests, 0 workers, 0.000s
+h33762: 0 tests, 0 workers, 0.000s
+h33763: 0 tests, 0 workers, 0.000s
+h33764: 16 tests, 1 workers, 9.249s
+h33765: 7 tests, 1 workers, 2.418s
+predicted schedule total 545.397s over 65 commits, 15 probes, 10.68s wall
+WRAP {"phases": {"import_selector": [0.033025000000000006, 0, 0.03289546300220536, 1], "load_map": [0.05773699999999998, 0.0, 0.05753082100272877, 1], "load_profile": [0.016333000000000014, 0.0, 0.016365588002372533, 1], "hunter_init": [0.001701000000000008, 0.0, 0.0016974379977909848, 1], "analyze": [1.837874999999999, 0.0, 1.8322632039853488, 65], "run_probes": [0.03159999999999963, 8.086714, 4.507278109005711, 1], "schedule": [0.014709000000002526, 0.0, 0.0184279469831381, 73], "verify": [0.023174000000000028, 7.086012, 4.220259875997726, 1]}, "self_total": 2.1384, "children_total": 15.172726, "wall": 10.775265684998885, "verify_runs": [[1, 0.51, true], [1, 0.731, true], [4, 0.541, true], [1, 0.408, true], [1, 0.435, true], [5, 1.307, true], [3, 0.328, true], [1, 0.495, true], [1, 0.316, true], [8, 0.723, true], [9, 1.681, true]], "probes": [[false, "ok", 0.614], [false, "ok", 0.639], [false, "broken", 0.526], [false, "ok", 0.542], [false, "ok", 0.55], [false, "ok", 0.546], [false, "ok", 0.545], [false, "ok", 0.522], [false, "broken", 0.611], [false, "ok", 0.628], [false, "ok", 0.514], [false, "ok", 0.557], [false, "ok", 0.528], [false, "ok", 0.556], [false, "ok", 0.568]]}
+CGROUP usage_usec 17390219

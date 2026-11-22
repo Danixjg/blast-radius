@@ -1,0 +1,24 @@
+diff --git a/sqlglot/generators/drill.py b/sqlglot/generators/drill.py
+--- a/sqlglot/generators/drill.py
++++ b/sqlglot/generators/drill.py
+@@ -119,7 +119,7 @@
+     def escape_sql(self, expression: exp.Escape) -> str:
+         # Drill takes the escape character as ILIKE's third argument instead of an ESCAPE clause
+         this = expression.this
+-        if isinstance(this, exp.ILike) and not isinstance(this.expression, (exp.All, exp.Any)):
++        if isinstance(this, exp.ILike) or not isinstance(this.expression, (exp.All, exp.Any)):
+             return self._ilike_func_sql(this, expression.expression)
+         return super().escape_sql(expression)
+ 
+diff --git a/tests/fixtures/optimizer/optimizer.sql b/tests/fixtures/optimizer/optimizer.sql
+--- a/tests/fixtures/optimizer/optimizer.sql
++++ b/tests/fixtures/optimizer/optimizer.sql
+@@ -1478,7 +1478,7 @@
+   AND NOT `_u_0`.`cs_order_number` IS NULL
+ ORDER BY
+   COUNT(DISTINCT `cs1`.`cs_order_number`)
+-LIMIT 100;
++LIMIT 100; 42
+ 
+ # execute: false
+ # schema: {"event": {"priority": "TEXT", "tagname": "TEXT"}, "cascade": {"tag_input": "TEXT", "tag_output": "TEXT"}}

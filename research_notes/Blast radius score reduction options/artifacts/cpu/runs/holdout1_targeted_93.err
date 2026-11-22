@@ -1,0 +1,105 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/dialects/dialect.py undecodable
+probe: patched import fails: ['sqlglot.dialects.singlestore', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot', "NameError: name 'AutoName' is not defined"]
+probe: patched import fails: ['sqlglot.executor', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.dialects.snowflake', "NameError: name 'EXPRESSION_METADATA' is not defined"]
+probe server: 16 of 17 probes forked
+h12100 probe: fresh `import sqlglot` still creates one dialect class
+h12112 import probe broken: catcher takes all
+h12116 probe: fresh `import sqlglot` still creates one dialect class
+h12117 probe: fresh `import sqlglot` still creates one dialect class
+h12130 probe: fresh `import sqlglot` still creates one dialect class
+h12134 probe: fresh `import sqlglot` still creates one dialect class
+h12135 probe: fresh `import sqlglot` still creates one dialect class
+h12138 probe: fresh `import sqlglot` still creates one dialect class
+h12143 probe: fresh `import sqlglot` still creates one dialect class
+h12149 import probe broken: catcher takes all
+h12150 probe: fresh `import sqlglot` still creates one dialect class
+h12151 import probe broken: catcher takes all
+h12153 probe: fresh `import sqlglot` still creates one dialect class
+h12154 probe: fresh `import sqlglot` still creates one dialect class
+h12159 probe: fresh `import sqlglot` still creates one dialect class
+h12162 import probe broken: catcher takes all
+h12165 probe: fresh `import sqlglot` still creates one dialect class
+h12102 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12106 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12114 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12119 verifier: ran 2 tests on the patch, 2 kept ['fail']
+h12128 verifier: ran 1 tests on the patch, 0 kept 
+h12137 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12138 verifier: ran 1 tests on the patch, 0 kept 
+h12144 verifier: ran 11 tests on the patch, 11 kept ['error', 'fail']
+h12145 verifier: ran 3 tests on the patch, 3 kept ['fail']
+h12148 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h12155 verifier: ran 6 tests on the patch, 6 kept ['fail']
+h12160 verifier: ran 2 tests on the patch, 2 kept ['fail']
+h12100: 104 tests, 2 workers, 25.454s
+h12101: 1020 tests, 2 workers, 9.226s
+h12102: 1 tests, 1 workers, 2.017s
+h12103: 21 tests, 1 workers, 3.501s
+h12104: 0 tests, 0 workers, 0.000s
+h12105: 0 tests, 0 workers, 0.000s
+h12106: 1 tests, 1 workers, 2.005s
+h12107: 87 tests, 2 workers, 25.454s
+h12108: 1 tests, 1 workers, 2.596s
+h12109: 0 tests, 0 workers, 0.000s
+h12110: 1 tests, 1 workers, 2.213s
+h12111: 1 tests, 1 workers, 2.092s
+h12112: 1620 tests, 4 workers, 36.817s
+h12113: 1 tests, 1 workers, 2.068s
+h12114: 1 tests, 1 workers, 2.038s
+h12115: 0 tests, 0 workers, 0.000s
+h12116: 78 tests, 2 workers, 7.884s
+h12117: 357 tests, 2 workers, 25.642s
+h12118: 0 tests, 0 workers, 0.000s
+h12119: 2 tests, 1 workers, 2.002s
+h12120: 1620 tests, 4 workers, 36.817s
+h12121: 1 tests, 1 workers, 2.038s
+h12122: 0 tests, 0 workers, 0.000s
+h12123: 1 tests, 1 workers, 2.007s
+h12124: 1 tests, 1 workers, 2.092s
+h12125: 1 tests, 1 workers, 2.068s
+h12126: 1 tests, 1 workers, 3.016s
+h12127: 1 tests, 1 workers, 2.004s
+h12128: 0 tests, 0 workers, 0.000s
+h12129: 0 tests, 0 workers, 0.000s
+h12130: 54 tests, 2 workers, 10.686s
+h12131: 1 tests, 1 workers, 2.002s
+h12132: 0 tests, 0 workers, 0.000s
+h12133: 0 tests, 0 workers, 0.000s
+h12134: 146 tests, 2 workers, 25.454s
+h12135: 27 tests, 2 workers, 25.454s
+h12136: 0 tests, 0 workers, 0.000s
+h12137: 1 tests, 1 workers, 2.001s
+h12138: 0 tests, 0 workers, 0.000s
+h12139: 1620 tests, 4 workers, 36.817s
+h12140: 1 tests, 1 workers, 2.061s
+h12141: 1620 tests, 4 workers, 36.817s
+h12142: 0 tests, 0 workers, 0.000s
+h12143: 308 tests, 3 workers, 12.686s
+h12144: 11 tests, 1 workers, 2.043s
+h12145: 3 tests, 1 workers, 2.157s
+h12146: 85 tests, 2 workers, 25.454s
+h12147: 0 tests, 0 workers, 0.000s
+h12148: 1 tests, 1 workers, 2.155s
+h12149: 1620 tests, 4 workers, 36.817s
+h12150: 176 tests, 2 workers, 11.879s
+h12151: 1620 tests, 4 workers, 36.817s
+h12152: 65 tests, 1 workers, 2.688s
+h12153: 492 tests, 3 workers, 27.454s
+h12154: 171 tests, 2 workers, 10.869s
+h12155: 6 tests, 1 workers, 2.241s
+h12156: 9 tests, 2 workers, 25.454s
+h12157: 2 tests, 1 workers, 2.303s
+h12158: 21 tests, 2 workers, 25.454s
+h12159: 131 tests, 2 workers, 6.534s
+h12160: 2 tests, 1 workers, 2.423s
+h12161: 0 tests, 0 workers, 0.000s
+h12162: 1620 tests, 4 workers, 36.817s
+h12163: 1 tests, 1 workers, 2.013s
+h12164: 1 tests, 1 workers, 2.007s
+h12165: 0 tests, 0 workers, 0.000s
+predicted schedule total 618.608s over 66 commits, 17 probes, 8.59s wall
+WRAP2 {"phases": {"import_selector": 0.064246, "load_map": 0.036132, "load_profile": 0.008008000000000015, "hunter_init": 0.0, "analyze": 0.8861319999999986, "server_start": 0.15855400000000008, "server_close": 0.005015000000000214, "run_probes": 2.6875080000000002, "verify": 5.148352}, "total_in_python": 8.886619, "verify_runs": [{"n": 1, "ms": 17, "cpu": 0.3229, "wall": 0.321, "npass": 0, "files": ["tests/dialects/test_prql.py"]}, {"n": 1, "ms": 5, "cpu": 0.3125, "wall": 0.311, "npass": 0, "files": ["tests/dialects/test_drill.py"]}, {"n": 1, "ms": 38, "cpu": 0.3804, "wall": 0.379, "npass": 0, "files": ["tests/dialects/test_dialect.py"]}, {"n": 2, "ms": 2, "cpu": 0.2694, "wall": 0.268, "npass": 0, "files": ["tests/dialects/test_mysql.py"]}, {"n": 1, "ms": 90, "cpu": 0.45, "wall": 0.45, "npass": 1, "files": ["tests/dialects/test_tsql.py"]}, {"n": 1, "ms": 1, "cpu": 0.2768, "wall": 0.276, "npass": 0, "files": ["tests/dialects/test_tsql.py"]}, {"n": 1, "ms": 4, "cpu": 0.275, "wall": 0.274, "npass": 1, "files": ["tests/dialects/test_risingwave.py"]}, {"n": 11, "ms": 43, "cpu": 0.2546, "wall": 0.254, "npass": 0, "files": ["tests/test_diff.py"]}, {"n": 3, "ms": 157, "cpu": 0.4754, "wall": 0.469, "npass": 0, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_dremio.py"]}, {"n": 1, "ms": 155, "cpu": 0.4819, "wall": 0.481, "npass": 0, "files": ["tests/dialects/test_dialect.py"]}, {"n": 6, "ms": 241, "cpu": 0.5918, "wall": 0.59, "npass": 0, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_tsql.py"]}, {"n": 2, "ms": 423, "cpu": 1.0547, "wall": 1.051, "npass": 0, "files": ["tests/dialects/test_duckdb.py", "tests/dialects/test_spark.py"]}], "probes": [{"stage": 0, "res": "ok", "cpu": 0.3199, "files": ["sqlglot/optimizer/simplify.py"]}, {"stage": 1, "res": "broken", "cpu": 0.1175, "files": ["sqlglot/generators/singlestore.py"]}, {"stage": 1, "res": "ok", "cpu": 0.1206, "files": ["sqlglot/parsers/postgres.py"]}, {"stage": 0, "res": "ok", "cpu": 0.1029, "files": ["sqlglot/dialects/hive.py"]}, {"stage": 1, "res": "ok", "cpu": 0.0982, "files": ["sqlglot/generators/oracle.py"]}, {"stage": 0, "res": "ok", "cpu": 0.1097, "files": ["sqlglot/generators/trino.py"]}, {"stage": 0, "res": "ok", "cpu": 0.0877, "files": ["sqlglot/generators/athena.py"]}, {"stage": 2, "res": "ok", "cpu": 0.1009, "files": ["sqlglot/dialects/risingwave.py"]}, {"stage": 0, "res": "ok", "cpu": 0.0721, "files": ["sqlglot/dialects/spark2.py"]}, {"stage": null, "res": "broken", "cpu": 0.7043, "files": ["sqlglot/expressions/datatypes.py"]}, {"stage": 0, "res": "ok", "cpu": 0.1103, "files": ["sqlglot/dialects/clickhouse.py", "sqlglot/generators/databricks.py"]}, {"stage": 2, "res": "broken", "cpu": 0.1244, "files": ["sqlglot/generators/python.py"]}, {"stage": 0, "res": "ok", "cpu": 0.0882, "files": ["sqlglot/dialects/duckdb.py"]}, {"stage": 0, "res": "ok", "cpu": 0.0808, "files": ["sqlglot/dialects/databricks.py"]}, {"stage": 1, "res": "ok", "cpu": 0.0953, "files": ["sqlglot/parsers/oracle.py"]}, {"stage": 2, "res": "broken", "cpu": 0.1058, "files": ["sqlglot/dialects/snowflake.py"]}, {"stage": 1, "res": "ok", "cpu": 0.0831, "files": ["sqlglot/dialects/prql.py"]}]}
+CGROUP usage_usec 8989452

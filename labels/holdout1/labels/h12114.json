@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_dialect.py::TestDialect::test_cast"
+ ],
+ "seconds": 49.3,
+ "peak_mb": null,
+ "patch": "h12114.patch"
+}

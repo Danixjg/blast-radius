@@ -1,0 +1,14 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_drill.py::TestDrill::test_ilike",
+  "tests/test_optimizer.py::TestOptimizer::test_optimize"
+ ],
+ "seconds": 51.3,
+ "peak_mb": null,
+ "patch": "h33702.patch"
+}

@@ -1,0 +1,99 @@
+profile loaded: version 2 from /app/profile.pkl, 1183 trusted dictionary entries, 783 comparison sites, 0 unobserved tests
+sqlglot/expressions/__init__.py star import changed: catcher takes all
+probe: patched import fails: ['sqlglot.dialects.oracle', "ModuleNotFoundError: No module named 'sqlglot_does_not_exist_xyz'"]
+probe: patched import fails: ['sqlglot.executor', "NameError: name 'exp' is not defined"]
+probe server: 14 of 15 probes forked
+h33701 probe: fresh `import sqlglot` still creates one dialect class
+h33707 probe: fresh `import sqlglot` still creates one dialect class
+h33712 import probe broken: catcher takes all
+h33719 probe: fresh `import sqlglot` still creates one dialect class
+h33720 probe: fresh `import sqlglot` still creates one dialect class
+h33732 probe: fresh `import sqlglot` still creates one dialect class
+h33733 probe: fresh `import sqlglot` still creates one dialect class
+h33740 probe: fresh `import sqlglot` still creates one dialect class
+h33744 import probe broken: catcher takes all
+h33745 probe: fresh `import sqlglot` still creates one dialect class
+h33746 probe: fresh `import sqlglot` still creates one dialect class
+h33756 probe: fresh `import sqlglot` still creates one dialect class
+h33758 probe: fresh `import sqlglot` still creates one dialect class
+h33759 probe: fresh `import sqlglot` still creates one dialect class
+h33764 probe: fresh `import sqlglot` still creates one dialect class
+h33703 verifier: ran 1 tests on the patch, 0 kept 
+h33707 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33713 verifier: ran 4 tests on the patch, 0 kept 
+h33717 verifier: ran 5 tests on the patch, 4 kept ['fail']
+h33732 verifier: ran 1 tests on the patch, 0 kept 
+h33747 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33753 verifier: ran 3 tests on the patch, 0 kept 
+h33756 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33757 verifier: ran 1 tests on the patch, 1 kept ['fail']
+h33760 verifier: ran 8 tests on the patch, 6 kept ['error', 'fail']
+h33765 verifier: ran 9 tests on the patch, 7 kept ['fail']
+h33700: 13 tests, 2 workers, 7.859s
+h33701: 49 tests, 2 workers, 10.686s
+h33702: 2 tests, 1 workers, 2.400s
+h33703: 0 tests, 0 workers, 0.000s
+h33704: 1 tests, 1 workers, 2.007s
+h33705: 1 tests, 1 workers, 2.038s
+h33706: 0 tests, 0 workers, 0.000s
+h33707: 1 tests, 1 workers, 2.039s
+h33708: 39 tests, 1 workers, 9.292s
+h33709: 0 tests, 0 workers, 0.000s
+h33710: 1 tests, 1 workers, 2.092s
+h33711: 34 tests, 2 workers, 10.686s
+h33712: 1620 tests, 4 workers, 36.817s
+h33713: 0 tests, 0 workers, 0.000s
+h33714: 0 tests, 0 workers, 0.000s
+h33715: 1 tests, 1 workers, 2.596s
+h33716: 0 tests, 0 workers, 0.000s
+h33717: 4 tests, 1 workers, 2.478s
+h33718: 1 tests, 1 workers, 2.090s
+h33719: 107 tests, 2 workers, 11.395s
+h33720: 7 tests, 1 workers, 8.762s
+h33721: 3 tests, 1 workers, 2.039s
+h33722: 1020 tests, 2 workers, 9.226s
+h33723: 2 tests, 1 workers, 2.013s
+h33724: 1020 tests, 2 workers, 9.226s
+h33725: 1 tests, 1 workers, 2.001s
+h33726: 1 tests, 1 workers, 2.037s
+h33727: 1620 tests, 4 workers, 36.817s
+h33728: 1 tests, 1 workers, 4.533s
+h33730: 1 tests, 1 workers, 2.002s
+h33731: 25 tests, 2 workers, 7.254s
+h33732: 0 tests, 0 workers, 0.000s
+h33733: 71 tests, 2 workers, 10.686s
+h33734: 1020 tests, 2 workers, 9.226s
+h33735: 228 tests, 2 workers, 25.454s
+h33736: 0 tests, 0 workers, 0.000s
+h33737: 0 tests, 0 workers, 0.000s
+h33738: 0 tests, 0 workers, 0.000s
+h33739: 0 tests, 0 workers, 0.000s
+h33740: 1545 tests, 4 workers, 36.817s
+h33741: 0 tests, 0 workers, 0.000s
+h33742: 0 tests, 0 workers, 0.000s
+h33743: 61 tests, 2 workers, 25.454s
+h33744: 1620 tests, 4 workers, 36.817s
+h33745: 164 tests, 2 workers, 11.215s
+h33746: 1567 tests, 4 workers, 36.817s
+h33747: 1 tests, 1 workers, 2.003s
+h33748: 53 tests, 2 workers, 25.454s
+h33749: 1620 tests, 4 workers, 36.817s
+h33750: 1 tests, 1 workers, 2.022s
+h33751: 0 tests, 0 workers, 0.000s
+h33752: 1 tests, 1 workers, 2.007s
+h33753: 0 tests, 0 workers, 0.000s
+h33754: 1 tests, 1 workers, 2.083s
+h33755: 51 tests, 1 workers, 24.605s
+h33756: 1 tests, 1 workers, 2.067s
+h33757: 1 tests, 1 workers, 2.023s
+h33758: 1592 tests, 4 workers, 36.817s
+h33759: 320 tests, 3 workers, 12.896s
+h33760: 6 tests, 1 workers, 2.065s
+h33761: 0 tests, 0 workers, 0.000s
+h33762: 0 tests, 0 workers, 0.000s
+h33763: 0 tests, 0 workers, 0.000s
+h33764: 16 tests, 1 workers, 9.249s
+h33765: 7 tests, 1 workers, 2.418s
+predicted schedule total 545.397s over 65 commits, 15 probes, 10.93s wall
+WRAP2 {"phases": {"import_selector": 0.02808400000000001, "load_map": 0.04012299999999999, "load_profile": 0.008022000000000001, "hunter_init": 0.0040140000000000176, "analyze": 1.444264999999999, "server_start": 0.17874999999999996, "server_close": 0.006662999999999641, "run_probes": 3.848442, "verify": 5.703538999999999}, "total_in_python": 11.148753000000001, "verify_runs": [{"n": 1, "ms": 2, "cpu": 0.3102, "wall": 0.31, "npass": 1, "files": ["tests/dialects/test_fabric.py"]}, {"n": 1, "ms": 39, "cpu": 0.5178, "wall": 0.515, "npass": 0, "files": ["tests/dialects/test_snowflake.py"]}, {"n": 4, "ms": 158, "cpu": 0.4324, "wall": 0.431, "npass": 4, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_dremio.py"]}, {"n": 5, "ms": 486, "cpu": 0.972, "wall": 0.968, "npass": 1, "files": ["tests/dialects/test_dialect.py", "tests/dialects/test_duckdb.py", "tests/dialects/test_postgres.py", "tests/dialects/test_snowflake.py"]}, {"n": 1, "ms": 17, "cpu": 0.3, "wall": 0.299, "npass": 1, "files": ["tests/dialects/test_prql.py"]}, {"n": 1, "ms": 3, "cpu": 0.2759, "wall": 0.276, "npass": 0, "files": ["tests/dialects/test_clickhouse.py"]}, {"n": 3, "ms": 9, "cpu": 0.3243, "wall": 0.323, "npass": 3, "files": ["tests/dialects/test_teradata.py"]}, {"n": 1, "ms": 67, "cpu": 0.3857, "wall": 0.387, "npass": 0, "files": ["tests/dialects/test_mysql.py"]}, {"n": 1, "ms": 23, "cpu": 0.259, "wall": 0.257, "npass": 0, "files": ["tests/test_expressions.py"]}, {"n": 8, "ms": 101, "cpu": 0.5751, "wall": 0.572, "npass": 2, "files": ["tests/dialects/test_athena.py", "tests/dialects/test_spark.py"]}, {"n": 9, "ms": 651, "cpu": 1.3488, "wall": 1.348, "npass": 2, "files": ["tests/dialects/test_bigquery.py", "tests/dialects/test_dialect.py", "tests/dialects/test_duckdb.py", "tests/dialects/test_hive.py", "tests/dialects/test_presto.py", "tests/dialects/test_redshift.py", "tests/dialects/test_snowflake.py"]}], "probes": [{"stage": 0, "res": "ok", "cpu": 0.4617, "files": ["sqlglot/generators/sqlite.py"]}, {"stage": 2, "res": "ok", "cpu": 0.2087, "files": ["sqlglot/generators/snowflake.py"]}, {"stage": 1, "res": "broken", "cpu": 0.194, "files": ["sqlglot/generators/oracle.py"]}, {"stage": 1, "res": "ok", "cpu": 0.1987, "files": ["sqlglot/dialects/redshift.py"]}, {"stage": 2, "res": "ok", "cpu": 0.1544, "files": ["sqlglot/dialects/solr.py"]}, {"stage": 1, "res": "ok", "cpu": 0.1854, "files": ["sqlglot/parsers/prql.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2606, "files": ["sqlglot/generators/databricks.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2905, "files": ["sqlglot/serde.py"]}, {"stage": 2, "res": "broken", "cpu": 0.2449, "files": ["sqlglot/executor/python.py"]}, {"stage": 1, "res": "ok", "cpu": 0.1954, "files": ["sqlglot/parsers/tsql.py"]}, {"stage": null, "res": "ok", "cpu": 0.4078, "files": ["sqlglot/expressions/core.py"]}, {"stage": 0, "res": "ok", "cpu": 0.2613, "files": ["sqlglot/generators/spark2.py"]}, {"stage": 1, "res": "ok", "cpu": 0.2099, "files": ["sqlglot/generators/tsql.py"]}, {"stage": 1, "res": "ok", "cpu": 0.19, "files": ["sqlglot/dialects/postgres.py"]}, {"stage": 1, "res": "ok", "cpu": 0.192, "files": ["sqlglot/dialects/materialize.py"]}]}
+CGROUP usage_usec 11259902
