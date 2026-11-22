@@ -44,11 +44,14 @@ MAP = Path(os.environ.get("BR_MAP", HERE / "map.pkl"))
 PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 IMPORT_SITE_INDEX = Path(os.environ.get("BR_IMPORT_SITE_INDEX", HERE / "import-sites.json"))
 IMPORT_SITE_INDEX_VERSION = 2
-# R5/R6 (ported from targeted-probes for a research measurement)
+# R5/R6 ported from targeted-probes
 INST_NARROW = os.environ.get("BR_INST_NARROW", "1") == "1"
 GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
 GENMEM_NUM = 1224
 GENMEM_MAX_SELECTED = 500
+# which sqlglot modules importing each module loads (build/mkimports.py); the targeted probe
+PROBE_IMPORTS = Path(os.environ.get("BR_PROBE_IMPORTS", HERE / "probe_imports.json"))
+PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "1") == "1"
 WORKER_MS = 2000
 MAX_WORKERS = 8
 # The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
@@ -3267,7 +3270,65 @@ def _kill(p):
         pass
 
 
+_PROBE_FWD = None
+_MUTATING_CALLS = frozenset(("setattr", "delattr", "update", "pop", "popitem", "append", "extend", "insert", "remove",
+                             "clear", "setdefault", "add", "discard", "register", "__setitem__", "__delitem__"))
+
+
+def import_time_mutation(text):
+    """Code that runs while the module imports (module level, class bodies, decorators,
+    defaults) stores into or deletes an attribute or item, augments one in place, or calls a
+    mutating method: it may change state another module reads. True also when it does not parse."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return True
+    found = False
+
+    def visit(node):
+        nonlocal found
+        if found:
+            return
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            for d in getattr(node, "decorator_list", []):
+                visit(d)
+            for d in node.args.defaults + [x for x in node.args.kw_defaults if x is not None]:
+                visit(d)
+            return
+        if isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Delete)):
+            targets = node.targets if isinstance(node, (ast.Assign, ast.Delete)) else [node.target]
+            if isinstance(node, ast.AugAssign) or any(isinstance(n, (ast.Attribute, ast.Subscript))
+                                                      for t in targets for n in ast.walk(t)):
+                found = True
+                return
+        if isinstance(node, ast.Call):
+            f = node.func
+            name = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+            if name in _MUTATING_CALLS:
+                found = True
+                return
+        for c in ast.iter_child_nodes(node):
+            visit(c)
+
+    visit(tree)
+    return found
+
+
+def _probe_fwd():
+    global _PROBE_FWD
+    if _PROBE_FWD is None:
+        try:
+            _PROBE_FWD = {k: frozenset(v) for k, v in json.loads(PROBE_IMPORTS.read_text(encoding="utf-8"))["fwd"].items()}
+        except Exception:
+            _PROBE_FWD = {}
+    return _PROBE_FWD
+
+
 def _probe_modules(files):
+    """The modules the probe imports, in its fixed order. Targeted: `sqlglot`, the patched modules
+    and every module whose import loads one of them (probe_imports.json), when the patch only edits
+    sqlglot modules and none of them, before or after the patch, mutates state while it imports
+    (another module could then fail without importing it). Otherwise every module."""
     mods = list(all_modules())
     for rel, text in files.items():
         if rel.startswith("sqlglot/"):
@@ -3277,7 +3338,21 @@ def _probe_modules(files):
                     mods.remove(m)
             elif m not in mods:
                 mods.append(m)
-    return mods
+    if not PROBE_TARGETED or not files or not all(rel.startswith("sqlglot/") and rel.endswith(".py") for rel in files):
+        return mods
+    fwd = _probe_fwd()
+    if not fwd:
+        return mods
+    patched = {module_of(rel) for rel in files}
+    for rel, text in files.items():
+        old = None
+        try:
+            old = (SRC / rel).read_text(encoding="utf-8")
+        except OSError:
+            pass
+        if (text is not None and import_time_mutation(text)) or (old is not None and import_time_mutation(old)):
+            return mods
+    return [m for m in mods if m == "sqlglot" or m in patched or m not in fwd or fwd[m] & patched]
 
 
 def _probe_env():
