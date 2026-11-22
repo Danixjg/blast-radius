@@ -59,6 +59,8 @@ widens to a safe superset whenever that reasoning runs out.
 | `import os as _fresh` at module level, of a module every interpreter has loaded at start-up | nothing: a `sys.modules` hit binds a name nobody reads |
 | a `from X import *` line (added, removed, changed) | every test: it re-exports an open set of names looked up at run time (`exp.Properties`) |
 | any other class attribute / module constant / import | tests reading the names it binds that created the class (or a subclass/dialect), following import-time derivations; the import is probed unless the old and new values are constants, nothing that runs while modules import reads the name, and the class is a plain Dialect/Parser/Generator/Tokenizer-family class (no Enum, NamedTuple, TypedDict, dataclass or decorator processing its body) |
+| … and it is a plain `NAME = value` in a sqlglot module whose old and new values build without side effects | as above, but a test that only *ran* the statement because its process imported the module during the test is not counted: pool workers (TPC-DS/TPC-H execution, optimizer fixture checks) import Hive, Presto, Trino, MySQL and Athena on the fly through `pushdown_predicates`, so coverage shows them running every class attribute there. Whoever ran a lambda-body line inside the statement stays |
+| a removed one-line module-level import in a sqlglot module, of the standard library or of a module `import sqlglot` loads anyway, when no name it bound is bound elsewhere in the module, no other file takes the names from it (`from M import name`, `M.name`, `from M import *`) and nothing scans its namespace (`subclasses(__name__, …)`, `getmembers`, `vars`, `dir`, `globals`) | tests that ran a line of that module reading one of the names (plus readers of annotations through `get_type_hints`/`get_annotations`); the import is probed, since a read while the module imports fails the import |
 | `is` ↔ `==` / `is not` ↔ `!=` only | tests with an operand fact the swap would change, tests that ran the line but were never seen evaluating it (except, when the comparison follows the first operand of an `and`/`or` chain, tests that short-circuited before it), and unobserved tests that ran it; without profile evidence for that exact comparison, line coverage |
 | a fixture file | tests that opened it |
 | comments, blank lines (outside strings, file still compiles to the same text) | nothing |
@@ -78,8 +80,19 @@ widens to a safe superset whenever that reasoning runs out.
   `pyproject.toml` counts only through its validity and its `tool.pytest` table.
 - **Import probe**: when import-time code changed, one fresh interpreter (`-I -S`) imports
   *every* sqlglot module with the *combined* patch served from memory through a meta-path finder
-  (no overlay directory or symlinks; deleted modules raise). Any failure, a timeout, a probe that
-  did not load the patched source, or a probe that could not start means: run every test.
+  (no overlay directory or symlinks; deleted modules raise). A timeout, a probe that did not load
+  the patched source, a probe that could not start, or a failing `import sqlglot` means: run every
+  test. When other modules fail to import (the probe lists every one, including those failing only
+  because they import a failing one), the selection is the tests that can reach them: tests that
+  ran their code, imported them while running or created their classes or their dialect's
+  (dialect, parser, generator, tokenizer and typing modules of one name go together); tests that
+  execute an import statement naming them (module level in a test module or helper: its whole file
+  and its importers; inside a function: whoever ran it; `if TYPE_CHECKING:` blocks ignored;
+  `from sqlglot.dialects import Name` and the `sqlglot.optimizer` lazy table resolved to the module
+  they load); and tests that load dialects in bulk (`Dialect.classes`, loops over every dialect:
+  those that ran the registry's on-demand loader or created classes of at least 80 % of the
+  dialects). A failing module never runs, so its own edits add nothing more; edits in other
+  patched files keep their selections. The verifier is not used on such commits.
   The probe imports `sqlglot` first and replays `test_lazy_load`'s assertions: a fresh
   `import sqlglot` creates exactly one dialect class, and `print('Success')` then reaches stdout
   (printed through the probe's own, possibly patched, `print` and `stdout`; the bytes up to a raw
