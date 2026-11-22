@@ -59,8 +59,10 @@ def _copy_tree_filtered(src_root, dst_root):
         rel = p.relative_to(src_root)
         (dst_root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(p, dst_root / rel)
-    for name in ("LICENSE", "pyproject.toml", "setup.cfg"):
+    for name in ("LICENSE", "pyproject.toml", "setup.cfg",
+                 "tests/fixtures/optimizer/tpc-ds/tpc-ds.sql", "tests/fixtures/optimizer/tpc-h/tpc-h.sql"):
         if (src_root / name).is_file():
+            (dst_root / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src_root / name, dst_root / name)
 
 
