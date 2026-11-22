@@ -723,6 +723,19 @@ class FailedImports(Base):
         ids = self.ids(self.h.import_failure_mask(["sqlglot.dialects.athena"]))
         self.assertIn("tests/test_optimizer.py::TestOptimizer::test_pushdown_predicates", ids)
 
+    def test_mass_failure_tests_stay_with_any_failed_import(self):
+        # removing `import typing as t` from qualify_columns breaks ~730 tests; with that many
+        # failures under xdist test_generator_memory fails too (seed 314159, h15941)
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.optimizer.qualify_columns"]))
+        self.assertIn("tests/test_generator.py::TestGenerator::test_generator_memory", ids)
+
+    def test_dialect_looked_up_by_name_in_sqlglot_code(self):
+        # parsers/presto.py: build_formatted_time(exp.TimeToStr, "teradata") runs Dialect["teradata"]
+        # without importing or instantiating anything of teradata's
+        ids = self.ids(self.h.dialect_name_sites({"sqlglot.dialects.teradata"}))
+        self.assertIn("tests/dialects/test_presto.py::TestPresto::test_to_char", ids)
+        self.assertEqual(self.h.dialect_name_sites({"sqlglot.optimizer.qualify_columns"}), 0)
+
     def test_selector_narrows_a_broken_probe(self):
         tmp = Path(tempfile.mkdtemp(prefix="br-failed-import-"))
         try:
