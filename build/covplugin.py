@@ -151,6 +151,11 @@ def _child_setup():
     if _child_ready:
         return
     _child_ready = True
+    # Import every sqlglot module before line events start, as the pytest process does in
+    # _prewarm: a module a task would otherwise load lazily runs its body here, so its module-level
+    # and class-body lines are never charged to that test (the parent records them as import-time
+    # facts). Under COV_PROFILE the rewriting hook still instruments these imports.
+    _import_all()
     mon.use_tool_id(TOOL, "covmap-child")
     mon.register_callback(TOOL, mon.events.LINE, _line_cb)
     mon.set_events(TOOL, mon.events.LINE)
@@ -236,12 +241,25 @@ def _patch_pools():
 _IMP_CLASSES = set()
 
 
-def _prewarm():
-    global _cur_types
+def _import_all():
+    """Import every sqlglot module (the order is walk_packages', the same in every process)."""
     import importlib
     import pkgutil
 
     import sqlglot
+
+    for m in pkgutil.walk_packages(sqlglot.__path__, "sqlglot."):
+        if "sqlglotc" in m.name or m.name.endswith("__main__"):
+            continue
+        try:
+            importlib.import_module(m.name)
+        except Exception as e:  # noqa
+            print("prewarm import failed", m.name, e, file=sys.stderr)
+
+
+def _prewarm():
+    global _cur_types
+    import sqlglot  # noqa: F401
     from sqlglot.dialects.dialect import Dialect
     from sqlglot.expressions.core import Expr
     from sqlglot.generator import Generator
@@ -251,14 +269,7 @@ def _prewarm():
     for c in (Expr, Generator, Parser, Tokenizer, Dialect):
         _wrap_init(c)
     _cur_types = set()
-
-    for m in pkgutil.walk_packages(sqlglot.__path__, "sqlglot."):
-        if "sqlglotc" in m.name or m.name.endswith("__main__"):
-            continue
-        try:
-            importlib.import_module(m.name)
-        except Exception as e:  # noqa
-            print("prewarm import failed", m.name, e, file=sys.stderr)
+    _import_all()
     for tp in _cur_types:
         _IMP_CLASSES.update(_mro_names(tp))
     _cur_types = None
