@@ -751,6 +751,19 @@ class FailedImports(Base):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_imports_by_computed_name(self):
+        import ast
+        # test_typing walks sqlglot/typing with pkgutil and imports each module by name
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.typing.sqlite", "sqlglot.dialects.sqlite"]))
+        self.assertIn("tests/test_typing.py::TestTyping::test_no_redundant_expression_metadata", ids)
+        src = ("import importlib\n\ndef f(n, m):\n    importlib.import_module(f'sqlglot.typing.{n}')\n"
+               "    importlib.import_module(m)\n    __import__('sqlglot.lineage')\n"
+               "    importlib.import_module(f'{__name__}.{n}')\n")
+        got = [(c.lineno, scope, tgt) for c, scope, tgt in S._dynamic_imports(ast.parse(src), "sqlglot.optimizer")]
+        self.assertEqual(sorted(got), [(4, "function", ("prefix", "sqlglot.typing.")), (5, "function", ("any",)),
+                                       (6, "function", ("exact", "sqlglot.lineage")),
+                                       (7, "function", ("prefix", "sqlglot.optimizer."))])
+
     def test_import_scopes(self):
         import ast
         src = ("import typing as t\nimport sqlglot.a\nif t.TYPE_CHECKING:\n    from sqlglot import b\n"

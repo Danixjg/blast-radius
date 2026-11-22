@@ -539,6 +539,66 @@ def _imports(tree):
     return out
 
 
+DYNAMIC_IMPORTS = ("import_module", "__import__", "reload", "run_path", "run_module", "exec_module")
+
+
+def _dynamic_imports(tree, module):
+    """(call, scope, target) for calls that import or execute a module by computed name
+    (importlib.import_module, __import__, importlib.reload, runpy, loader.exec_module), scoped as in
+    _imports. target: ('exact', name) for a constant, ('prefix', p) when the name starts with a
+    constant (an f-string or a concatenation; `__name__` stands for this module), else ('any',)."""
+    calls = {id(c): c for c in ast.walk(tree) if isinstance(c, ast.Call) and (
+        (isinstance(c.func, ast.Name) and c.func.id in DYNAMIC_IMPORTS) or
+        (isinstance(c.func, ast.Attribute) and c.func.attr in DYNAMIC_IMPORTS))}
+    if not calls:
+        return []
+    scope_of = {}
+    tc = runtime_facts(tree)[1] | {"TYPE_CHECKING", "typing.TYPE_CHECKING", "t.TYPE_CHECKING"}
+
+    def visit(node, scope):
+        for child in ast.iter_child_nodes(node):
+            if id(child) in calls:
+                scope_of[id(child)] = scope
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                visit(child, "function" if scope != "type_checking" else scope)
+            elif isinstance(child, ast.If) and _tc_test(child.test, tc):
+                for st in child.body:
+                    visit(ast.Module(body=[st], type_ignores=[]), "type_checking")
+                for st in child.orelse:
+                    visit(ast.Module(body=[st], type_ignores=[]), scope)
+            else:
+                visit(child, scope)
+
+    visit(tree, "module")
+
+    def target(arg):
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            return ("exact", arg.value)
+        if isinstance(arg, ast.JoinedStr) and arg.values:
+            head = ""
+            for v in arg.values:
+                if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                    head += v.value
+                elif isinstance(v, ast.FormattedValue) and isinstance(v.value, ast.Name) and v.value.id == "__name__" \
+                        and v.conversion == -1 and v.format_spec is None:
+                    head += module
+                else:
+                    break
+            return ("prefix", head) if head else ("any",)
+        if isinstance(arg, ast.BinOp) and isinstance(arg.op, ast.Add) and isinstance(arg.left, ast.Constant) and \
+                isinstance(arg.left.value, str):
+            return ("prefix", arg.left.value)
+        return ("any",)
+
+    out = []
+    for c in calls.values():
+        name = c.func.id if isinstance(c.func, ast.Name) else c.func.attr
+        arg = c.args[0] if c.args else None
+        tgt = target(arg) if name in ("import_module", "__import__") and arg is not None else ("any",)
+        out.append((c, scope_of.get(id(c), "module"), tgt))
+    return out
+
+
 def _imported_modules(st, rel):
     """Module names an import statement imports (or may: `from P import N` imports P.N when N is
     a submodule, and sqlglot.dialects maps a dialect name N to the module P.<n lowercased>)."""
@@ -1377,12 +1437,13 @@ class Hunter:
             # its _LAZY_ATTRS table)
             names = {leaf} | {n.lower() for n, mods in self.lazy_attr_modules(parent).items() if mod in mods}
             by_parent.append((re.compile(r"\bfrom\s+%s\s+import\s+(\([^)]*\)|[^\n]*)" % re.escape(parent)), names))
+        dynamic = re.compile(r"\b(?:%s)\s*\(" % "|".join(map(re.escape, DYNAMIC_IMPORTS)))
         hits = set()
         for rel in self.py_files():
             text = self.source(rel)
             if not text:
                 continue
-            if any(p.search(text) for p in direct) or any(
+            if any(p.search(text) for p in direct) or dynamic.search(text) or any(
                     any(n.split(" as ")[0].strip().lower() in names for n in mt.group(1).strip("()").split(","))
                     for p, names in by_parent for mt in p.finditer(text)):
                 hits.add(rel)
@@ -1391,14 +1452,30 @@ class Hunter:
             tree = self.tree(rel)
             if tree is None:
                 return self.ALL
+            sites = []
             for st, scope in _imports(tree):
                 mods = _imported_modules(st, rel)
                 if isinstance(st, ast.ImportFrom) and not st.level and st.module:
                     lazy = self.lazy_attr_modules(st.module)
                     for a in st.names:
                         mods |= lazy.get(a.name, set())
-                if not mods & F:
-                    continue
+                if mods & F:
+                    sites.append((st, scope))
+            # imports by computed name (a package walk importing each module, the dialect registry,
+            # lazy package attributes, deserialization by module path): a call whose name can be one
+            # of F counts like an import statement naming it
+            lazy_targets = None
+            if rel.endswith("/__init__.py"):   # a package's own lazy __getattr__: its table's modules
+                lazy_targets = set().union(*self.lazy_attr_modules(module_of(rel)).values()) or None
+            for call, scope, tgt in _dynamic_imports(tree, module_of(rel)):
+                if tgt[0] == "any" and lazy_targets is not None:
+                    hit = bool(lazy_targets & F)
+                else:
+                    hit = tgt[0] == "any" or (tgt[0] == "exact" and tgt[1] in F) or \
+                        (tgt[0] == "prefix" and any(f.startswith(tgt[1]) for f in F))
+                if hit:
+                    sites.append((call, scope))
+            for st, scope in sites:
                 if scope == "type_checking":
                     continue
                 if scope == "function":
