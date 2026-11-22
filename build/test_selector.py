@@ -775,6 +775,40 @@ class FailedImports(Base):
                         S._imported_modules(st, "tests/x.py"))
 
 
+class OneLineLambdas(Base):
+    """A call of a lambda reports no line event for its first line (sys.monitoring, CPython 3.12+),
+    so coverage of that line only names whoever created the lambda."""
+
+    def test_monitoring_reports_no_first_line_of_a_called_lambda(self):
+        import sys as _sys
+        if not hasattr(_sys, "monitoring"):
+            self.skipTest("no sys.monitoring")
+        mon = _sys.monitoring
+        tool = next(i for i in range(6) if mon.get_tool(i) is None)
+        code = compile("F = {'a': lambda x: x + 1}\n", "lam_probe.py", "exec")
+        ns = {}
+        exec(code, ns)
+        hits = []
+        mon.use_tool_id(tool, "lam-probe")
+        try:
+            mon.register_callback(tool, mon.events.LINE,
+                                  lambda c, ln: hits.append(ln) if c.co_filename == "lam_probe.py" else None)
+            mon.set_events(tool, mon.events.LINE)
+            ns["F"]["a"](1)
+        finally:
+            mon.set_events(tool, 0)
+            mon.register_callback(tool, mon.events.LINE, None)
+            mon.free_tool_id(tool)
+        self.assertEqual(hits, [], "the premise of locate()'s lambda rule")
+
+    def test_edit_on_a_dict_entry_lambda_selects_its_readers(self):
+        rel = "sqlglot/parsers/tsql.py"
+        old = '"ISNULL": lambda args: build_coalesce(args=args, is_null=True),'
+        m, _ = self.mask(edit(rel, old, old.replace("is_null=True", "is_null=False")))
+        self.assertTrue(m & (1 << DATA["tests"].index("tests/dialects/test_tsql.py::TestTSQL::test_isnull")),
+                        "the parser test calling FUNCTIONS['ISNULL'] (line coverage shows only the import)")
+
+
 class RemovedImports(Base):
     """removed_import_mask: a removed module-level import line whose names nothing else binds or
     takes from the module selects the module's own readers of those names."""

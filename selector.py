@@ -644,6 +644,12 @@ def locate(tree, line, c0, c1, precise=True):
     fn_i = None
     for i in range(len(chain) - 1, 0, -1):
         if isinstance(chain[i], FUNC):
+            if isinstance(chain[i], ast.Lambda) and chain[i].lineno == line:
+                # A call of a lambda reports no line event for its first line (its RESUME sits
+                # there, so nothing "moves" to that line): coverage of this line only shows who
+                # created the lambda, never who called it. Judge the edit by what encloses it
+                # (the statement holding a dict entry, or the function creating it).
+                continue
             fn_i = i
             break
     path, cls = [], []
@@ -1306,6 +1312,10 @@ class Hunter:
                 return None   # a module-level string naming it (__all__, getattr): an export
         if self.reexported(rel, names):
             return None
+        for lam in ast.walk(otree):
+            if isinstance(lam, ast.Lambda) and any(
+                    isinstance(n, ast.Name) and n.id in names and n.lineno == lam.lineno for n in ast.walk(lam.body)):
+                return None   # read on a lambda's first line: who calls it is not in the map
         m = 0
         for node in ast.walk(otree):
             if isinstance(node, ast.Name) and node.id in names and isinstance(node.ctx, ast.Load):
