@@ -52,6 +52,19 @@ INST_NARROW = os.environ.get("BR_INST_NARROW", "0") == "1"
 GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
 GENMEM_ID = "tests/test_generator.py::TestGenerator::test_generator_memory"
 GENMEM_MAX_SELECTED = 500
+
+# tpcds result check: test_execute_tpcds (21 s) optimizes 57 TPC-DS queries in pool workers, runs
+# them with the Python executor and compares with DuckDB. When every edit of a patch sits in
+# functions that the test enters only inside optimize() (recorded at build time by
+# build/record_tpcds.py into tpcds-check.json), the patch can reach the test only through
+# optimize()'s result. A subprocess then optimizes and plans the queries on the patched source and
+# hashes the results (plus each plan's generated Python and the DuckDB SQL); an unchanged hash
+# drops the test.
+TPCDS_CHECK = os.environ.get("BR_TPCDS_CHECK", "1") == "1"
+TPCDS_CHECK_FILE = Path(os.environ.get("BR_TPCDS_CHECK_FILE", HERE / "tpcds-check.json"))
+TPCDS_ID = "tests/test_executor.py::TestExecutor::test_execute_tpcds"
+TPCDS_TIMEOUT_S = float(os.environ.get("BR_TPCDS_TIMEOUT", "15"))
+TPCDS_MIN_GAIN_MS = int(float(os.environ.get("BR_TPCDS_MIN_GAIN", "4")) * 1000)   # check: ~2.5 s CPU
 # which sqlglot modules importing each module loads (build/mkimports.py). The targeted probe
 # imports only that subset, which saves CPU but can miss an order-dependent import failure and
 # so bypass #8's import_failure_mask (an over-selection, never an under-selection). It was
@@ -3837,6 +3850,117 @@ def run_probes(jobs, parallel=PROBE_PARALLEL, lazy=None):
     return out
 
 
+# The tpcds check's subprocess (see TPCDS_CHECK): prints one @@BR-TPCDS@@ line with the hash.
+TPCDS_CHECK_CODE = PATCHED_IMPORTS + r'''
+import time as _time
+_t0 = _time.process_time()
+import hashlib, pickle
+try:
+    os.chdir(src)
+    for _m in patched:            # a patched module that fails to import fails the test too
+        importlib.import_module(_m)
+    from sqlglot import exp, find_tables, parse_one, transpile
+    from sqlglot.executor.python import Python
+    from sqlglot.optimizer import optimize
+    from sqlglot.planner import Plan
+    from sqlglot.schema import ensure_schema
+    from tests.helpers import TPCDS_SCHEMA, load_sql_fixture_pairs
+
+    def dump(node, out):
+        if isinstance(node, exp.Expr):
+            out.append("(" + type(node).__name__)
+            for k, v in node.args.items():
+                out.append(k)
+                dump(v, out)
+            out.append("|t")
+            dump(node._type, out)
+            out.append("|m")
+            dump(node._meta, out)
+            out.append("|c")
+            dump(node.comments, out)
+            out.append(")")
+        elif isinstance(node, (list, tuple)):
+            out.append("[" if isinstance(node, list) else "<")
+            for v in node:
+                dump(v, out)
+            out.append("]")
+        elif isinstance(node, dict):
+            out.append("{")
+            for k, v in node.items():
+                dump(k, out)
+                dump(v, out)
+            out.append("}")
+        elif node is None or type(node) in (str, int, float, bool):
+            out.append(type(node).__name__ + ":" + repr(node))
+        else:   # compared by type and repr: anything unexpected can only read as "differs"
+            out.append("?" + type(node).__module__ + "." + type(node).__qualname__ + ":" + repr(node))
+
+    def exprs(value):
+        if isinstance(value, exp.Expr):
+            yield value
+        elif isinstance(value, (list, tuple)):
+            for v in value:
+                yield from exprs(v)
+        elif isinstance(value, dict):
+            for v in value.values():
+                yield from exprs(v)
+
+    def plan_dump(plan, out):
+        """Every step's fields (sorted: the DAG is a set) and the Python the executor's generator
+        writes for each of their expressions."""
+        gen = Python().generator(identify=True, comments=False)
+        steps, seen, todo = [], set(), [plan.root]
+        while todo:
+            step = todo.pop()
+            if id(step) in seen:
+                continue
+            seen.add(id(step))
+            todo.extend(step.dependencies)
+            s = [type(step).__name__, repr(sorted(str(d.name) for d in step.dependencies))]
+            for k, v in sorted(vars(step).items()):
+                if k in ("dependencies", "dependents"):
+                    continue
+                s.append(k)
+                dump(v, s)
+                for e in exprs(v):
+                    try:
+                        s.append(gen.generate(e.copy()))
+                    except Exception as err:
+                        s.append("raise:" + type(err).__name__)
+            steps.append("\x01".join(s))
+        out.extend(sorted(steps))
+
+    h = hashlib.sha256()
+    n = 0
+    for meta, sql, _ in load_sql_fixture_pairs("optimizer/tpc-ds/tpc-ds.sql"):
+        h.update(b"\x00Q" + sql.encode("utf-8", "surrogateescape"))
+        if not meta.get("execute"):
+            continue
+        n += 1
+        out = []
+        expression = pickle.loads(pickle.dumps(parse_one(sql)))   # as mp_execute receives it
+        out.append(repr(sorted(t.name for t in find_tables(expression))))   # a set; the test makes a dict
+        try:
+            optimized = optimize(expression, ensure_schema(TPCDS_SCHEMA, dialect=None),
+                                 leave_tables_isolated=True, dialect=None)
+            dump(optimized, out)
+            plan_dump(Plan(optimized), out)
+        except Exception as e:
+            out.append("raise:" + type(e).__name__)
+        try:
+            out.append(transpile(sql, write="duckdb")[0])
+        except Exception as e:
+            out.append("raise:" + type(e).__name__)
+        h.update("\x00".join(out).encode("utf-8", "surrogateescape"))
+    result = {"fingerprint": h.hexdigest(), "executed": n, "cpu": _time.process_time() - _t0}
+except BaseException as e:
+    result = {"error": repr(e)[:300]}
+sys.stdout.write("\n@@BR-TPCDS@@" + json.dumps(result) + "\n")
+sys.stdout.flush()
+os._exit(0)
+'''
+
+
 def verify_report(files, tests, timeout):
     """{catalogue id: outcome} from running tests ([(id, limit_s)]) on the patched source in a
     fresh interpreter (VERIFY_CODE), or None when the run did not finish and report."""
@@ -4063,6 +4187,226 @@ def verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num):
         selected[cid] = kept
 
 
+def load_tpcds_check():
+    """tpcds-check.json, or None (missing or malformed: the check stays off)."""
+    try:
+        rec = json.loads(TPCDS_CHECK_FILE.read_text(encoding="utf-8"))
+        if rec["version"] != 1 or rec["test"] != TPCDS_ID or not isinstance(rec["fingerprint"], str) or \
+                not isinstance(rec["sources"], dict) or not isinstance(rec["executed"], int):
+            return None
+        rec["outside"] = {rel: {(int(line), str(name)) for line, name in keys}
+                          for rel, keys in rec["outside"].items()}
+        return rec
+    except (OSError, KeyError, TypeError, ValueError, RecursionError, AttributeError):
+        return None
+
+
+_SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.GeneratorExp, ast.ClassDef)
+
+
+def scope_nodes(tree):
+    """Every node of tree that has its own code object, widest span first."""
+    nodes = [n for n in ast.walk(tree) if isinstance(n, _SCOPE_NODES)]
+    nodes.sort(key=lambda n: (n.lineno - n.end_lineno, n.lineno))
+    return nodes
+
+
+def code_key(node):
+    """(co_firstlineno, co_name) of the code object a function, lambda or genexp compiles to."""
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return min([d.lineno for d in node.decorator_list] + [node.lineno]), node.name
+    return node.lineno, "<lambda>" if isinstance(node, ast.Lambda) else "<genexpr>"
+
+
+def line_scopes(nodes, line):
+    """(names, keys) for the code that runs the line: names is the chain of enclosing scopes, keys
+    the code_key of every function, lambda and generator expression on it or around it. None when
+    the line is not inside a function body (a def's header, decorators and defaults run in the
+    enclosing scope), sits in a class defined inside a function, or the function declares
+    global/nonlocal (its effects then outlive its calls)."""
+    found = [n for n in nodes if n.lineno <= line <= n.end_lineno]
+    funcs = [n for n in found if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    if not funcs:
+        return None
+    inner = funcs[-1]
+    if line <= header_end(inner) or any(isinstance(n, ast.ClassDef) for n in found[found.index(inner):]):
+        return None
+    if any(isinstance(x, (ast.Global, ast.Nonlocal)) for x in ast.walk(inner)):
+        return None
+    names = tuple((type(n).__name__, getattr(n, "name", "")) for n in found)
+    return names, {code_key(n) for n in found if not isinstance(n, ast.ClassDef)}
+
+
+def header_end(fn):
+    """Last line holding part of a def's header (arguments, defaults, annotations): a body line
+    shared with it (def f(x=1): return x) is a header line too."""
+    parts = [fn.lineno] + [n.end_lineno for n in ast.walk(fn.args) if hasattr(n, "end_lineno")]
+    if fn.returns is not None:
+        parts.append(fn.returns.end_lineno)
+    return max(parts)
+
+
+def default_edit(onodes, nnodes, oline, nline):
+    """code_key of the function when old line oline and new line nline both sit in the header of
+    the same function and its old and new headers differ only in default values that are literal
+    constants on both sides; else None. A literal default is evaluated once, with no effect, when
+    the def runs; its value is seen only by calls of that function."""
+    def header_fn(nodes, line):
+        fns = [n for n in nodes if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+               and n.lineno <= line <= header_end(n)]
+        return fns[-1] if fns else None
+
+    a, b = header_fn(onodes, oline), header_fn(nnodes, nline)
+    if a is None or b is None or type(a) is not type(b) or a.name != b.name:
+        return None
+    da, db = a.args.defaults + a.args.kw_defaults, b.args.defaults + b.args.kw_defaults
+    if len(a.args.defaults) != len(b.args.defaults) or len(da) != len(db):
+        return None
+    for x, y in zip(da, db):
+        if (x is None) != (y is None):
+            return None
+        if x is not None and ast.dump(x) != ast.dump(y) and                 not (isinstance(x, ast.Constant) and isinstance(y, ast.Constant)):
+            return None
+
+    def shape(fn):
+        args = fn.args
+        return ast.dump(ast.Tuple([*args.posonlyargs, *args.args, *args.kwonlyargs,
+                                   args.vararg or ast.Constant(None), args.kwarg or ast.Constant(None),
+                                   fn.returns or ast.Constant(None), *fn.decorator_list], ast.Load()))
+
+    return code_key(a) if shape(a) == shape(b) else None
+
+
+def tpcds_gate(rec, text, files, source):
+    """True when every edited line of the patch runs only in code the tpcds test never enters
+    outside optimize(): an existing sqlglot module, byte-identical to the recorded source, edited
+    inside function bodies whose code objects (and those of every enclosing function, lambda and
+    genexp) the recording saw only under an optimize() frame, or never."""
+    fps = parse_patch(text)
+    if not fps:
+        return False
+    for fp in fps:
+        rel = fp.old
+        old, new = source(rel), files.get(rel)
+        if old is None or new is None or rec["sources"].get(rel) != source_digest(old):
+            return False
+        try:
+            onodes, nnodes = scope_nodes(ast.parse(old)), scope_nodes(ast.parse(new))
+        except (SyntaxError, ValueError, RecursionError, MemoryError):
+            return False
+        outside = rec["outside"].get(rel, ())
+        changed = list(edits(fp.hunks))
+        if not changed:
+            return False
+        for kind, ol, nl, _, _ in changed:
+            if kind == "replace":
+                key = default_edit(onodes, nnodes, ol, nl)
+                if key is not None:
+                    if key in outside:
+                        return False
+                    continue
+            # an added line goes before old line ol: either neighbour may hold its function
+            olds = [ol] if kind != "add" else [ol - 1, ol]
+            nside = line_scopes(nnodes, nl) if nl is not None else None
+            if nl is not None and nside is None:
+                return False
+            oside = next((s for s in (line_scopes(onodes, line) for line in olds)
+                          if s is not None and (nside is None or s[0] == nside[0])), None)
+            if oside is None or any(k in outside for k in oside[1]):
+                return False
+    return True
+
+
+def tpcds_report(files, timeout, isolate=True, env_extra=None):
+    """The check subprocess's result ({"fingerprint", "executed", "cpu"} or {"error"}) on the
+    patched source, or None when it did not finish and report."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("PYTHON", "BR_"))}
+    env.update(env_extra or {})
+    kw = {"start_new_session": True} if os.name != "nt" else {}
+    cwd = os.environ.get("TMPDIR") or ("/tmp" if os.path.isdir("/tmp") else None)
+    flags = ["-I", "-S"] if isolate else ["-S", "-s", "-P"]
+    payload = json.dumps({"src": str(SRC), "files": files}).encode("utf-8", "surrogateescape")
+    try:
+        p = subprocess.Popen([sys.executable, *flags, "-c", TPCDS_CHECK_CODE], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env, cwd=cwd, **kw)
+    except Exception as e:
+        log("tpcds check could not start:", repr(e))
+        return None
+    try:
+        out, _ = p.communicate(payload, timeout=timeout)
+    except Exception:
+        _kill(p)
+        try:
+            p.communicate(timeout=5)
+        except Exception:
+            pass
+        return None
+    text = out.decode("utf-8", "replace")
+    k = text.rfind("\n@@BR-TPCDS@@")
+    if k < 0:
+        return None
+    try:
+        rep = json.loads(text[k + len("\n@@BR-TPCDS@@"):].strip())
+    except ValueError:
+        return None
+    return rep if isinstance(rep, dict) else None
+
+
+def run_tpcds_reports(jobs, parallel=PROBE_PARALLEL):
+    """jobs: {key: files}, best first -> {key: report or None}, inside the batch budget."""
+    results, order, lock = {}, list(jobs), threading.Lock()
+
+    def worker():
+        while True:
+            with lock:
+                if not order:
+                    return
+                key = order.pop(0)
+            left = remaining() - RESERVE_S
+            rep = tpcds_report(jobs[key], min(TPCDS_TIMEOUT_S, left)) if left >= TPCDS_TIMEOUT_S else None
+            with lock:
+                results[key] = rep
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(min(parallel, len(order)))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(max(0.0, remaining() - RESERVE_S + 6))
+    with lock:
+        return {key: results.get(key) for key in jobs}
+
+
+def tpcds_check(catalog, selected, cands, texts, source, ms_by_num, skip=()):
+    """Drop test_execute_tpcds where the check shows the patch leaves its optimizer results as
+    they are. cands: {commit id: patched files} for patches that only edit existing sqlglot
+    modules; skip: commits whose import probe failed."""
+    num = next((t["number"] for t in catalog if t["id"] == TPCDS_ID), None)
+    rec = load_tpcds_check() if num is not None else None
+    if rec is None:
+        return
+    jobs = []
+    for cid, files in cands.items():
+        nums = selected.get(cid)
+        if nums is None or num not in nums or cid in skip:
+            continue
+        gain = schedule([(n, ms_by_num[n]) for n in nums])[0] - \
+            schedule([(n, ms_by_num[n]) for n in nums if n != num])[0]
+        if gain < TPCDS_MIN_GAIN_MS:
+            continue
+        if not tpcds_gate(rec, texts[cid], files, source):
+            log(cid, "tpcds check: an edit can run outside optimize(), test kept")
+            continue
+        jobs.append((gain, cid, files))
+    jobs.sort(key=lambda j: (-j[0], j[1]))
+    for cid, rep in run_tpcds_reports({cid: files for _, cid, files in jobs}).items():
+        if rep is not None and rep.get("fingerprint") == rec["fingerprint"] and \
+                rep.get("executed") == rec["executed"]:
+            selected[cid].discard(num)
+            log(cid, f"tpcds check: optimizer results unchanged, test dropped ({rep.get('cpu', 0):.2f}s CPU)")
+        else:
+            log(cid, "tpcds check: results differ or no report, test kept", (rep or {}).get("error", ""))
+
+
 def drop_genmem(selected, direct, import_broken=(), genmem_num=None):
     """R6 (pp2.py): drop test_generator_memory from small selections unless line or file
     coverage selected it directly. `direct` maps commit id -> that direct-coverage evidence.
@@ -4105,7 +4449,7 @@ def main():
         return nums
 
     selected, probes, lazy_pending, verify_files, parts = {}, {}, set(), {}, {}
-    texts, import_broken = {}, set()
+    texts, import_broken, tpcds_cands = {}, set(), {}
     for p in patches:
         cid = p.stem
         try:
@@ -4127,6 +4471,7 @@ def main():
                     lazy_pending.add(cid)
             if hunter.verify_files is not None:
                 verify_files[cid] = hunter.verify_files
+                tpcds_cands[cid] = hunter.verify_files
         except Exception as e:
             log(cid, "hunter failed, catcher runs everything:", repr(e))
             selected[cid] = None
@@ -4174,6 +4519,12 @@ def main():
             verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num)
         except Exception as e:   # the selections stand as they are
             log("verification failed, selections kept:", repr(e))
+
+    if TPCDS_CHECK and hunter is not None and tpcds_cands:
+        try:
+            tpcds_check(catalog, selected, tpcds_cands, texts, hunter.source, ms_by_num, import_broken)
+        except Exception as e:   # the selections stand as they are
+            log("tpcds check failed, selections kept:", repr(e))
 
     if GENMEM_DROP and hunter is not None:
         # by id, not by number: another catalogue may number it differently. Absent from the
