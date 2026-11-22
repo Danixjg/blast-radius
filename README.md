@@ -50,7 +50,7 @@ widens to a safe superset whenever that reasoning runs out.
 | Edit lands in | Tests selected |
 | --- | --- |
 | a statement inside a function | tests that ran it (compound statements: the header) |
-| a lambda | tests that ran the lambda |
+| a lambda | tests that ran the lambda; on the lambda's **first line**, what encloses it decides (the statement holding the dict entry, or the function creating the lambda): a call of a lambda reports no `sys.monitoring` line event for that line, so its coverage only names whoever created the lambda (for `FUNCTIONS`/`TRANSFORMS` entries, the import) |
 | a signature, decorator or new line in a function | tests that ran the function |
 | the value of an existing entry of a literal dict, with side-effect-free old and new values (constants, names, attribute chains, lambdas, closure-factory calls) | tests the profile saw reading that entry (plus unobserved tests); the import is probed only when building the new value could raise (a name or attribute), since a trusted entry is read by nothing while modules import |
 | a file whose AST is unchanged (comments, layout, quoting, literal spelling `0x10`/`16`, parentheses, line breaks) | nothing: Python compiles the same program |
@@ -148,19 +148,24 @@ See [RESULTS.md](RESULTS.md) for every number and how it was produced. Simulated
 official scorer. The public sample was also run in the real linux/amd64 image under the official
 limits; the other sets were measured with the Windows emulation of that image.
 
-| set | baseline+probes (`3fd38f7`, Windows copy-based probes) | frozen (`c8a81ea`) | rev3 (`fcc7d3a`) | this version |
-| --- | --- | --- | --- | --- |
-| public sample (30, oracle 94.351) | 121.100 / 0 | 109.549 / 0 | 118.245 / 0 | 97.076 / 0 |
-| holdout 1 (66, independent labels) | 1795.553 / 4 | 701.636 / 0 | 776.358 / 0 | 654.997 / 0 |
-| holdout 2 unique (61) | 824.964 / 1 | 885.072 / 1 | 693.460 / 0 | 534.169 / 0 |
-| validation (27, aimed at rev3's two fixes) | 3349.836 / 11 | 3349.836 / 11 | 868.992 / 0 | 867.704 / 0 |
-| same-program edits (10, hand-built rule demos: layout, literal spelling, docstrings, annotations, `TYPE_CHECKING`) | - | - | 266.486 / 0 | 0.000 / 0 |
-| unread additions (5, hand-built rule demos: new functions, annotations, `pyproject.toml`) | - | - | 130.542 / 0 | 0.000 / 0 |
-| independent holdout (66, seed 8675309, labelled after freeze) | - | - | 670.708 / 0 | 571.500 / 0 |
-| independent holdout (65, seed 271828, frozen merged artifact) | - | - | 619.830 / 0 | 491.085 / 0 |
+| set | rev3 (`fcc7d3a`) | main (`08aeb05`, #6 + #7) | this version |
+| --- | --- | --- | --- |
+| public sample (30, oracle 94.351) | 118.245 / 0 | 97.076 / 0 | 97.076 / 0 |
+| holdout 1 (66, independent labels) | 776.358 / 0 | 618.608 / 0 | 551.231 / 0 |
+| holdout 2 (65) | 741.078 / 0 | 545.397 / 0 | 464.316 / 0 |
+| holdout 2 unique (61) | 693.460 / 0 | 534.169 / 0 | 453.088 / 0 |
+| validation (27, aimed at rev3's two fixes) | 868.992 / 0 | 867.704 / 0 | 858.341 / 0 |
+| same-program edits (10, hand-built rule demos) | 266.486 / 0 | 0.000 / 0 | 0.000 / 0 |
+| unread additions (5, hand-built rule demos) | 130.542 / 0 | 0.000 / 0 | 0.000 / 0 |
+| independent holdout (65, seed 271828, labelled after freeze) | 619.830 / 0 | 491.085 / 0 | 434.951 / 0 |
+| independent holdout (66, seed 314159, labelled after freeze) | 644.613 / 0 | 501.325 / 0 | 465.185 / 0 |
+| one-line lambda edits (30, structure-chosen, labelled after freeze) | - | **8656.711 / 28** | 520.328 / 0 |
+| import failures (30, structure-chosen, labelled after freeze) | - | 1104.510 / 0 | 546.717 / 0 |
+| removed import lines (30, structure-chosen, labelled after freeze) | - | 1019.419 / 0 | 341.554 / 0 |
+| class attributes of lazily imported dialects (30, structure-chosen) | - | 764.184 / 0 | 292.756 / 0 |
 
-A third, pre-merge holdout (seed 42424242) scored 799.615 → 610.261 s with 0 misses; see
-[RESULTS.md](RESULTS.md).
+The reviewer's holdouts (seeds 8675309 and 42424242) scored 571.500 and 610.261 s with 0 misses
+before #7 and were not rerun here; see [RESULTS.md](RESULTS.md).
 
 The two hand-built sets were constructed to contain the edit categories the new rules excuse. They
 show the rules fire, but they are **not held-out evidence**; the independent check is the fresh-
