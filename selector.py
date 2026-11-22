@@ -68,6 +68,10 @@ VERIFY_UNSAFE_FILES = {
     "tests/test_sqlglotc.py", "tests/test_integration_loader.py",   # files outside the image
     "tests/test_dialect_entry_points.py", "tests/test_dialect_imports.py",   # rewrite global registries
 }
+# is/== swaps: drop tests that ran the line but short-circuited before the comparison (see
+# eq_swap_mask). Validated on 24 swap sites chosen by structure alone (an and/or operand after the
+# first, profiled, short-circuiting tests), labelled by full-suite runs: none breaks a test.
+EQ_SHORT_CIRCUIT = os.environ.get("BR_EQ_SHORT_CIRCUIT", "1") == "1"
 # tracemalloc counts every thread's allocations: under pytest-xdist the worker's I/O thread makes
 # this test fail whenever many other tests fail, which a run here cannot reproduce
 VERIFY_UNSAFE_TESTS = {"tests/test_generator.py::TestGenerator::test_generator_memory"}
@@ -372,27 +376,37 @@ def changed_cols(a, b):
     return p, max(p + 1, len(a) - s)
 
 
-def compile_check(new_bytes, rel):
+def compile_check(new_bytes, rel, tree=None):
     """(tree, problem): parse and fully compile the patched file the way the interpreter would
     import it (BOM, coding cookie, symbol table and code generation errors included), and make sure
-    the text this module analyses is the text Python will run."""
+    the text this module analyses is the text Python will run. `tree`, when given, is
+    ast.parse(new_bytes) already done by the caller."""
     try:
-        tree = ast.parse(new_bytes, rel)
+        if tree is None:
+            tree = ast.parse(new_bytes, rel)
         compile(tree, rel, "exec", dont_inherit=True)
     except (SyntaxError, ValueError, UnicodeError, MemoryError, RecursionError) as e:
         return None, f"does not compile: {e!r}"[:200]
+    problem = decoding_problem(new_bytes)
+    return (None, problem) if problem else (tree, None)
+
+
+def decoding_problem(new_bytes):
+    """Why Python's decoding of the patched bytes (coding cookie) differs from the UTF-8 text this
+    module analyses line by line, or None. Line-based reasoning (unchanged lines mean unchanged
+    code) only holds when the two agree."""
     try:
         enc, _ = tokenize.detect_encoding(io.BytesIO(new_bytes).readline)
     except SyntaxError as e:
-        return None, f"bad encoding declaration: {e!r}"[:200]
+        return f"bad encoding declaration: {e!r}"[:200]
     if enc not in ("utf-8", "utf-8-sig") and not new_bytes.isascii():
         try:
             as_python = new_bytes.decode(enc)
         except (LookupError, UnicodeError):
-            return None, "undecodable"
+            return "undecodable"
         if as_python.lstrip("\ufeff") != new_bytes.decode("utf-8", "surrogateescape").lstrip("\ufeff"):
-            return None, f"declared encoding {enc} changes the source text"
-    return tree, None
+            return f"declared encoding {enc} changes the source text"
+    return None
 
 
 # Swapping `is` <-> `==` (or `is not` <-> `!=`) is only harmless when, for the operands that
@@ -889,20 +903,33 @@ class Hunter:
         if new is None:
             log(rel, "patch does not apply: catcher takes all")
             return self.ALL
-        ntree, problem = compile_check(new.encode("utf-8", "surrogateescape"), rel)
-        if problem:
+        new_bytes = new.encode("utf-8", "surrogateescape")
+        problem = decoding_problem(new_bytes)
+        if problem:   # before any line-based shortcut: unchanged lines may now mean other text
             log(rel, problem)
             return self.broken_file(rel)
         otree = self.tree(rel)
-        if otree is None:
-            return self.ALL
         changes = line_map(fp.hunks)
         self._nchanged, self._fresh_memo = changes[1], {}
         try:
+            ptree = ast.parse(new_bytes, rel)   # Python's own decoding of the bytes (BOM, cookie)
+        except (SyntaxError, ValueError, UnicodeError, MemoryError, RecursionError):
+            ptree = None
+        try:
             # comments, layout, quoting, literal spelling, parentheses: Python compiles the same
-            # program (only line numbers move, which no test observes), nothing runs differently
-            if same_ast(otree, ntree, changes):
+            # program (only line numbers move, which no test observes), nothing runs differently;
+            # the pristine module compiles, so this one does too and needs no compile of its own
+            if otree is not None and ptree is not None and same_ast(otree, ptree, changes):
                 return 0
+        except RecursionError:
+            pass
+        ntree, problem = compile_check(new_bytes, rel, ptree)
+        if problem:
+            log(rel, problem)
+            return self.broken_file(rel)
+        if otree is None:
+            return self.ALL
+        try:
             # docstrings, postponed annotations, TYPE_CHECKING-only code: what changes is data
             # nothing in sqlglot reads (__doc__, __annotations__), so only code reading it can tell
             (of, otc), (nf, ntc) = runtime_facts(otree), runtime_facts(ntree)
@@ -1195,9 +1222,24 @@ class Hunter:
             if not self._swap_preserves(fact, negated):
                 bad |= mask
         ran = self.span_mask(rel, line, line)
+        unseen = ran & ~seen
+        if unseen and EQ_SHORT_CIRCUIT and self._after_first_operand(otree, node):
+            # The comparison follows the first operand of an and/or chain on its line. A test that
+            # ran the line in both recorded orders without the recorder ever seeing it evaluate the
+            # comparison short-circuited before it; the swap cannot reach that test.
+            unseen = 0
         # kept: tests with an operand fact the swap changes, tests that ran the line but were
         # never seen evaluating it, and tests whose instrumented run took a different path
-        return bad | (ran & ~seen) | (ran & self.unobserved)
+        return bad | unseen | (ran & self.unobserved)
+
+    @staticmethod
+    def _after_first_operand(tree, node):
+        """node is a direct operand, after the first, of an `and`/`or` chain."""
+        for n in ast.walk(tree):
+            if isinstance(n, ast.BoolOp) and n.lineno <= node.lineno <= n.end_lineno:
+                if any(v is node for v in n.values[1:]):
+                    return True
+        return False
 
     @staticmethod
     def _swap_preserves(fact, negated):

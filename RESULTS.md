@@ -141,6 +141,60 @@ are not seed-specific. 66 patches, 40 breaking, pristine `complete` with 0 failu
 | rev3 (`fcc7d3a`) | 799.615 | 0 |
 | pre-merge version | 610.261 | 0 |
 
+## Third independent holdout (frozen follow-up artifact)
+
+PR #7's code was frozen before this set existed: commit `209864a`, `selector.py` SHA-256
+`2647cb4306b4f68e27a9375ad24f8f2bdb673c2361b5745356b5e794818a9a13`, same `profile.pkl` as above.
+Then `build/holdout.py --seed 314159 --n 66` generated the set, and `build/label.py` ran the full
+suite per patch. The pristine run had 0 failures, and all 66 patches were `complete` (39 breaking):
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 644.613 | 0 |
+| #6 (`caa13a4`) | 501.325 | 0 |
+| #7, short-circuit rule and compile skip (`209864a`) | 501.325 | 0 |
+
+That is a 22.2 % reduction with no misses. The oracle is 210.215 s. No swap in this set sits behind
+an `and`/`or`, so the follow-up's rule leaves it unchanged. Across the three independent holdouts
+(seeds 8675309, 271828, 314159, all frozen first), the reduction against rev3 is 14.8 %, 20.8 % and
+22.2 %, with zero misses on each.
+
+## Short-circuited `is`/`==` swaps (follow-up to the frozen branch)
+
+For an `is`↔`==` swap with profile evidence, the selector keeps three groups:
+
+- tests with an operand fact the swap changes;
+- unobserved tests;
+- tests that ran the line but were never seen evaluating the comparison.
+
+An audit over every labelled swap found the third group non-empty only at
+`tokenizer_core.py:793` (`if self._comments and token_type == TokenType.SEMICOLON and
+self.tokens:`). There, 1,520 tests ran the line and only short-circuited at `self._comments`; none
+failed. The narrowing is semantic: if the comparison follows the first operand of an `and`/`or`
+chain, a test that ran the line in both recorded orders without ever evaluating it short-circuited
+before it, and the swap cannot reach it. Tests with changing facts and unobserved tests stay.
+
+Because that rule came from one case, it was validated on sites chosen by structure alone. A
+script picked 24 swap sites (seed 4242): profiled; an `and`/`or` operand after the first; at least
+5 short-circuiting tests; no fact the swap changes; at most two per file. One of the 24 is the site
+above, so it is in-sample. Each was swapped and labelled by full-suite runs. All 24 were `complete`
+with **zero failures**, so no short-circuiting test failed anywhere.
+
+| set | rule off | rule on | misses |
+| --- | ---: | ---: | ---: |
+| structural swap set (24) | 281.755 | 113.179 | 0 / 0 |
+| holdout 1 (66) | 654.997 | 618.608 | 0 / 0 |
+| holdout 2, holdout 4, validation 3, sample, feature, fresh | unchanged | unchanged | 0 / 0 |
+
+On four of the 24, the edited line holds two comparisons (`… is True and … is True`). The swap
+cannot be pinned to one comparison with profile evidence, so line coverage applies as before.
+
+The same follow-up skips the full compile of a patched module whose AST equals the pristine one
+(comments, layout, literal spelling). The decoding check runs first: the existing latin-1 cookie
+test caught a first version where unchanged lines were assumed to mean unchanged text. The
+selector process's own CPU on the sample (Windows, median of 5) went from 0.312 to 0.281 s, with
+identical selections on every set.
+
 ## Adversarial checks
 
 Targeted tests were added for the three rules most likely to be overfitted:
