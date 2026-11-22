@@ -1424,7 +1424,10 @@ class Hunter:
 
         if not hasattr(self, "_order_sites"):
             self._order_sites = load_order_boundaries(self.d["tests"])
-        row = self._order_sites.get(rel, {}).get(str(old_line))
+        entry = self._order_sites.get(rel)
+        if entry is None or source_digest(source) != entry[0]:
+            return 0   # no record, or recorded against other source: line numbers may not match
+        row = entry[1].get(str(old_line))
         if not isinstance(row, list) or len(row) != 2:
             return 0
         try:
@@ -3978,12 +3981,37 @@ def load_import_site_index():
         return None
 
 
+def catalogue_numbers(hunter, catalog):
+    """(idx_to_num, unmapped) for this catalogue. Every Hunter caller (main(), build/validate.py)
+    goes through here, so a rule that depends on whether the catalogue has unmapped tests (the
+    order-boundary drop) behaves the same in replays as in the shipped selector."""
+    num_of = {t["id"]: t["number"] for t in catalog}
+    idx_to_num = [num_of.get(tid) for tid in hunter.d["tests"]]
+    known = {n for n in idx_to_num if n is not None}
+    unmapped = [t["number"] for t in catalog if t["number"] not in known]
+    hunter.order_boundary_has_unmapped = bool(unmapped)
+    return idx_to_num, unmapped
+
+
+def source_digest(data):
+    """sha256 of a source file's exact bytes (str: as Hunter.source decoded them)."""
+    import hashlib
+    if isinstance(data, str):
+        data = data.encode("utf-8", "surrogateescape")
+    return hashlib.sha256(data).hexdigest()
+
+
 def load_order_boundaries(tests):
-    """Optional pristine observations. Missing or invalid records cannot narrow selection."""
+    """Optional pristine observations: {rel: (sha256 of the recorded source, {line: row})}.
+    Sites are keyed by line number, so each file's rows apply only while its source is
+    byte-identical to the one recorded. Missing or invalid records cannot narrow selection."""
     try:
         profile = json.loads(ORDER_BOUNDARIES.read_text(encoding="utf-8"))
-        if profile["version"] == 1 and profile["tests"] == tests and isinstance(profile["sites"], dict):
-            return {rel: rows for rel, rows in profile["sites"].items() if isinstance(rows, dict)}
+        sites, sources = profile["sites"], profile["sources"]
+        if profile["version"] == 2 and profile["tests"] == tests and isinstance(sites, dict) and \
+                isinstance(sources, dict):
+            return {rel: (sources[rel], rows) for rel, rows in sites.items()
+                    if isinstance(rows, dict) and isinstance(sources.get(rel), str)}
     except (OSError, KeyError, TypeError, ValueError, RecursionError):
         pass
     return {}
@@ -4061,11 +4089,7 @@ def main():
     try:
         data = load_map()
         hunter = Hunter(data, load_profile(data["tests"]))
-        num_of = {t["id"]: t["number"] for t in catalog}
-        idx_to_num = [num_of.get(tid) for tid in data["tests"]]
-        known = {n for n in idx_to_num if n is not None}
-        unmapped = [n for n in all_nums if n not in known]
-        hunter.order_boundary_has_unmapped = bool(unmapped)
+        idx_to_num, unmapped = catalogue_numbers(hunter, catalog)
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
 

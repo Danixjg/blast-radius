@@ -22,6 +22,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PIN = "eb11aec4be8cb2122afe713a4816662c3f0fb2fa"
+sys.path.insert(0, str(ROOT))
+from selector import source_digest  # noqa: E402   # the selector checks these digests at run time
 
 
 def check_checkout(source):
@@ -50,6 +52,14 @@ def load_map(path):
     except zlib.error:
         pass
     return pickle.loads(raw)
+
+
+def bind_sources(profile, source):
+    """Version 2: record the pin and the sha256 of every file that has sites. Sites are keyed by
+    line number; the selector applies a file's rows only while its source has the same digest."""
+    sources = {rel: source_digest((source / rel).read_bytes()) for rel in profile["sites"]}
+    return {"version": 2, "sqlglot": PIN, "tests": profile["tests"], "sources": sources,
+            "sites": profile["sites"]}
 
 
 def make_profile(observations, coverage, tests):
@@ -98,11 +108,21 @@ def main():
     ap.add_argument("--map", default=ROOT / "map.pkl", type=Path)
     ap.add_argument("--output", default=ROOT / "order-boundaries.json", type=Path)
     ap.add_argument("--reuse-observations", action="store_true", help="merge the completed run in --scratch")
+    ap.add_argument("--bind-existing", action="store_true",
+                    help="upgrade an existing version 1 --output to version 2 without re-recording")
     args = ap.parse_args()
     if sys.version_info[:2] != (3, 13):
         raise SystemExit("use Python 3.13 with the kit's locked test dependencies")
     source = args.sqlglot.resolve()
     check_checkout(source)
+    if args.bind_existing:
+        old = json.loads(args.output.read_text(encoding="utf-8"))
+        if old.get("version") != 1:
+            raise SystemExit("--bind-existing expects a version 1 profile")
+        profile = bind_sources(old, source)
+        args.output.write_text(json.dumps(profile, separators=(",", ":")) + "\n", encoding="utf-8")
+        print(f"bound {len(profile['sources'])} files -> {args.output}")
+        return
     scratch = args.scratch.resolve()
     scratch.mkdir(exist_ok=True, parents=True)
     observations = scratch / "observations.json"
@@ -110,6 +130,7 @@ def main():
         record(source, scratch, observations)
     tests = [test["id"] for test in json.loads(args.tests.read_text(encoding="utf-8"))["tests"]]
     profile = make_profile(json.loads(observations.read_text(encoding="utf-8")), load_map(args.map), tests)
+    profile = bind_sources(profile, source)
     if not profile["sites"]:
         raise SystemExit("refusing to publish an empty boundary profile")
     pending = args.output.with_suffix(args.output.suffix + ".tmp")

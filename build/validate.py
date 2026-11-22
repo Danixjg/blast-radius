@@ -40,9 +40,8 @@ def main():
         cat = json.loads((data_dir / "tests.json").read_text(encoding="utf-8"))["tests"]
         num_of = {t["id"]: t["number"] for t in cat}
         ms = {t["number"]: math.floor(t["seconds"] * 1000 + 0.5) for t in cat}
-        idx_to_num = [num_of.get(t) for t in data["tests"]]
-        known = {n for n in idx_to_num if n is not None}
-        unmapped = [n for n in num_of.values() if n not in known]
+        # same helper as selector.main(): also sets the unmapped guard the order-boundary drop reads
+        idx_to_num, unmapped = S.catalogue_numbers(h, cat)
         answers = json.loads(ans_path.read_text(encoding="utf-8"))["commits"]
         total = misses = 0
         for cid, ans in sorted(answers.items()):
