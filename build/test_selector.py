@@ -562,6 +562,8 @@ class TargetedProbe(unittest.TestCase):
 
     def setUp(self):
         self.saved = (S.PROBE_IMPORTS, S.PROBE_TARGETED)
+        # This class tests the opt-in targeted path explicitly, whatever the shipped default is.
+        S.PROBE_TARGETED = True
         S._PROBE_FWD = None
 
     def tearDown(self):

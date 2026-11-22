@@ -49,9 +49,12 @@ INST_NARROW = os.environ.get("BR_INST_NARROW", "1") == "1"
 GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
 GENMEM_NUM = 1224
 GENMEM_MAX_SELECTED = 500
-# which sqlglot modules importing each module loads (build/mkimports.py); the targeted probe
+# which sqlglot modules importing each module loads (build/mkimports.py). The targeted probe
+# imports only that subset, which saves CPU but can miss an order-dependent import failure and
+# so bypass #8's import_failure_mask (an over-selection, never an under-selection). It was
+# validated on targeted-probes, which has no #8; keep it opt-in until checked on main's rule.
 PROBE_IMPORTS = Path(os.environ.get("BR_PROBE_IMPORTS", HERE / "probe_imports.json"))
-PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "1") == "1"
+PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "0") == "1"
 WORKER_MS = 2000
 MAX_WORKERS = 8
 # The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
