@@ -396,3 +396,29 @@ Still emulated rather than run in Docker: the holdouts, validation, feature and 
 Windows comparison versions. Their CPU figures are Windows process-tree CPU and are not comparable
 to the container's cgroup CPU. If the image's packages ever differ from the pinned versions, the
 verifier refuses to run (version check) and selections stand.
+
+## R5 and R6: fresh-seed validation
+
+R5 (narrow the import-time class-attribute fallback to `readers ∩ instantiators`, only when the
+changed statement contains no `Call`/`Lambda`) and R6 (drop `test_generator_memory` from selections
+of at most 500 tests unless line/file coverage selected it directly) were implemented exactly as
+`driver7.py` and `pp2.py`, with tests first. The frozen artifact is `selector.py` SHA-256
+`9ea331dddd4f730e49d9bd9af2d8287301f1389cb1a53c7b47409b7586316a7c`, map `0bbff6ad…`, profile
+`735e6730…`; no source changed after hashing. Both rules were scored alone and together on the five
+committed sets and three independently labelled fresh seeds (`8675309`, `42424242`, `314159`).
+Every run had **0 misses**, including each rule separately, so both are enabled by default.
+Simulated seconds, current branch before → after:
+
+| set | before | after | Δ |
+| --- | ---: | ---: | ---: |
+| sample | 97.076 | 97.076 | 0 |
+| holdout1 | 573.956 | 546.062 | −27.894 |
+| holdout2 | 449.843 | 399.695 | −50.148 |
+| holdout2u | 438.615 | 388.467 | −50.148 |
+| mutants | 927.443 | 854.858 | −72.585 |
+| seed 314159 | 433.721 | 390.230 | −43.491 |
+| seed 8675309 | 549.778 | 525.371 | −24.407 |
+| seed 42424242 | 587.043 | 538.532 | −48.511 |
+
+Docker `make sample` on the frozen artifact: 97.076 s / 0 misses; `make measure` median total
+99.54 s (CPU 2.28–2.56 s).
