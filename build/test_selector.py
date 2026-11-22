@@ -712,6 +712,11 @@ class FailedImports(Base):
             self.assertIn(t, ids, "bulk dialect loaders reach any dialect module")
         self.assertLess(len(ids), len(DATA["tests"]) // 4)
 
+    def test_dynamic_typing_import_failure_keeps_source_reader(self):
+        # TestTyping reads each source to find its parent, then imports the module by name.
+        ids = self.ids(self.h.import_failure_mask(["sqlglot.typing.redshift"]))
+        self.assertIn("tests/test_typing.py::TestTyping::test_no_redundant_expression_metadata", ids)
+
     def test_module_level_import_in_a_test_module_fails_its_importers(self):
         # tests/dialects/test_dialect.py does `from sqlglot.dialects import BigQuery, Hive, Snowflake,
         # Spark2` at module level, and every dialect test module imports its Validator

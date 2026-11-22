@@ -1,5 +1,28 @@
 # Results
 
+## Build-time import index (follow-up to the import-time rules)
+
+The image build writes `/app/import-sites.json`: where the pinned sources import each sqlglot module
+(import statements under every module they may import, lazy package attributes, and imports by
+computed name under their constant target, their constant prefix, their package's lazy table, or
+for any module). When a patched import fails, the selector looks the failed modules up instead of
+scanning and parsing the source tree; without a valid index for this source tree it rebuilds the
+same index in-process. It also keeps tests that opened a failed module's source file (from the
+first version of this index, `c6ce054`); with the computed-name rule in place this adds no test on
+any labelled set.
+
+Selections are **byte-identical** to the source-scanning selector on all 15 labelled sets (512
+commits) and on the fresh import-failure set (30). Windows process-tree CPU, same packaging,
+`map.pkl`, `profile.pkl` and interpreter, three alternating runs per version (`build/bench.py`; a
+labelling job was running at the same time, so absolute times are high):
+
+| set | source scan, median CPU (runs) | index, median CPU (runs) | simulated | misses |
+| --- | ---: | ---: | ---: | ---: |
+| 30 import failures (`work/impval`) | 56.281 s (50.219-59.656) | 19.328 s (18.891-19.438) | 517.671 | 0 / 0 |
+| public sample (30) | 2.422 s (2.312-2.844) | 2.297 s (2.281-2.688) | 97.076 | 0 / 0 |
+
+About 1.2 s of CPU less per commit whose probe fails; no change elsewhere.
+
 Simulated numbers were measured on **Windows 11** and are exact; the public sample of this round was
 also run in the real linux/amd64 Docker image under the official limits (see below). Windows runs use
 `build/bench.py`/`build/compare.py`: the selector runs from an `/app`

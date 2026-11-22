@@ -40,6 +40,8 @@ DATA = Path(os.environ.get("BR_DATA", "/data"))
 SRC = Path(os.environ.get("BR_SRC", HERE / "src"))
 MAP = Path(os.environ.get("BR_MAP", HERE / "map.pkl"))
 PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
+IMPORT_SITE_INDEX = Path(os.environ.get("BR_IMPORT_SITE_INDEX", HERE / "import-sites.json"))
+IMPORT_SITE_INDEX_VERSION = 2
 WORKER_MS = 2000
 MAX_WORKERS = 8
 # The batch must finish inside the run's wall limit (3 min practice, 4.5 min final). Probes only
@@ -601,20 +603,23 @@ def _dynamic_imports(tree, module):
     return out
 
 
+def _import_base(st, rel):
+    """Absolute module named by a from-import in rel."""
+    if not st.level:
+        return st.module or ""
+    pkg = module_of(rel) if rel.endswith("/__init__.py") else module_of(rel).rpartition(".")[0]
+    parts = pkg.split(".")
+    pkg = ".".join(parts[:len(parts) - st.level + 1])
+    return pkg + ("." + st.module if st.module else "")
+
+
 def _imported_modules(st, rel):
     """Module names an import statement imports (or may: `from P import N` imports P.N when N is
     a submodule, and sqlglot.dialects maps a dialect name N to the module P.<n lowercased>)."""
     if isinstance(st, ast.Import):
         names = [a.name for a in st.names]
-        base = None
     else:
-        if st.level:
-            pkg = module_of(rel) if rel.endswith("/__init__.py") else module_of(rel).rpartition(".")[0]
-            parts = pkg.split(".")
-            pkg = ".".join(parts[:len(parts) - st.level + 1])
-            base = pkg + ("." + st.module if st.module else "")
-        else:
-            base = st.module or ""
+        base = _import_base(st, rel)
         names = [base] + [f"{base}.{a.name}" for a in st.names] + [f"{base}.{a.name.lower()}" for a in st.names]
     out = set()
     for n in names:
@@ -1409,7 +1414,10 @@ class Hunter:
         bulk = False
         for mod in F:
             rel = mod.replace(".", "/")
-            m |= self.file_mask(rel + ".py") | self.file_mask(rel + "/__init__.py") | self.group_mask(rel + ".py")
+            for path in (rel + ".py", rel + "/__init__.py"):
+                # Some tests read a source before dynamically importing its module.
+                m |= self.file_mask(path) | self.d["opens"].get(path, 0)
+            m |= self.group_mask(rel + ".py")
             prefix = mod + ":"
             for k, v in self.classes.items():
                 if k.startswith(prefix):
@@ -1473,68 +1481,76 @@ class Hunter:
             self._bulk = m
         return self._bulk
 
-    def import_sites(self, F):
-        """Tests that execute an import statement naming a module of F (see import_failure_mask)."""
-        direct, by_parent = [], []
-        for mod in F:
-            parent, _, leaf = mod.rpartition(".")
-            direct.append(re.compile(r"\bimport\s+%s\b|\bfrom\s+%s\s+import\b" % (re.escape(mod), re.escape(mod))))
-            # `from parent import name`: a submodule, or a name the package's lazy __getattr__
-            # resolves to this module (sqlglot.dialects: the name lowercased; sqlglot.optimizer:
-            # its _LAZY_ATTRS table)
-            names = {leaf} | {n.lower() for n, mods in self.lazy_attr_modules(parent).items() if mod in mods}
-            by_parent.append((re.compile(r"\bfrom\s+%s\s+import\s+(\([^)]*\)|[^\n]*)" % re.escape(parent)), names))
-        dynamic = re.compile(r"\b(?:%s)\s*\(" % "|".join(map(re.escape, DYNAMIC_IMPORTS)))
-        hits = set()
+    def build_import_site_index(self):
+        """Where the pristine sources import each sqlglot module, for import_sites:
+        {"sites": {module: [(file, scope, first, last)]}, "prefix": [(prefix, file, scope, first, last)],
+         "any": [(file, scope, first, last)]}. Import statements count under every module they may
+        import (submodules, lazy package attributes); calls importing by computed name count under
+        their constant target, under a constant prefix, under the modules of the package's own lazy
+        table (inside that package's __init__), or for any module. TYPE_CHECKING blocks are left out."""
+        sites, prefix, anywhere = {}, [], []
         for rel in self.py_files():
-            text = self.source(rel)
-            if not text:
-                continue
-            if any(p.search(text) for p in direct) or dynamic.search(text) or any(
-                    any(n.split(" as ")[0].strip().lower() in names for n in mt.group(1).strip("()").split(","))
-                    for p, names in by_parent for mt in p.finditer(text)):
-                hits.add(rel)
-        m = 0
-        for rel in sorted(hits):
             tree = self.tree(rel)
             if tree is None:
-                return self.ALL
-            sites = []
+                raise ValueError(f"cannot read or parse pristine import source {rel}")
             for st, scope in _imports(tree):
+                if scope == "type_checking":
+                    continue
                 mods = _imported_modules(st, rel)
-                if isinstance(st, ast.ImportFrom) and not st.level and st.module:
-                    lazy = self.lazy_attr_modules(st.module)
+                if isinstance(st, ast.ImportFrom):
+                    lazy = self.lazy_attr_modules(_import_base(st, rel))
                     for a in st.names:
-                        mods |= lazy.get(a.name, set())
-                if mods & F:
-                    sites.append((st, scope))
-            # imports by computed name (a package walk importing each module, the dialect registry,
-            # lazy package attributes, deserialization by module path): a call whose name can be one
-            # of F counts like an import statement naming it
+                        mods.update(lazy.get(a.name, ()))
+                row = (rel, scope, st.lineno, st.end_lineno)
+                for mod in mods:
+                    if mod == "sqlglot" or mod.startswith("sqlglot."):
+                        sites.setdefault(mod, []).append(row)
             lazy_targets = None
             if rel.endswith("/__init__.py"):   # a package's own lazy __getattr__: its table's modules
                 lazy_targets = set().union(*self.lazy_attr_modules(module_of(rel)).values()) or None
             for call, scope, tgt in _dynamic_imports(tree, module_of(rel)):
-                if tgt[0] == "any" and lazy_targets is not None:
-                    hit = bool(lazy_targets & F)
-                else:
-                    hit = tgt[0] == "any" or (tgt[0] == "exact" and tgt[1] in F) or \
-                        (tgt[0] == "prefix" and any(f.startswith(tgt[1]) for f in F))
-                if hit:
-                    sites.append((call, scope))
-            for st, scope in sites:
                 if scope == "type_checking":
                     continue
-                if scope == "function":
-                    m |= self.span_mask(rel, st.lineno, st.end_lineno)
-                elif rel.startswith("tests/"):
-                    d, base = os.path.dirname(rel), os.path.basename(rel)
-                    if base in ("conftest.py", "__init__.py"):
-                        m |= self.scope_tests(d)
-                    else:
-                        m |= self.file_tests.get(rel, 0) | self.importers_of_test_module(rel)
+                row = (rel, scope, call.lineno, call.end_lineno)
+                if tgt[0] == "any" and lazy_targets is not None:
+                    for mod in lazy_targets:
+                        sites.setdefault(mod, []).append(row)
+                elif tgt[0] == "exact":
+                    sites.setdefault(tgt[1], []).append(row)
+                elif tgt[0] == "prefix":
+                    prefix.append((tgt[1],) + row)
                 else:
-                    m |= self.file_mask(rel) | self.inst_mask(rel, ())   # a guarded import in sqlglot
+                    anywhere.append(row)
+        return {"sites": sites, "prefix": prefix, "any": anywhere}
+
+    def import_sites(self, F):
+        """Tests that execute an import statement or call naming a module of F (see
+        import_failure_mask), from the build-time index (built here if missing or stale)."""
+        if not hasattr(self, "_import_site_index"):
+            try:
+                index = load_import_site_index()
+                self._import_site_index = self.build_import_site_index() if index is None else index
+            except Exception as e:
+                log("import site index unavailable:", repr(e))
+                self._import_site_index = None
+        if self._import_site_index is None:
+            return self.ALL
+        idx = self._import_site_index
+        rows = {tuple(row) for mod in F for row in idx["sites"].get(mod, ())}
+        rows |= {tuple(row[1:]) for row in idx["prefix"] if any(f.startswith(row[0]) for f in F)}
+        rows |= {tuple(row) for row in idx["any"]}
+        m = 0
+        for rel, scope, first, last in rows:
+            if scope == "function":
+                m |= self.span_mask(rel, first, last)
+            elif rel.startswith("tests/"):
+                d, base = os.path.dirname(rel), os.path.basename(rel)
+                if base in ("conftest.py", "__init__.py"):
+                    m |= self.scope_tests(d)
+                else:
+                    m |= self.file_tests.get(rel, 0) | self.importers_of_test_module(rel)
+            else:
+                m |= self.file_mask(rel) | self.inst_mask(rel, ())   # a guarded import in sqlglot
         return m
 
     def lazy_attr_modules(self, pkg):
@@ -3238,6 +3254,33 @@ def _load(path):
 
 def load_map():
     return _load(MAP)
+
+
+def load_import_site_index():
+    """Read the structural index if it belongs to this source tree and passes validation."""
+
+    def row_ok(rel, scope, first, last):
+        return (isinstance(rel, str) and rel.startswith(("sqlglot/", "tests/")) and rel.endswith(".py")
+                and scope in ("function", "module") and type(first) is int and type(last) is int
+                and 0 < first <= last)
+
+    try:
+        record = json.loads(IMPORT_SITE_INDEX.read_text(encoding="utf-8"))
+        if record["version"] != IMPORT_SITE_INDEX_VERSION or Path(record["source"]) != SRC.resolve():
+            return None
+        sites, prefix, anywhere = record["sites"], record["prefix"], record["any"]
+        if not isinstance(sites, dict) or "sqlglot" not in sites or not isinstance(prefix, list) or                 not isinstance(anywhere, list):
+            return None
+        for module, rows in sites.items():
+            if not module or not isinstance(rows, list) or not all(row_ok(*row) for row in rows):
+                return None
+        if not all(isinstance(row[0], str) and row[0] and row_ok(*row[1:]) for row in prefix):
+            return None
+        if not all(row_ok(*row) for row in anywhere):
+            return None
+        return {"sites": sites, "prefix": prefix, "any": anywhere}
+    except (OSError, KeyError, TypeError, ValueError, RecursionError):   # rebuild in-process
+        return None
 
 
 def load_profile(tests):

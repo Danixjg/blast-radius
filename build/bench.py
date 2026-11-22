@@ -94,6 +94,8 @@ def make_app(app, src=None, tar=None, selector=None, map_=None, python=None, pro
     else:
         _copy_tree_filtered(src or R / "work" / "sqlglot", app / "src")
     py = python or sys.executable
+    subprocess.run([py, "-B", "-S", str(R / "build/build_import_index.py"), str(app / "selector.py"),
+                    str(app / "src"), str(app / "import-sites.json"), "--if-supported"], check=True)
     subprocess.run([py, "-m", "compileall", "-q", str(app / "src" / "sqlglot"), str(app / "src" / "tests"),
                     str(app / "selector.py")], check=True)
     # read-only like the image's runtime filesystem

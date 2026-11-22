@@ -10,8 +10,10 @@ FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf107
 # pure-Python packages the verifier's test runs need, so those runs take the labelled code paths.
 COPY selector.py map.pkl profile.pkl /app/
 COPY build/fetch_sqlglot.py build/sqlglot.manifest build/verify-requirements.txt /tmp/fetch/
+COPY build/build_import_index.py /tmp/fetch/
 
 RUN python -I /tmp/fetch/fetch_sqlglot.py /app/src /tmp/fetch/sqlglot.manifest \
+ && python -B -S /tmp/fetch/build_import_index.py /app/selector.py /app/src /app/import-sites.json \
  && python -m pip install --no-cache-dir --no-deps --only-binary=:all: --require-hashes --disable-pip-version-check --root-user-action=ignore -r /tmp/fetch/verify-requirements.txt \
  && rm -rf /tmp/fetch \
  && python -c "import zlib, pathlib; [p.write_bytes(zlib.decompress(p.read_bytes())) for p in map(pathlib.Path, ('/app/map.pkl', '/app/profile.pkl'))]" \
