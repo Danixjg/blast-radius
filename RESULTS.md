@@ -371,6 +371,51 @@ Regression checks: holdout 2 goes from 464.316 to 447.102, from its one expected
 (`h33743`, earlier 25.454 s and now 8.240 s, with its labelled failure kept). Holdout 2 unique goes
 from 453.088 to 435.874. All other sets are unchanged, with 0 misses.
 
+## `x is None` vs `x == None` on sqlglot objects (follow-up to the import index)
+
+Swapping `is None` and `== None` is a common edit. When the operand is a sqlglot `Expression`,
+`==` runs `Expression.__eq__`, so the profile could not vouch for the swap, and tests like
+`test_execute_tpcds` were selected even though nothing can change. The profiler now records, for a
+comparison against `None` whose operand has its own equality, the qualified names of the `__eq__`
+and `__ne__` that operand's type supplies. It looks the methods up and never calls them. The selector
+keeps such an evaluation unchanged when that code provably gives identity's answer for `None`, and
+only under these conditions:
+
+- the method is a single `return` built from `is`/`is not` tests of self, other, `None` and builtin
+  `type(...)`, combined with `and`/`or`/`not`, and decided before anything else would run;
+- `==` and `!=` decide nothing, because they run user code. A first version treated them like
+  identity: for an `__eq__` whose body is `return self == other`, it predicted `False` where CPython
+  raises `RecursionError`;
+- the name `type` must not be rebound in the method's module, before or after the patch;
+- the patch changes no `__eq__`/`__ne__` definition and no class's bases, keywords or decorators in any
+  file it touches.
+
+`Expression.__eq__` qualifies: `self is other or (type(self) is type(other) and hash(self) ==
+hash(other))` is decided at the type-identity test before `hash` runs. Regression tests cover the
+recursive case, `==` on types, a custom `__ne__`, a side effect, a walrus, a shadowed `type`, and
+multi-file patches that change the method, a binding or a class's bases.
+
+`profile.pkl` was rebuilt with this recorder: two instrumented passes merged with the existing
+divergence passes. It has 783 comparison sites, and 330 of its facts carry implementation names.
+
+Validation (`work/eqnone`, code and profile frozen together: selector `5760525a…`, profile
+`08e515d7…`): 30 comparison sites chosen by structure where the new facts change the selection,
+each swapped and labelled. All 30 are `complete` with **zero failures**, so the swaps are neutral as
+the proof says. That set measures the saving. The soundness side rests on the proof's restrictions
+and its negative-control tests.
+
+| set | before (this PR's base) | after | misses |
+| --- | ---: | ---: | ---: |
+| structural `== None` swaps (30) | 248.592 | 0.000 | 0 / 0 |
+| holdout 1 (66) | 551.231 | 549.224 | 0 / 0 |
+| holdout 2 (65) | 464.316 | 425.492 | 0 / 0 |
+| holdout seed 271828 (65) | 434.951 | 409.497 | 0 / 0 |
+| holdout seed 314159 (66) | 465.185 | 441.011 | 0 / 0 |
+| sample, validation 3, fresh, the four import-time validation sets | unchanged | unchanged | 0 / 0 |
+
+The holdouts suggested this idea, so they are regression checks. The estimate before measuring was
+110 s across them; the measured saving is 90 s.
+
 ## Adversarial checks
 
 Targeted tests were added for the three rules most likely to be overfitted:
@@ -527,6 +572,26 @@ of the memory exhaustion, not of the edit, but this cannot be confirmed here.
   selected nothing (right only by luck); now the existing conservative rule for a new module-level
   name without readers selects the tests that ran the file. The same blindness is what made every
   earlier version miss `h33749` and 11 of 27 validation patches.
+
+## Review fix: failed-import narrowing (Linux rescore)
+
+Rescoring this PR on Linux against `main` (`build/evalsets.py`, 3 runs) found one miss: seed 314159,
+h15941 removes `import typing as t` from `optimizer/qualify_columns.py`. The module then fails at
+import time and 733 tests fail. The narrowed selection (909 tests) left out
+`test_generator_memory`, which fails under xdist once that many tests fail. Before this PR, a
+broken probe ran everything, so that test was always included. Two changes:
+
+- `mass_failure_mask`: a narrowed failed-import selection always keeps `test_generator_memory`.
+- `dialect_name_sites`: a failed dialect module also selects the tests that ran a line of sqlglot
+  code holding its name as a string constant. For example, `parsers/presto.py` runs
+  `Dialect["teradata"]` through `build_formatted_time(exp.TimeToStr, "teradata")` without
+  creating any Teradata class. Without this, those tests were caught only because the coverage
+  run happened to hit the registry's loader.
+
+Simulated seconds / misses after the fix, `main` → this PR: sample 97.076 → 97.076, holdout 1
+618.608 → 563.268, holdout 2 545.397 → 466.316, holdout 2 unique 534.169 → 455.088, mutants
+1065.357 → 924.094, seed 314159 501.325 → 466.097, seed 8675309 571.500 → 508.965, seed 42424242
+610.261 → 539.162. Every set has 0 misses.
 
 ## Profiler regressions (counterexamples that reproduced on c8a81ea)
 
