@@ -1,0 +1,17 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_bigquery",
+  "tests/dialects/test_duckdb.py::TestDuckDB::test_time",
+  "tests/dialects/test_mysql.py::TestMySQL::test_timestampadd",
+  "tests/dialects/test_postgres.py::TestPostgres::test_datetime_arithmetic",
+  "tests/dialects/test_tsql.py::TestTSQL::test_eomonth"
+ ],
+ "seconds": 50.4,
+ "peak_mb": null,
+ "patch": "h12103.patch"
+}

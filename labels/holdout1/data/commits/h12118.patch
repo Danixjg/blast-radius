@@ -1,0 +1,13 @@
+diff --git a/tests/test_zz_holdout.py b/tests/test_zz_holdout.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_zz_holdout.py
+@@ -0,0 +1,8 @@
++import unittest
++
++import sqlglot
++
++
++class TestNew(unittest.TestCase):
++    def test_new(self):
++        self.assertTrue(sqlglot.parse_one('select 1'))

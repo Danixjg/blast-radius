@@ -1,0 +1,12 @@
+diff --git a/sqlglot/anonymize.py b/sqlglot/anonymize.py
+--- a/sqlglot/anonymize.py
++++ b/sqlglot/anonymize.py
+@@ -23,7 +23,7 @@
+     TokenType.UNICODE_STRING,
+     TokenType.VAR,
+ }
+-QUOTED_TYPES = ANONYMIZED_TYPES - {TokenType.NUMBER, TokenType.VAR}
++QUOTED_TYPES = ANONYMIZED_TYPES + {TokenType.NUMBER, TokenType.VAR}
+ REWRITTEN_TYPES = {TokenType.HINT, TokenType.UNKNOWN}
+ 
+ 

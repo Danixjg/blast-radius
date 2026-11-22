@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/simplify.py b/sqlglot/optimizer/simplify.py
+--- a/sqlglot/optimizer/simplify.py
++++ b/sqlglot/optimizer/simplify.py
+@@ -1080,7 +1080,7 @@
+         return expression
+ 
+     @annotate_types_on_change
+-    def uniq_sort(self, expression: object, root: bool = True) -> object:
++    def uniq_sort(self, expression: object, root: bool = False) -> object:
+         """
+         Uniq and sort a connector.
+ 

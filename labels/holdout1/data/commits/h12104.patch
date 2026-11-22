@@ -1,0 +1,11 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -518,6 +518,7 @@
+     def set_operation(self, step, context):
+         left = context.tables[step.left]
+         right = context.tables[step.right]
++        # note
+ 
+         sink = self.table(left.columns)
+ 

@@ -1,0 +1,469 @@
+{
+ "h12100": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/optimizer/simplify.py"
+  ],
+  "note": "swap 'True'->'False' line 1083"
+ },
+ "h12101": {
+  "category": "collection",
+  "files": [
+   "tests/dialects/conftest.py"
+  ],
+  "note": "nested-conftest"
+ },
+ "h12102": {
+  "category": "code",
+  "files": [
+   "sqlglot/parsers/prql.py"
+  ],
+  "note": "swap 'False'->'True' line 44"
+ },
+ "h12103": {
+  "category": "code",
+  "files": [
+   "sqlglot/dialects/dialect.py"
+  ],
+  "note": "swap 'is'->'is not' line 2425"
+ },
+ "h12104": {
+  "category": "comment",
+  "files": [
+   "sqlglot/executor/python.py"
+  ],
+  "note": "comment after line 520"
+ },
+ "h12105": {
+  "category": "cookie",
+  "files": [
+   "sqlglot/parsers/risingwave.py"
+  ],
+  "note": "coding utf-8"
+ },
+ "h12106": {
+  "category": "code",
+  "files": [
+   "sqlglot/parsers/drill.py"
+  ],
+  "note": "num '2'->'1' line 12"
+ },
+ "h12107": {
+  "category": "helper",
+  "files": [
+   "tests/helpers.py"
+  ],
+  "note": "num '0'->'1' line 18"
+ },
+ "h12108": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/simplify.sql"
+  ],
+  "note": "inserted token line 455"
+ },
+ "h12109": {
+  "category": "eq",
+  "files": [
+   "sqlglot/tokenizer_core.py"
+  ],
+  "note": "==->is line 793"
+ },
+ "h12110": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/canonicalize_internal_names.sql"
+  ],
+  "note": "inserted token line 63"
+ },
+ "h12111": {
+  "category": "multi",
+  "files": [
+   "sqlglot/dialects/druid.py",
+   "tests/fixtures/optimizer/pushdown_projections.sql"
+  ],
+  "note": "harmless extra import + inserted token line 118"
+ },
+ "h12112": {
+  "category": "import",
+  "files": [
+   "sqlglot/generators/singlestore.py"
+  ],
+  "note": "import of a missing module"
+ },
+ "h12113": {
+  "category": "fixture-ws",
+  "files": [
+   "tests/fixtures/optimizer/normalize_identifiers.sql"
+  ],
+  "note": "trailing spaces line 108"
+ },
+ "h12114": {
+  "category": "multi",
+  "files": [
+   "sqlglot/generators/drill.py",
+   "sqlglot/generators/hive.py"
+  ],
+  "note": "dict value line 51: \"VARBINARY\" -> 'VARBINARY_' + comment after line 584"
+ },
+ "h12115": {
+  "category": "cookie",
+  "files": [
+   "sqlglot/parsers/postgres.py"
+  ],
+  "note": "coding latin-1"
+ },
+ "h12116": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/parsers/postgres.py"
+  ],
+  "note": "str '\"INPUT\"'->'\"INPUX\"' line 125"
+ },
+ "h12117": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/hive.py"
+  ],
+  "note": "dict value line 69: \"%Istrict\" -> '%Istrict_'"
+ },
+ "h12118": {
+  "category": "collection",
+  "files": [
+   "tests/test_zz_holdout.py"
+  ],
+  "note": "newtest"
+ },
+ "h12119": {
+  "category": "code",
+  "files": [
+   "sqlglot/parsers/mysql.py"
+  ],
+  "note": "num '2'->'1' line 682"
+ },
+ "h12120": {
+  "category": "cookie",
+  "files": [
+   "sqlglot/dialects/dialect.py"
+  ],
+  "note": "coding ascii"
+ },
+ "h12121": {
+  "category": "fixture-ws",
+  "files": [
+   "tests/fixtures/optimizer/optimize_joins.sql"
+  ],
+  "note": "trailing spaces line 62"
+ },
+ "h12122": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/materialize.py"
+  ],
+  "note": "dict value line 14: (16, 8, 8, 0x10FFFF) -> (17, 8, 8, 1114111)"
+ },
+ "h12123": {
+  "category": "eq",
+  "files": [
+   "sqlglot/optimizer/eliminate_ctes.py"
+  ],
+  "note": "is not->!= line 49"
+ },
+ "h12124": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/helpers.py"
+  ],
+  "note": "swap 'is'->'is not' line 50"
+ },
+ "h12125": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/normalize_identifiers.sql"
+  ],
+  "note": "inserted token line 71"
+ },
+ "h12126": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/merge_subqueries.sql"
+  ],
+  "note": "inserted token line 739"
+ },
+ "h12127": {
+  "category": "setup",
+  "files": [
+   "tests/test_lineage.py"
+  ],
+  "note": "num '3'->'2' line 275"
+ },
+ "h12128": {
+  "category": "eq",
+  "files": [
+   "sqlglot/generators/spark.py"
+  ],
+  "note": "is->== line 222"
+ },
+ "h12129": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/redshift.py"
+  ],
+  "note": "dict value line 41: (8, 1, 3, 0o777) -> (9, 1, 3, 511)"
+ },
+ "h12130": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/generators/oracle.py"
+  ],
+  "note": "str '\"VARCHAR2\"'->'\"VARCHARX\"' line 61"
+ },
+ "h12131": {
+  "category": "setup",
+  "files": [
+   "tests/test_lineage.py"
+  ],
+  "note": "num '0'->'1' line 706"
+ },
+ "h12132": {
+  "category": "collection",
+  "files": [
+   "tests/test_zz_holdout.py"
+  ],
+  "note": "newtest"
+ },
+ "h12133": {
+  "category": "helper",
+  "files": [
+   "tests/helpers.py"
+  ],
+  "note": "harmless extra import"
+ },
+ "h12134": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/generators/trino.py"
+  ],
+  "note": "swap 'True'->'False' line 39"
+ },
+ "h12135": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/generators/athena.py"
+  ],
+  "note": "num '2'->'3' line 143"
+ },
+ "h12136": {
+  "category": "comment",
+  "files": [
+   "sqlglot/optimizer/normalize_identifiers.py"
+  ],
+  "note": "comment after line 84"
+ },
+ "h12137": {
+  "category": "code",
+  "files": [
+   "sqlglot/parsers/tsql.py"
+  ],
+  "note": "swap 'True'->'False' line 644"
+ },
+ "h12138": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/risingwave.py"
+  ],
+  "note": "dict value line 20: TokenType.SINK -> TokenType.SOURCE"
+ },
+ "h12139": {
+  "category": "collection",
+  "files": [
+   "tests/conftest.py"
+  ],
+  "note": "conftest-bad"
+ },
+ "h12140": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/annotate_types.sql"
+  ],
+  "note": "inserted token line 200"
+ },
+ "h12141": {
+  "category": "collection",
+  "files": [
+   "tests/conftest.py"
+  ],
+  "note": "conftest-bad"
+ },
+ "h12142": {
+  "category": "eq",
+  "files": [
+   "sqlglot/parsers/doris.py"
+  ],
+  "note": "==->is line 79"
+ },
+ "h12143": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/dialects/spark2.py"
+  ],
+  "note": "str '\"mm\"'->'\"mX\"' line 30"
+ },
+ "h12144": {
+  "category": "code",
+  "files": [
+   "sqlglot/diff.py"
+  ],
+  "note": "swap '-'->'+' line 468"
+ },
+ "h12145": {
+  "category": "multi",
+  "files": [
+   "sqlglot/generators/snowflake.py",
+   "sqlglot/generators/dremio.py"
+  ],
+  "note": "harmless extra import + swap '=='->'!=' line 20"
+ },
+ "h12146": {
+  "category": "helper",
+  "files": [
+   "tests/helpers.py"
+  ],
+  "note": "num '2'->'3' line 50"
+ },
+ "h12147": {
+  "category": "import",
+  "files": [
+   "sqlglot/parsers/dune.py"
+  ],
+  "note": "harmless extra import"
+ },
+ "h12148": {
+  "category": "eq",
+  "files": [
+   "sqlglot/generators/drill.py"
+  ],
+  "note": "==->is line 22"
+ },
+ "h12149": {
+  "category": "import",
+  "files": [
+   "sqlglot/expressions/datatypes.py"
+  ],
+  "note": "removed import line 8"
+ },
+ "h12150": {
+  "category": "multi",
+  "files": [
+   "sqlglot/dialects/clickhouse.py",
+   "sqlglot/generators/databricks.py"
+  ],
+  "note": "dict value line 102: TokenType.DATE32 -> TokenType.LINESTRING + swap 'in'->'not in' line 151"
+ },
+ "h12151": {
+  "category": "import",
+  "files": [
+   "sqlglot/generators/python.py"
+  ],
+  "note": "import of a missing module"
+ },
+ "h12152": {
+  "category": "collection",
+  "files": [
+   "tests/dialects/test_tsql.py"
+  ],
+  "note": "rename tests/dialects/test_tsql.py"
+ },
+ "h12153": {
+  "category": "multi",
+  "files": [
+   "sqlglot/dialects/duckdb.py",
+   "tests/fixtures/optimizer/tpc-h/tpc-h.sql"
+  ],
+  "note": "dict value line 108: TokenType.DSTAR -> TokenType.TIMESTAMP_NS + inserted token line 600"
+ },
+ "h12154": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/databricks.py"
+  ],
+  "note": "dict value line 39: TokenType.VOID -> TokenType.MATCH_RECOGNIZE"
+ },
+ "h12155": {
+  "category": "code",
+  "files": [
+   "sqlglot/generators/tsql.py"
+  ],
+  "note": "swap 'and'->'or' line 342"
+ },
+ "h12156": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/unnest_subqueries.py"
+  ],
+  "note": "swap 'is'->'is not' line 386"
+ },
+ "h12157": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/qualify_tables.py"
+  ],
+  "note": "swap 'or'->'and' line 70"
+ },
+ "h12158": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/simplify.py"
+  ],
+  "note": "swap 'and'->'or' line 946"
+ },
+ "h12159": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/parsers/oracle.py"
+  ],
+  "note": "dict value line 92: exp.Localtimestamp -> exp.Systimestamp"
+ },
+ "h12160": {
+  "category": "code",
+  "files": [
+   "sqlglot/parsers/spark.py"
+  ],
+  "note": "num '0'->'1' line 28"
+ },
+ "h12161": {
+  "category": "comment",
+  "files": [
+   "sqlglot/generators/duckdb.py"
+  ],
+  "note": "comment after line 3697"
+ },
+ "h12162": {
+  "category": "import",
+  "files": [
+   "sqlglot/dialects/snowflake.py"
+  ],
+  "note": "removed import line 16"
+ },
+ "h12163": {
+  "category": "setup",
+  "files": [
+   "tests/test_executor.py"
+  ],
+  "note": "num '2'->'3' line 1115"
+ },
+ "h12164": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/pushdown_cte_alias_columns.sql"
+  ],
+  "note": "inserted token line 11"
+ },
+ "h12165": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/prql.py"
+  ],
+  "note": "dict value line 25: TokenType.COMMENT -> TokenType.IDENTIFIER"
+ }
+}

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/starrocks.py b/sqlglot/parsers/starrocks.py
+--- a/sqlglot/parsers/starrocks.py
++++ b/sqlglot/parsers/starrocks.py
+@@ -56,7 +56,7 @@
+     TABLE_ALIAS_TOKENS = MySQLParser.TABLE_ALIAS_TOKENS - {TokenType.ANTI, TokenType.SEMI}
+ 
+     # The keys of a map{key: value, ...} literal are expressions, not struct field names
+-    MAP_KEYS_ARE_ARBITRARY_EXPRESSIONS = True
++    MAP_KEYS_ARE_ARBITRARY_EXPRESSIONS = False
+ 
+     FUNCTIONS = {
+         **MySQLParser.FUNCTIONS,

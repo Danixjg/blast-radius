@@ -1,0 +1,11 @@
+diff --git a/sqlglot/dialects/snowflake.py b/sqlglot/dialects/snowflake.py
+--- a/sqlglot/dialects/snowflake.py
++++ b/sqlglot/dialects/snowflake.py
+@@ -13,7 +13,6 @@
+     SnowflakeParser,
+ )
+ from sqlglot.tokens import TokenType
+-from sqlglot.typing.snowflake import EXPRESSION_METADATA
+ 
+ 
+ class Snowflake(Dialect):

@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+--- a/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
++++ b/tests/fixtures/optimizer/tpc-ds/tpc-ds.sql
+@@ -2955,7 +2955,7 @@
+   "item"."i_item_desc",
+   "store"."s_state"
+ ORDER BY
+-  "i_item_id",
++  1 "i_item_id",
+   "i_item_desc",
+   "s_state"
+ LIMIT 100;

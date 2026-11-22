@@ -1,0 +1,12 @@
+diff --git a/tests/test_optimizer.py b/tests/test_optimizer.py
+--- a/tests/test_optimizer.py
++++ b/tests/test_optimizer.py
+@@ -3444,7 +3444,7 @@
+             self.assertEqual(len(scopes[6].columns), 6)
+             self.assertEqual({c.table for c in scopes[6].columns}, {"r", "s"})
+             self.assertEqual(scopes[6].source_columns("q"), [])
+-            self.assertEqual(len(scopes[6].source_columns("r")), 2)
++            self.assertEqual(len(scopes[7].source_columns("r")), 2)
+             self.assertEqual({c.table for c in scopes[6].source_columns("r")}, {"r"})
+ 
+             self.assertEqual({c.sql() for c in scopes[-1].find_all(exp.Column)}, {"r.b", "s.b"})

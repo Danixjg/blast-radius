@@ -1,0 +1,11 @@
+diff --git a/tests/test_sqlglotc.py b/tests/test_sqlglotc.py
+--- a/tests/test_sqlglotc.py
++++ b/tests/test_sqlglotc.py
+@@ -38,6 +38,7 @@
+         cwd = os.getcwd()
+         os.chdir(self.root)
+         try:
++        # TODO: revisit
+             distribution = Distribution(
+                 {
+                     "version": "0.0.0",

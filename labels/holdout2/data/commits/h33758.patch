@@ -1,0 +1,10 @@
+diff --git a/sqlglot/generators/tsql.py b/sqlglot/generators/tsql.py
+--- a/sqlglot/generators/tsql.py
++++ b/sqlglot/generators/tsql.py
+@@ -1,6 +1,5 @@
+ from __future__ import annotations
+ 
+-from functools import reduce
+ 
+ from sqlglot import exp, generator, transforms
+ from sqlglot.dialects.dialect import (

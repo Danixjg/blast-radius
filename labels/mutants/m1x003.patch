@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/canonicalize_internal_names.sql b/tests/fixtures/optimizer/canonicalize_internal_names.sql
+--- a/tests/fixtures/optimizer/canonicalize_internal_names.sql
++++ b/tests/fixtures/optimizer/canonicalize_internal_names.sql
+@@ -212,7 +212,7 @@
+ 
+ # title: unaliased scalar subquery column inside a CTE (non-output scope) is canonicalized like any other internal column
+ WITH t AS (SELECT a, (SELECT MAX(y.c) FROM y) FROM x) SELECT a FROM t;
+-WITH "_t2" AS (SELECT "_t1"."a" AS "_c1", (SELECT MAX("_t0"."c") AS "_c0" FROM "c"."db"."y" AS "_t0") AS "_c2" FROM "c"."db"."x" AS "_t1") SELECT "_t2"."_c1" AS "a" FROM "_t2" AS "_t2";
++WITH "_t2" AS (SELECT "_t1"."a" AS "_c1", (SELECT MAX("_t0"."c") AS "_c0" FROM "c"."db"."y" 1 AS "_t0") AS "_c2" FROM "c"."db"."x" AS "_t1") SELECT "_t2"."_c1" AS "a" FROM "_t2" AS "_t2";
+ 
+ # title: distinct on
+ # dialect: postgres

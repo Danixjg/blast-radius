@@ -1,0 +1,12 @@
+diff --git a/sqlglot/time.py b/sqlglot/time.py
+--- a/sqlglot/time.py
++++ b/sqlglot/time.py
+@@ -82,7 +82,7 @@
+             precision = 3
+         return precision
+     except ValueError:
+-        return 0
++        return 1
+ 
+ 
+ TIMEZONES: set[str] = {

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/expressions/core.py b/sqlglot/expressions/core.py
+--- a/sqlglot/expressions/core.py
++++ b/sqlglot/expressions/core.py
+@@ -2697,7 +2697,7 @@
+     into_arg="this",
+     **opts: Unpack[ParserNoDialectArgs],
+ ) -> E:
+-    if _is_wrong_expression(expression, into) and into is not None:
++    if _is_wrong_expression(expression, into) and into is None:
+         expression = into(**{into_arg: expression})
+     instance = maybe_copy(instance, copy)
+     expression = maybe_parse(

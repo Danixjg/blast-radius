@@ -1,0 +1,12 @@
+diff --git a/tests/dialects/test_dialect.py b/tests/dialects/test_dialect.py
+--- a/tests/dialects/test_dialect.py
++++ b/tests/dialects/test_dialect.py
+@@ -5943,7 +5943,7 @@
+         ):
+             for func in ("localtime", "localtimestamp"):
+                 # oracle supports localtimestamp but not localtime
+-                if func == "localtimestamp" and dialect == "oracle":
++                if func != "localtimestamp" and dialect == "oracle":
+                     continue
+ 
+                 with self.subTest(f"Testing {func} identifier in {dialect}"):

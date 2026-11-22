@@ -1,0 +1,12 @@
+diff --git a/sqlglot/tokenizer_core.py b/sqlglot/tokenizer_core.py
+--- a/sqlglot/tokenizer_core.py
++++ b/sqlglot/tokenizer_core.py
+@@ -1318,7 +1318,7 @@
+         """
+         text = ""
+         delim_size = len(delimiter)
+-        escapes = self.string_escapes if escapes is None else escapes
++        escapes = self.string_escapes if escapes == None else escapes
+         unescaped_sequences = self.unescaped_sequences
+         numeric_escapes = self.numeric_escapes
+         drop_unknown_escapes = self.drop_unknown_escapes

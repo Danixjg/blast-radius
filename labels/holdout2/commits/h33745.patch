@@ -1,0 +1,12 @@
+diff --git a/sqlglot/parsers/tsql.py b/sqlglot/parsers/tsql.py
+--- a/sqlglot/parsers/tsql.py
++++ b/sqlglot/parsers/tsql.py
+@@ -423,7 +423,7 @@
+         ),
+     }
+ 
+-    JOIN_HINTS = {"LOOP", "HASH", "MERGE", "REMOTE"}
++    JOIN_HINTS = {"LOOP", "HASX", "MERGE", "REMOTE"}
+ 
+     PROCEDURE_OPTIONS = dict.fromkeys(
+         ("ENCRYPTION", "RECOMPILE", "SCHEMABINDING", "NATIVE_COMPILATION", "EXECUTE"), tuple()

@@ -1,0 +1,12 @@
+diff --git a/tests/fixtures/optimizer/merge_subqueries.sql b/tests/fixtures/optimizer/merge_subqueries.sql
+--- a/tests/fixtures/optimizer/merge_subqueries.sql
++++ b/tests/fixtures/optimizer/merge_subqueries.sql
+@@ -18,7 +18,7 @@
+ 
+ # title: Don't wrap function
+ SELECT 2 * foo AS bar FROM (SELECT CAST(b AS DOUBLE) AS foo FROM x);
+-SELECT 2 * CAST(x.b AS DOUBLE) AS bar FROM x AS x;
++SELECT 2 * CAST(x.b AS DOUBLE) x AS bar FROM x AS x;
+ 
+ # title: Wrap comparison in IN
+ SELECT c IN (FALSE) AS d FROM (SELECT a > 1 AS c FROM x);

@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/test_optimizer.py::TestOptimizer::test_pushdown_cte_alias_columns"
+ ],
+ "seconds": 51.6,
+ "peak_mb": null,
+ "patch": "h12164.patch"
+}

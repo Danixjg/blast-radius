@@ -1,0 +1,18 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_dialect.py::TestDialect::test_set_operators",
+  "tests/dialects/test_tsql.py::TestTSQL::test_set_operation_branch_limits",
+  "tests/dialects/test_tsql.py::TestTSQL::test_set_operation_order",
+  "tests/dialects/test_tsql.py::TestTSQL::test_set_operation_pagination",
+  "tests/dialects/test_tsql.py::TestTSQL::test_set_operation_trailing_clauses",
+  "tests/dialects/test_tsql.py::TestTSQL::test_tsql"
+ ],
+ "seconds": 48.0,
+ "peak_mb": null,
+ "patch": "h12155.patch"
+}

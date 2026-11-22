@@ -1,0 +1,11 @@
+diff --git a/sqlglot/generators/oracle.py b/sqlglot/generators/oracle.py
+--- a/sqlglot/generators/oracle.py
++++ b/sqlglot/generators/oracle.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ from sqlglot import exp, generator, transforms
++import sqlglot_does_not_exist_xyz
+ from sqlglot.dialects.dialect import (
+     approx_count_distinct_sql,
+     date_trunc_to_trunc_sql,

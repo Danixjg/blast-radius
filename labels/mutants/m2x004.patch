@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/clickhouse.py b/sqlglot/generators/clickhouse.py
+--- a/sqlglot/generators/clickhouse.py
++++ b/sqlglot/generators/clickhouse.py
+@@ -206,7 +206,7 @@
+     SET_OP_LIMITS = True
+     ARRAY_SIZE_NAME = "LENGTH"
+     VARIANCE_NAME = "varSamp"
+-    WRAP_DERIVED_VALUES = False
++    WRAP_DERIVED_VALUES = True
+     AUTO_REFRESH_BARE_INTERVALS = True
+ 
+     STRING_TYPE_MAPPING: t.ClassVar = {

@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/spark2.py b/sqlglot/generators/spark2.py
+--- a/sqlglot/generators/spark2.py
++++ b/sqlglot/generators/spark2.py
+@@ -139,7 +139,7 @@
+     PROPERTIES_LOCATION = {
+         **HiveGenerator.PROPERTIES_LOCATION,
+         exp.EngineProperty: exp.Properties.Location.UNSUPPORTED,
+-        exp.AutoIncrementProperty: exp.Properties.Location.UNSUPPORTED,
++        exp.AutoIncrementProperty: exp.Properties.Location.POST_SCHEMA,
+         exp.CharacterSetProperty: exp.Properties.Location.UNSUPPORTED,
+         exp.CollateProperty: exp.Properties.Location.UNSUPPORTED,
+         exp.OptionsProperty: exp.Properties.Location.POST_SCHEMA,

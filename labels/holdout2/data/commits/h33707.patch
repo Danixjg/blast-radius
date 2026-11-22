@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/snowflake.py b/sqlglot/generators/snowflake.py
+--- a/sqlglot/generators/snowflake.py
++++ b/sqlglot/generators/snowflake.py
+@@ -653,7 +653,7 @@
+ 
+     PROPERTIES_LOCATION = {
+         **generator.Generator.PROPERTIES_LOCATION,
+-        exp.CredentialsProperty: exp.Properties.Location.POST_WITH,
++        exp.CredentialsProperty: exp.Properties.Location.UNSUPPORTED,
+         exp.InteractiveProperty: exp.Properties.Location.POST_CREATE,
+         exp.LocationProperty: exp.Properties.Location.POST_WITH,
+         exp.PartitionedByProperty: exp.Properties.Location.POST_SCHEMA,

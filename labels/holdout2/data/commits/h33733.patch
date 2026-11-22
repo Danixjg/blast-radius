@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/databricks.py b/sqlglot/generators/databricks.py
+--- a/sqlglot/generators/databricks.py
++++ b/sqlglot/generators/databricks.py
+@@ -90,7 +90,7 @@
+ 
+     TYPE_MAPPING = {
+         **SparkGenerator.TYPE_MAPPING,
+-        exp.DType.NULL: "VOID",
++        exp.DType.NULL: 'VOID_',
+     }
+ 
+     def unnest_sql(self, expression: exp.Unnest) -> str:

@@ -1,0 +1,11 @@
+diff --git a/sqlglot/executor/python.py b/sqlglot/executor/python.py
+--- a/sqlglot/executor/python.py
++++ b/sqlglot/executor/python.py
+@@ -2,7 +2,6 @@
+ import itertools
+ import math
+ 
+-from sqlglot import exp, planner, tokens
+ from sqlglot.dialects.dialect import Dialect
+ from sqlglot.errors import ExecuteError
+ from sqlglot.executor.context import Context

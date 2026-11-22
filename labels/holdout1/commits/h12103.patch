@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/dialect.py b/sqlglot/dialects/dialect.py
+--- a/sqlglot/dialects/dialect.py
++++ b/sqlglot/dialects/dialect.py
+@@ -2422,7 +2422,7 @@
+     if isinstance(parent, (exp.Binary, exp.Unary, exp.AtTimeZone)) and not (
+         isinstance(parent, exp.Paren)
+         or isinstance(parent, (exp.Add, exp.Sub))
+-        and parent.this is expression
++        and parent.this is not expression
+     ):
+         return self.sql(exp.paren(binary, copy=False))
+     return self.sql(binary)

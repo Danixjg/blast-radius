@@ -1,0 +1,14 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_duckdb.py::TestDuckDB::test_duckdb",
+  "tests/dialects/test_spark.py::TestSpark::test_spark"
+ ],
+ "seconds": 49.2,
+ "peak_mb": null,
+ "patch": "h12160.patch"
+}

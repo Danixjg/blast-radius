@@ -1,0 +1,11 @@
+diff --git a/sqlglot/parsers/dune.py b/sqlglot/parsers/dune.py
+--- a/sqlglot/parsers/dune.py
++++ b/sqlglot/parsers/dune.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ from sqlglot.parsers.trino import TrinoParser
++import os as _unused_os  # noqa
+ 
+ 
+ class DuneParser(TrinoParser):

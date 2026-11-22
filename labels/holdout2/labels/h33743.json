@@ -1,0 +1,13 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/test_optimizer.py::TestOptimizer::test_tpcds"
+ ],
+ "seconds": 50.1,
+ "peak_mb": null,
+ "patch": "h33743.patch"
+}

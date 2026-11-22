@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/unnest_subqueries.py b/sqlglot/optimizer/unnest_subqueries.py
+--- a/sqlglot/optimizer/unnest_subqueries.py
++++ b/sqlglot/optimizer/unnest_subqueries.py
+@@ -383,7 +383,7 @@
+         return
+ 
+     is_subquery_projection = any(
+-        node is select.parent
++        node is not select.parent
+         for node in map(lambda s: s.unalias(), parent_select.selects)
+         if isinstance(node, exp.Subquery)
+     )

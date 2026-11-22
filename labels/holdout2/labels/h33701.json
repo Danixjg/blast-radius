@@ -1,0 +1,17 @@
+{
+ "rc": 1,
+ "collect_errors": [],
+ "extra_fail_ids": [],
+ "vanished": [],
+ "status": "complete",
+ "failing": [
+  "tests/dialects/test_dialect.py::TestDialect::test_operators",
+  "tests/dialects/test_mysql.py::TestMySQL::test_safe_div",
+  "tests/dialects/test_postgres.py::TestPostgres::test_postgres",
+  "tests/dialects/test_snowflake.py::TestSnowflake::test_snowflake",
+  "tests/dialects/test_sqlite.py::TestSQLite::test_floating_point_types"
+ ],
+ "seconds": 49.2,
+ "peak_mb": null,
+ "patch": "h33701.patch"
+}

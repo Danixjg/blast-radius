@@ -1,0 +1,12 @@
+diff --git a/sqlglot/generators/sqlite.py b/sqlglot/generators/sqlite.py
+--- a/sqlglot/generators/sqlite.py
++++ b/sqlglot/generators/sqlite.py
+@@ -119,7 +119,7 @@
+         exp.DType.INT: "INTEGER",
+         exp.DType.BIGINT: "INTEGER",
+         exp.DType.FLOAT: "REAL",
+-        exp.DType.DOUBLE: "REAL",
++        exp.DType.DOUBLE: 'REAL_',
+         exp.DType.DECIMAL: "REAL",
+         exp.DType.CHAR: "TEXT",
+         exp.DType.NCHAR: "TEXT",

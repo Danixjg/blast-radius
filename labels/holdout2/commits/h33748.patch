@@ -1,0 +1,12 @@
+diff --git a/sqlglot/optimizer/pushdown_projections.py b/sqlglot/optimizer/pushdown_projections.py
+--- a/sqlglot/optimizer/pushdown_projections.py
++++ b/sqlglot/optimizer/pushdown_projections.py
+@@ -373,7 +373,7 @@
+     pending: deque[DependencyNode] = deque()
+     for root in roots:
+         root_outputs = output_nodes[root]
+-        all_roots = 1 if whole_query else (1 << len(root_outputs)) - 1
++        all_roots = 1 if whole_query else (1 << len(root_outputs)) + 1
+         scope_nodes[root].required_by = all_roots
+ 
+         for i, output_node in enumerate(root_outputs):

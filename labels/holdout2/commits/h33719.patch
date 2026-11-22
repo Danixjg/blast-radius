@@ -1,0 +1,12 @@
+diff --git a/sqlglot/dialects/redshift.py b/sqlglot/dialects/redshift.py
+--- a/sqlglot/dialects/redshift.py
++++ b/sqlglot/dialects/redshift.py
+@@ -53,7 +53,7 @@
+             "HLLSKETCH": TokenType.HLLSKETCH,
+             "MINUS": TokenType.EXCEPT,
+             "SUPER": TokenType.SUPER,
+-            "TOP": TokenType.TOP,
++            "TOP": TokenType.SUPER,
+             "UNLOAD": TokenType.COMMAND,
+             "USER": TokenType.CURRENT_USER,
+             "VARBYTE": TokenType.VARBINARY,

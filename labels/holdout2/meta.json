@@ -1,0 +1,469 @@
+{
+ "h33700": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/generators/duckdb.py"
+  ],
+  "note": "dict value line 2114: \"EPOCH_NS\" -> 'EPOCH_NS_'"
+ },
+ "h33701": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/generators/sqlite.py"
+  ],
+  "note": "dict value line 122: \"REAL\" -> 'REAL_'"
+ },
+ "h33702": {
+  "category": "multi",
+  "files": [
+   "sqlglot/generators/drill.py",
+   "tests/fixtures/optimizer/optimizer.sql"
+  ],
+  "note": "swap 'and'->'or' line 122 + inserted token line 1481"
+ },
+ "h33703": {
+  "category": "code",
+  "files": [
+   "sqlglot/generators/fabric.py"
+  ],
+  "note": "swap 'and'->'or' line 101"
+ },
+ "h33704": {
+  "category": "eq",
+  "files": [
+   "sqlglot/optimizer/eliminate_ctes.py"
+  ],
+  "note": "is not->!= line 43"
+ },
+ "h33705": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/optimize_joins.sql"
+  ],
+  "note": "inserted token line 23"
+ },
+ "h33706": {
+  "category": "comment",
+  "files": [
+   "sqlglot/optimizer/__init__.py"
+  ],
+  "note": "comment after line 55"
+ },
+ "h33707": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/generators/snowflake.py"
+  ],
+  "note": "dict value line 656: exp.Properties.Location.POST_WITH -> exp.Properties.Location.UNSUPPORTED"
+ },
+ "h33708": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/generators/exasol.py"
+  ],
+  "note": "str '\"preceding\"'->'\"precedinX\"' line 729"
+ },
+ "h33709": {
+  "category": "cookie",
+  "files": [
+   "sqlglot/parsers/drill.py"
+  ],
+  "note": "coding utf-8"
+ },
+ "h33710": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/pushdown_projections.sql"
+  ],
+  "note": "inserted token line 168"
+ },
+ "h33711": {
+  "category": "multi",
+  "files": [
+   "tests/fixtures/optimizer/canonicalize.sql",
+   "sqlglot/generators/postgres.py"
+  ],
+  "note": "inserted token line 45 + swap 'False'->'True' line 289"
+ },
+ "h33712": {
+  "category": "import",
+  "files": [
+   "sqlglot/generators/oracle.py"
+  ],
+  "note": "import of a missing module"
+ },
+ "h33713": {
+  "category": "code",
+  "files": [
+   "sqlglot/generators/dremio.py"
+  ],
+  "note": "swap 'and'->'or' line 108"
+ },
+ "h33714": {
+  "category": "collection",
+  "files": [
+   "tests/conftest.py"
+  ],
+  "note": "conftest-ok"
+ },
+ "h33715": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/simplify.sql"
+  ],
+  "note": "inserted token line 1019"
+ },
+ "h33716": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/dialects/postgres.py"
+  ],
+  "note": "num '16'->'15' line 88"
+ },
+ "h33717": {
+  "category": "code",
+  "files": [
+   "sqlglot/dialects/duckdb.py"
+  ],
+  "note": "swap 'in'->'not in' line 87"
+ },
+ "h33718": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/qualify_tables.sql"
+  ],
+  "note": "inserted token line 273"
+ },
+ "h33719": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/redshift.py"
+  ],
+  "note": "dict value line 56: TokenType.TOP -> TokenType.SUPER"
+ },
+ "h33720": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/dialects/solr.py"
+  ],
+  "note": "swap 'False'->'True' line 12"
+ },
+ "h33721": {
+  "category": "eq",
+  "files": [
+   "sqlglot/typing/bigquery.py"
+  ],
+  "note": "==->is line 218"
+ },
+ "h33722": {
+  "category": "collection",
+  "files": [
+   "tests/dialects/__init__.py"
+  ],
+  "note": "init"
+ },
+ "h33723": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/eliminate_ctes.py"
+  ],
+  "note": "num '0'->'1' line 48"
+ },
+ "h33724": {
+  "category": "collection",
+  "files": [
+   "tests/dialects/conftest.py"
+  ],
+  "note": "nested-conftest"
+ },
+ "h33725": {
+  "category": "setup",
+  "files": [
+   "tests/test_optimizer.py"
+  ],
+  "note": "num '0'->'1' line 4014"
+ },
+ "h33726": {
+  "category": "fixture-ws",
+  "files": [
+   "tests/fixtures/optimizer/qualify_columns__invalid.sql"
+  ],
+  "note": "trailing spaces line 46"
+ },
+ "h33727": {
+  "category": "eq",
+  "files": [
+   "sqlglot/tokenizer_core.py"
+  ],
+  "note": "is->== line 1321"
+ },
+ "h33728": {
+  "category": "setup",
+  "files": [
+   "tests/test_optimizer.py"
+  ],
+  "note": "num '6'->'7' line 3447"
+ },
+ "h33729": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/scope.py"
+  ],
+  "note": "swap '-'->'+' line 722"
+ },
+ "h33730": {
+  "category": "setup",
+  "files": [
+   "tests/test_lineage.py"
+  ],
+  "note": "num '0'->'1' line 706"
+ },
+ "h33731": {
+  "category": "helper",
+  "files": [
+   "tests/helpers.py"
+  ],
+  "note": "swap 'True'->'False' line 61"
+ },
+ "h33732": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/parsers/prql.py"
+  ],
+  "note": "swap 'False'->'True' line 168"
+ },
+ "h33733": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/generators/databricks.py"
+  ],
+  "note": "dict value line 93: \"VOID\" -> 'VOID_'"
+ },
+ "h33734": {
+  "category": "collection",
+  "files": [
+   "tests/dialects/__init__.py"
+  ],
+  "note": "init"
+ },
+ "h33735": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/qualify.py"
+  ],
+  "note": "swap 'True'->'False' line 81"
+ },
+ "h33736": {
+  "category": "cookie",
+  "files": [
+   "sqlglot/parsers/doris.py"
+  ],
+  "note": "coding latin-1"
+ },
+ "h33737": {
+  "category": "cookie",
+  "files": [
+   "tests/test_diff.py"
+  ],
+  "note": "coding utf-8"
+ },
+ "h33738": {
+  "category": "eq",
+  "files": [
+   "sqlglot/parsers/duckdb.py"
+  ],
+  "note": "==->is line 435"
+ },
+ "h33739": {
+  "category": "helper",
+  "files": [
+   "tests/helpers.py"
+  ],
+  "note": "harmless extra import"
+ },
+ "h33740": {
+  "category": "import",
+  "files": [
+   "sqlglot/serde.py"
+  ],
+  "note": "removed import line 5"
+ },
+ "h33741": {
+  "category": "collection",
+  "files": [
+   "tests/conftest.py"
+  ],
+  "note": "conftest-ok"
+ },
+ "h33742": {
+  "category": "comment",
+  "files": [
+   "sqlglot/generators/presto.py"
+  ],
+  "note": "comment after line 594"
+ },
+ "h33743": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/tpc-ds/tpc-ds.sql"
+  ],
+  "note": "inserted token line 2958"
+ },
+ "h33744": {
+  "category": "import",
+  "files": [
+   "sqlglot/executor/python.py"
+  ],
+  "note": "removed import line 5"
+ },
+ "h33745": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/parsers/tsql.py"
+  ],
+  "note": "str '\"HASH\"'->'\"HASX\"' line 426"
+ },
+ "h33746": {
+  "category": "code",
+  "files": [
+   "sqlglot/expressions/core.py"
+  ],
+  "note": "swap 'or'->'and' line 928"
+ },
+ "h33747": {
+  "category": "code",
+  "files": [
+   "sqlglot/parsers/clickhouse.py"
+  ],
+  "note": "num '2'->'1' line 98"
+ },
+ "h33748": {
+  "category": "code",
+  "files": [
+   "sqlglot/optimizer/pushdown_projections.py"
+  ],
+  "note": "swap '-'->'+' line 376"
+ },
+ "h33749": {
+  "category": "import",
+  "files": [
+   "sqlglot/expressions/__init__.py"
+  ],
+  "note": "removed import line 17"
+ },
+ "h33750": {
+  "category": "helper",
+  "files": [
+   "tests/dialects/test_dialect.py"
+  ],
+  "note": "swap '=='->'!=' line 5946"
+ },
+ "h33751": {
+  "category": "multi",
+  "files": [
+   "sqlglot/typing/mysql.py",
+   "sqlglot/tokenizer_core.py"
+  ],
+  "note": "comment after line 87 + harmless extra import"
+ },
+ "h33752": {
+  "category": "fixture-ws",
+  "files": [
+   "tests/fixtures/optimizer/quote_identifiers.sql"
+  ],
+  "note": "trailing spaces line 5"
+ },
+ "h33753": {
+  "category": "eq",
+  "files": [
+   "sqlglot/parsers/teradata.py"
+  ],
+  "note": "is->== line 164"
+ },
+ "h33754": {
+  "category": "fixture",
+  "files": [
+   "tests/fixtures/optimizer/pushdown_predicates.sql"
+  ],
+  "note": "inserted token line 133"
+ },
+ "h33755": {
+  "category": "code",
+  "files": [
+   "sqlglot/executor/table.py"
+  ],
+  "note": "swap '>'->'>=' line 131"
+ },
+ "h33756": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/generators/spark2.py"
+  ],
+  "note": "dict value line 142: exp.Properties.Location.UNSUPPORTED -> exp.Properties.Location.POST_SCHEMA"
+ },
+ "h33757": {
+  "category": "code",
+  "files": [
+   "sqlglot/expressions/builders.py"
+  ],
+  "note": "swap '=='->'!=' line 886"
+ },
+ "h33758": {
+  "category": "import",
+  "files": [
+   "sqlglot/generators/tsql.py"
+  ],
+  "note": "removed import line 3"
+ },
+ "h33759": {
+  "category": "classbody",
+  "files": [
+   "sqlglot/dialects/postgres.py"
+  ],
+  "note": "str '\"FMDDD\"'->'\"FMDDX\"' line 46"
+ },
+ "h33760": {
+  "category": "code",
+  "files": [
+   "sqlglot/generators/athena.py"
+  ],
+  "note": "swap 'and'->'or' line 52"
+ },
+ "h33761": {
+  "category": "multi",
+  "files": [
+   "sqlglot/optimizer/scope.py",
+   "sqlglot/parsers/hive.py"
+  ],
+  "note": "comment after line 426 + harmless extra import"
+ },
+ "h33762": {
+  "category": "collection",
+  "files": [
+   "tests/test_zz_holdout.py"
+  ],
+  "note": "newtest"
+ },
+ "h33763": {
+  "category": "comment",
+  "files": [
+   "tests/test_sqlglotc.py"
+  ],
+  "note": "comment after line 40"
+ },
+ "h33764": {
+  "category": "dictvalue",
+  "files": [
+   "sqlglot/dialects/materialize.py"
+  ],
+  "note": "dict value line 11: \"a\" -> 'a_'"
+ },
+ "h33765": {
+  "category": "multi",
+  "files": [
+   "sqlglot/generators/duckdb.py",
+   "sqlglot/generators/redshift.py"
+  ],
+  "note": "swap 'and'->'or' line 4422 + dict value line 63: \"VARBYTE\" -> 'VARBYTE_'"
+ }
+}
