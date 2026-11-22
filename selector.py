@@ -44,9 +44,10 @@ PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
 # which sqlglot modules importing each module loads (build/mkimports.py); the targeted probe
 PROBE_IMPORTS = Path(os.environ.get("BR_PROBE_IMPORTS", HERE / "probe_imports.json"))
 PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "1") == "1"
-# Two measured selection rules, off by default until they pass the fresh-seed gate.
+# Two measured selection rules, enabled after they passed the fresh-seed gate.
 # R5: narrow the import-time class-attribute fallback to readers that also instantiated the
-# class, but only for a changed statement containing no Call/Lambda (driver7.py's guard).
+# class, only when neither the old nor the new statement contains a Call/Lambda. The new-side
+# check is stricter than driver7.py but cannot add a miss.
 INST_NARROW = os.environ.get("BR_INST_NARROW", "1") == "1"
 # R6: drop test_generator_memory from small selections unless line/file coverage selected it
 # directly (pp2.py's rule; 1224 is its catalogue number and 500 the measured cap).
@@ -366,6 +367,35 @@ def line_map(hunks):
                 break
         return line + shift
     return ochanged, nchanged, to_new
+
+
+def map_new_span(span, hunks):
+    """Map an old-line span (both endpoints) to the corresponding new-line span.
+    A replaced line maps to the new line at the same hunk position; an inserted line maps
+    to the new line that was added. R5's guard uses this to inspect the patched statement."""
+    def one(line):
+        delta = 0
+        for os_, ol, ns, nl, body in hunks:
+            o_end = os_ + max(ol - 1, 0)
+            if line < os_:
+                break
+            if line > o_end:
+                delta += nl - ol
+                continue
+            o, n = os_, ns
+            for b in body:
+                if line == o:
+                    return n
+                if b[0] == " ":
+                    o += 1
+                    n += 1
+                elif b[0] == "-":
+                    o += 1
+                else:
+                    n += 1
+            return ns + max(nl - 1, 0)
+        return line + delta
+    return one(span[0]), one(span[1])
 
 
 _DOC_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -816,6 +846,7 @@ class Hunter:
         self.lazy_pending = False
         self._kd_memo = {}
         self._fresh_memo, self._nchanged = {}, set()
+        self._new_src, self._hunks = {}, {}   # R5: patched text per file for the Call/Lambda guard
         self._inst_ok = True   # R5: the current top-level statement has no Call/Lambda
         # the one fresh-interpreter test whose assertion the import probe replays exactly
         self.lazy_mask = 0
@@ -956,24 +987,32 @@ class Hunter:
         return m, unknown
 
     @staticmethod
-    def _has_call(rel, span, source):
-        """True when a statement span contains a Call or Lambda, or cannot be parsed.
-        Mirrors driver7.py: a value built by a call can raise at import time, so the
-        narrowing guard is only safe when the statement is call-free."""
-        if not span:
-            return True
-        try:
-            src = "\n".join(source(rel).split("\n")[span[0] - 1:span[1]])
-            tree = ast.parse(textwrap.dedent(src))
-        except Exception:
-            return True
-        return any(isinstance(n, (ast.Call, ast.Lambda)) for n in ast.walk(tree))
+    def _has_call(rel, span, source, new_source=None, new_span=None):
+        """True when the old or the new statement contains a Call/Lambda, or cannot be parsed.
+        driver7.py only checked the pristine statement; a Call *added* by the patch is the more
+        dangerous case, so the new side is checked too (strictly more conservative)."""
+        spans = [(source, span)]
+        if new_source is not None and new_span is not None:
+            spans.append((new_source, new_span))
+        for src_fn, sp in spans:
+            if not sp:
+                return True
+            try:
+                src = "\n".join(src_fn(rel).split("\n")[sp[0] - 1:sp[1]])
+                tree = ast.parse(textwrap.dedent(src))
+            except Exception:
+                return True
+            if any(isinstance(n, (ast.Call, ast.Lambda)) for n in ast.walk(tree)):
+                return True
+        return False
 
     def resolve_stmt(self, rel, cls_path, names, span, doc, visited, depth=0):
         """Tests affected by a changed class-body or module-level statement."""
         self.import_time = True
         if depth == 0 and INST_NARROW:
-            self._inst_ok = not self._has_call(rel, span, self.source)
+            hunks = self._hunks.get(rel, ())
+            nspan = map_new_span(span, hunks) if hunks and span else None
+            self._inst_ok = not self._has_call(rel, span, self.source, self._new_src.get, nspan)
         reexec = self.span_mask(rel, span[0], span[1]) if span else 0
         if doc:
             return reexec | self.d["name_mask"].get("__doc__", 0)
@@ -1037,6 +1076,9 @@ class Hunter:
         if new is None:
             log(rel, "patch does not apply: catcher takes all")
             return self.ALL
+        if INST_NARROW:
+            self._new_src[rel] = new
+            self._hunks[rel] = fp.hunks
         new_bytes = new.encode("utf-8", "surrogateescape")
         problem = decoding_problem(new_bytes)
         if problem:   # before any line-based shortcut: unchanged lines may now mean other text
@@ -1889,6 +1931,8 @@ class Hunter:
         self.import_time = False
         self.need_probe = False
         self.probe_files = {}
+        self._new_src, self._hunks = {}, {}
+        self._inst_ok = True
         files = parse_patch(patch_text)
         self.patch_paths = {p for fp in files for p in (fp.old, fp.new) if p}
         self.probe_files = self.combined(files)

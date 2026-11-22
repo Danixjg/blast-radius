@@ -1147,6 +1147,15 @@ class RiskyRules(unittest.TestCase):
             S.INST_NARROW = True
             self.assertEqual(h.analyze(with_call)[0], with_before,
                              "a Call in the edited statement keeps the full selection")
+            # A Call *added* by the patch must be checked too (the old code alone misses it)
+            added_call = harmless.replace('+        "hh": \'%Istrict_\',',
+                                          '+        "hh": "".join(["%Istrict_"]),')
+            self.assertNotEqual(added_call, harmless)
+            S.INST_NARROW = False
+            added_before = h.analyze(added_call)[0]
+            S.INST_NARROW = True
+            self.assertEqual(h.analyze(added_call)[0], added_before,
+                             "a Call added by the patch keeps the full selection")
         finally:
             S.INST_NARROW = old
 
