@@ -47,10 +47,10 @@ PROBE_TARGETED = os.environ.get("BR_PROBE_TARGETED", "1") == "1"
 # Two measured selection rules, off by default until they pass the fresh-seed gate.
 # R5: narrow the import-time class-attribute fallback to readers that also instantiated the
 # class, but only for a changed statement containing no Call/Lambda (driver7.py's guard).
-INST_NARROW = os.environ.get("BR_INST_NARROW", "0") == "1"
+INST_NARROW = os.environ.get("BR_INST_NARROW", "1") == "1"
 # R6: drop test_generator_memory from small selections unless line/file coverage selected it
 # directly (pp2.py's rule; 1224 is its catalogue number and 500 the measured cap).
-GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "0") == "1"
+GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
 GENMEM_NUM = 1224
 GENMEM_MAX_SELECTED = 500
 WORKER_MS = 2000
