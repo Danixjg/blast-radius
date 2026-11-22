@@ -37,6 +37,9 @@ from pathlib import Path
 R = Path(__file__).resolve().parent.parent
 KIT = R / "kit"
 STDOUT_LIMIT = 2 * 1024 * 1024
+# optional data files the selector reads from its own directory (HERE); evalsets.files_at ships
+# the same list from a baseline ref, so both apps carry what their selector expects
+APP_DATA_FILES = ("probe_imports.json", "order-boundaries.json")
 
 
 def load_scorer():
@@ -77,8 +80,10 @@ def make_app(app, src=None, tar=None, selector=None, map_=None, python=None, pro
         shutil.rmtree(app)
     app.mkdir(parents=True)
     shutil.copyfile(selector or R / "selector.py", app / "selector.py")
-    if (Path(selector).parent if selector else R).joinpath("probe_imports.json").is_file():
-        shutil.copyfile((Path(selector).parent if selector else R) / "probe_imports.json", app / "probe_imports.json")
+    selector_dir = Path(selector).parent if selector else R
+    for name in APP_DATA_FILES:
+        if (selector_dir / name).is_file():
+            shutil.copyfile(selector_dir / name, app / name)
     raw = Path(map_ or R / "map.pkl").read_bytes()
     try:
         raw = zlib.decompress(raw)

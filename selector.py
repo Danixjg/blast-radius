@@ -42,6 +42,7 @@ DATA = Path(os.environ.get("BR_DATA", "/data"))
 SRC = Path(os.environ.get("BR_SRC", HERE / "src"))
 MAP = Path(os.environ.get("BR_MAP", HERE / "map.pkl"))
 PROFILE = Path(os.environ.get("BR_PROFILE", HERE / "profile.pkl"))
+ORDER_BOUNDARIES = HERE / "order-boundaries.json"
 IMPORT_SITE_INDEX = Path(os.environ.get("BR_IMPORT_SITE_INDEX", HERE / "import-sites.json"))
 IMPORT_SITE_INDEX_VERSION = 2
 # R5/R6 ported from targeted-probes
@@ -474,6 +475,8 @@ def decoding_problem(new_bytes):
 # the result of side-effect-free equality, whether != is side-effect free); see eq_swap_mask.
 _EQ_OP = re.compile(r"\bis not\b|\bis\b|==|!=")
 _EQ_PAIRS = {("is", "=="), ("==", "is"), ("is not", "!="), ("!=", "is not")}
+_ORDER_OP = re.compile(r"(?<![<>=])(?:<=|>=|<|>)(?![<>=])")
+_ORDER_PAIRS = {(ast.Lt, ast.LtE), (ast.LtE, ast.Lt), (ast.Gt, ast.GtE), (ast.GtE, ast.Gt)}
 
 
 def eq_swap_cols(a, b):
@@ -1037,6 +1040,7 @@ class Hunter:
         self.d = data
         self.n = len(data["tests"])
         self.ALL = (1 << self.n) - 1
+        self.order_boundary_has_unmapped = False
         self.lines = data["lines"]
         self.classes = data["classes"]
         self.imp = {f: set(v) for f, v in data["imp_lines"].items()}
@@ -1277,7 +1281,7 @@ class Hunter:
             return s1 & inst
         return s1 | (inst if inst else self.fallback(rel, cls_path))
 
-    def analyze_py(self, rel, fp):
+    def analyze_py(self, rel, fp, isolated=False):
         """Mask for a modified .py file, or ALL when it cannot be reasoned about."""
         old = self.source(rel)
         if old is None:
@@ -1363,6 +1367,8 @@ class Hunter:
                 if not nt.strip() or (nt.strip().startswith("#") and not self._in_string(ntree, nl)):
                     continue
                 m |= self._added(rel, otree, ntree, ol, nl, nt, visited)
+        if isolated and m and not self.import_time and rel.startswith("sqlglot/"):
+            m &= ~self.order_boundary_drop(rel, fp, old, otree, ntree)
         if self.import_time and rel.startswith("sqlglot/"):
             self.need_probe = True
         if self.import_time and rel.startswith("tests/"):
@@ -1370,6 +1376,89 @@ class Hunter:
             m |= self.file_tests.get(rel, 0) | self.importers_of_test_module(rel)
         self.import_time = self.import_time or before
         return m
+
+    def order_boundary_drop(self, rel, fp, source, otree, ntree):
+        """Line-covered tests whose exact int operands never reach an edited order boundary."""
+        if self.order_boundary_has_unmapped or len(fp.hunks) != 1:
+            return 0
+        changed = list(edits(fp.hunks))
+        if len(changed) != 1:
+            return 0
+        kind, old_line, new_line, old, new = changed[0]
+        if kind != "replace" or old_line != new_line or not old.lstrip().startswith(("if ", "if\t")):
+            return 0
+        a, b = list(_ORDER_OP.finditer(old)), list(_ORDER_OP.finditer(new))
+        if len(a) != 1 or len(b) != 1:
+            return 0
+        a, b = a[0], b[0]
+        if old[:a.start()] != new[:b.start()] or old[a.end():] != new[b.end():]:
+            return 0
+        if (a.group(), b.group()) not in (("<", "<="), ("<=", "<"), (">", ">="), (">=", ">")):
+            return 0
+
+        def at_operator(tree, text, match):
+            start = len(text[:match.start()].encode("utf-8", "surrogateescape"))
+            return chain_at(tree, old_line, start, start + len(match.group()))
+
+        old_chain, new_chain = at_operator(otree, old, a), at_operator(ntree, new, b)
+        for chain in (old_chain, new_chain):
+            node = chain[-1]
+            if len(chain) < 3 or not isinstance(chain[-2], ast.If) or not isinstance(node, ast.Compare):
+                return 0
+            st = chain[-2]
+            if st.test is not node or st.lineno != old_line or st.body[0].lineno == old_line or \
+                    node.lineno != old_line or node.end_lineno != old_line or len(node.ops) != 1:
+                return 0
+        old_node, new_node = old_chain[-1], new_chain[-1]
+        if (type(old_node.ops[0]), type(new_node.ops[0])) not in _ORDER_PAIRS:
+            return 0
+        operands = (old_node.left, old_node.comparators[0])
+        if any(not (isinstance(n, ast.Name) or isinstance(n, ast.Constant) and type(n.value) is int)
+               for n in operands):
+            return 0
+        if any(_dump(x) != _dump(y) for x, y in zip(operands, (new_node.left, new_node.comparators[0]))):
+            return 0
+        scope = next((n for n in reversed(old_chain[:-2]) if isinstance(n, DEFS + (ast.Lambda,))), None)
+        if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return 0
+
+        if not hasattr(self, "_order_sites"):
+            self._order_sites = load_order_boundaries(self.d["tests"])
+        entry = self._order_sites.get(rel)
+        if entry is None or source_digest(source) != entry[0]:
+            return 0   # no record, or recorded against other source: line numbers may not match
+        row = entry[1].get(str(old_line))
+        if not isinstance(row, list) or len(row) != 2:
+            return 0
+        try:
+            good, bad = (int(mask, 16) for mask in row)
+        except (TypeError, ValueError):
+            return 0
+        if not 0 < good <= self.ALL or not 0 <= bad <= self.ALL:
+            return 0
+        if not self.order_operands_are_local(source, rel, scope, operands):
+            return 0
+        covered = self.span_mask(rel, old_line, old_line)
+        return covered & good & ~bad & ~self.unobserved & ~self.d["subproc"]
+
+    @staticmethod
+    def order_operands_are_local(source, rel, scope, operands):
+        from symtable import symtable
+
+        names = {n.id for n in operands if isinstance(n, ast.Name)}
+        if not names:
+            return True
+        try:
+            pending = [symtable(source, rel, "exec")]
+            while pending:
+                table = pending.pop()
+                if table.get_type() == "function" and table.get_lineno() == scope.lineno and \
+                        table.get_name() == scope.name:
+                    return all(table.lookup(name).is_local() for name in names)
+                pending.extend(table.get_children())
+        except (KeyError, SyntaxError, ValueError, RecursionError):
+            pass
+        return False
 
     def broken_file(self, rel):
         """A file that will not compile (or whose bytes mean something else to Python)."""
@@ -2657,7 +2746,7 @@ class Hunter:
                 return self.fallback(os.path.dirname(new) + "/__init__.py") | self.d["subproc"]
             return self.analyze_other(new)
         if rel.endswith(".py"):
-            return self.analyze_py(rel, fp)
+            return self.analyze_py(rel, fp, isolated)
         m = self.analyze_other(rel)
         if isolated and m and m != self.ALL and FIXTURE_PROJECTION and rel.startswith("tests/fixtures/") and \
                 rel.endswith(".sql"):
@@ -3892,6 +3981,42 @@ def load_import_site_index():
         return None
 
 
+def catalogue_numbers(hunter, catalog):
+    """(idx_to_num, unmapped) for this catalogue. Every Hunter caller (main(), build/validate.py)
+    goes through here, so a rule that depends on whether the catalogue has unmapped tests (the
+    order-boundary drop) behaves the same in replays as in the shipped selector."""
+    num_of = {t["id"]: t["number"] for t in catalog}
+    idx_to_num = [num_of.get(tid) for tid in hunter.d["tests"]]
+    known = {n for n in idx_to_num if n is not None}
+    unmapped = [t["number"] for t in catalog if t["number"] not in known]
+    hunter.order_boundary_has_unmapped = bool(unmapped)
+    return idx_to_num, unmapped
+
+
+def source_digest(data):
+    """sha256 of a source file's exact bytes (str: as Hunter.source decoded them)."""
+    import hashlib
+    if isinstance(data, str):
+        data = data.encode("utf-8", "surrogateescape")
+    return hashlib.sha256(data).hexdigest()
+
+
+def load_order_boundaries(tests):
+    """Optional pristine observations: {rel: (sha256 of the recorded source, {line: row})}.
+    Sites are keyed by line number, so each file's rows apply only while its source is
+    byte-identical to the one recorded. Missing or invalid records cannot narrow selection."""
+    try:
+        profile = json.loads(ORDER_BOUNDARIES.read_text(encoding="utf-8"))
+        sites, sources = profile["sites"], profile["sources"]
+        if profile["version"] == 2 and profile["tests"] == tests and isinstance(sites, dict) and \
+                isinstance(sources, dict):
+            return {rel: (sources[rel], rows) for rel, rows in sites.items()
+                    if isinstance(rows, dict) and isinstance(sources.get(rel), str)}
+    except (OSError, KeyError, TypeError, ValueError, RecursionError):
+        pass
+    return {}
+
+
 def load_profile(tests):
     """The runtime profile, if present and built for the same test list."""
     try:
@@ -3964,10 +4089,7 @@ def main():
     try:
         data = load_map()
         hunter = Hunter(data, load_profile(data["tests"]))
-        num_of = {t["id"]: t["number"] for t in catalog}
-        idx_to_num = [num_of.get(tid) for tid in data["tests"]]
-        known = {n for n in idx_to_num if n is not None}
-        unmapped = [n for n in all_nums if n not in known]
+        idx_to_num, unmapped = catalogue_numbers(hunter, catalog)
     except Exception as e:
         log("map unavailable, catcher runs everything:", repr(e))
 

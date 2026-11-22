@@ -67,6 +67,16 @@ def main():
                 shutil.copy2(ctx / s, d / Path(s).name)
         elif op == "RUN":
             cmd = re.sub(r"(?<![\w.])(/(?:app|tmp)\b[^\s'\",)]*)", lambda m: host(m.group(1)).replace("\\", "/"), rest)
+            stdlib_target = "/usr/local/lib/python3.13"
+            if stdlib_target in cmd:
+                # Compile in the scratch image and avoid writing to the host interpreter.
+                stdlib = subprocess.check_output(
+                    [py, "-I", "-c", "import sysconfig; print(sysconfig.get_path('stdlib'))"],
+                    text=True).strip()
+                destination = Path(host(stdlib_target))
+                shutil.copytree(stdlib, destination, ignore=shutil.ignore_patterns(
+                    "__pycache__", "*.pyc", "site-packages", "test", "tests", "idle_test"))
+                cmd = cmd.replace(stdlib_target, destination.as_posix())
             cmd = re.sub(r"(^|&&\s*)python\b", lambda m: m.group(1) + py.replace("\\", "/"), cmd)
             # pip installs into the image's site-packages; here into a scratch target instead, so the
             # host interpreter is untouched while download and hash checks still run

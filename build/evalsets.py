@@ -23,6 +23,9 @@ import sys
 from pathlib import Path
 
 R = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(R / "build"))
+from bench import APP_DATA_FILES  # noqa: E402
+
 W = R / "work"
 SAMPLE = R / "kit" / "sample"
 APP_FILES = ("selector.py", "map.pkl", "profile.pkl")
@@ -139,6 +142,13 @@ def files_at(ref, out):
     for f in APP_FILES:
         blob = subprocess.run(["git", "-C", str(R), "show", f"{ref}:{f}"], capture_output=True, check=True).stdout
         (d / f).write_bytes(blob)
+    # the optional data files bench.make_app picks up next to the selector: shipped when the ref has
+    # them, so the baseline app is the one that ref builds (older refs simply lack some)
+    for f in APP_DATA_FILES:
+        (d / f).unlink(missing_ok=True)
+        got = subprocess.run(["git", "-C", str(R), "show", f"{ref}:{f}"], capture_output=True)
+        if got.returncode == 0:
+            (d / f).write_bytes(got.stdout)
     return d
 
 

@@ -646,3 +646,23 @@ Still emulated rather than run in Docker: the holdouts, validation, feature and 
 Windows comparison versions. Their CPU figures are Windows process-tree CPU and are not comparable
 to the container's cgroup CPU. If the image's packages ever differ from the pinned versions, the
 verifier refuses to run (version check) and selections stand.
+
+## Integer comparison boundaries
+
+The optional `order-boundaries.json` profiles the pinned, unmodified sqlglot suite.
+For each supported comparison it records which tests reached it and saw unequal
+exact integers on every evaluation. The selector uses that fact for isolated
+`<`/`<=` or `>`/`>=` changes in a single-line function-local `if` condition.
+Equality, unobserved execution, subprocesses and import-time execution retain the
+existing selection. To rebuild the observations with Python 3.13 and the kit's
+locked dependencies, run `python build/record_boundaries.py --sqlglot PATH_TO_PINNED_CHECKOUT --scratch PATH_TO_SCRATCH`.
+
+The recording run passed all 1,621 collected tests and 25,454 subtests. Eight
+sites had usable observations. Three fresh comparison patches were checked with
+pytest against the 13 tests that covered the three sites. The selector retained
+both failing tests on the first patch and all three on the second. The third
+patch had no observed failure. Enabling the profile saved 1.111 simulated
+seconds across these controls with runtime verification disabled to isolate its effect.
+With verification enabled, the official sample and the 59-patch mixed set scored
+97.076 and 476.794 simulated seconds respectively in all three Windows runs,
+with zero missed commits in either set.
