@@ -242,6 +242,48 @@ class Collection(Base):
         m, _ = self.mask(p)
         self.assertEqual(m, self.h.tests_mentioning("test_zz_new"))
 
+    NEW_BODY = "\n\nclass T(unittest.TestCase):\n    def test_x(self):\n        pass\n"
+
+    def new_module_mask(self, imports):
+        return self.mask(diff("tests/test_zz_new.py", None, "import unittest\n" + imports + self.NEW_BODY))[0]
+
+    def test_new_test_module_importing_uncollected_helper_by_any_spelling(self):
+        # every spelling below runs tests/gen_fixtures.py, which collection otherwise never runs
+        for imports in ("from tests import gen_fixtures\n",
+                        "from tests import helpers, gen_fixtures\n",
+                        "import tests.gen_fixtures\n",
+                        "import tests.gen_fixtures as g\n",
+                        "from . import gen_fixtures\n",
+                        "from .gen_fixtures import rewrite_fixtures\n"):
+            self.assertEqual(self.new_module_mask(imports), self.h.scope_tests("tests"), imports)
+
+    def test_new_test_module_importing_collected_modules_stays_narrow(self):
+        # modules collection imports anyway, in every spelling: a cache hit, not new code
+        for imports in ("from tests.dialects import test_dialect\n",
+                        "from tests import helpers\n",
+                        "import tests.helpers\n",
+                        "from .dialects.test_dialect import Validator\n",
+                        "from . import helpers\n"):
+            self.assertNotEqual(self.new_module_mask(imports), self.h.scope_tests("tests"), imports)
+
+    def test_new_test_module_unresolvable_relative_import(self):
+        # beyond the top-level package: no module to vouch for, so it counts as unknown code
+        self.assertEqual(self.new_module_mask("from ... import something\n"), self.h.scope_tests("tests"))
+
+    CONFTEST = "import pytest\n\n\n@pytest.fixture\ndef {name}():\n    raise RuntimeError('boom')\n"
+
+    def test_new_conftest_with_an_unrequested_fixture_selects_nothing(self):
+        m, _ = self.mask(diff("tests/conftest.py", None, self.CONFTEST.format(name="unused_fixture_xyz")))
+        self.assertEqual(m, 0)
+
+    def test_new_conftest_overriding_a_builtin_fixture(self):
+        # pytest and its plugins request these themselves (tmpdir requests tmp_path, for example),
+        # so no mention in the test sources can vouch that nothing uses the override
+        for name in ("tmp_path", "tmp_path_factory", "monkeypatch", "capsys", "caplog", "worker_id",
+                     "testrun_uid", "cache", "recwarn", "pytestconfig", "record_property", "doctest_namespace"):
+            m, _ = self.mask(diff("tests/conftest.py", None, self.CONFTEST.format(name=name)))
+            self.assertEqual(m, self.h.ALL, name)
+
 
 class SameProgram(unittest.TestCase):
     """same_ast: equal programs apart from positions; loosely, apart from docstrings, postponed
@@ -749,6 +791,41 @@ class Verifier(unittest.TestCase):
             self.assertEqual(rep, {f + "test_pass": "pass", f + "test_subfail": "fail", f + "test_skip": "skip",
                                    f + "test_xfail": "xfail", f + "test_xpass": "xpass", f + "test_fail": "fail",
                                    f + "test_error": "error"})
+        finally:
+            S.SRC = old_src
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_class_and_module_teardown_errors_are_not_a_pass(self):
+        """Errors after a test's own stopTest (tearDownClass, class cleanups, tearDownModule) reach
+        unittest on a placeholder, not on a test; pytest charges them to the last test of the class
+        or module. No test the error could belong to may be reported as a pass."""
+        tmp = Path(tempfile.mkdtemp(prefix="br-verify-"))
+        old_src = S.SRC
+        try:
+            (tmp / "sqlglot").mkdir()
+            (tmp / "sqlglot" / "__init__.py").write_text("")
+            (tmp / "tests").mkdir()
+            (tmp / "tests" / "__init__.py").write_text("")
+            (tmp / "tests" / "test_td.py").write_text(
+                "import unittest\n\n"
+                "class TestTeardown(unittest.TestCase):\n"
+                "    @classmethod\n    def tearDownClass(cls):\n        raise RuntimeError\n"
+                "    def test_a(self):\n        pass\n\n"
+                "class TestCleanup(unittest.TestCase):\n"
+                "    @classmethod\n    def setUpClass(cls):\n        cls.addClassCleanup(cls.boom)\n"
+                "    @staticmethod\n    def boom():\n        raise RuntimeError\n"
+                "    def test_b(self):\n        pass\n")
+            (tmp / "tests" / "test_tdm.py").write_text(
+                "import unittest\n\n"
+                "def tearDownModule():\n    raise RuntimeError\n\n"
+                "class TestModule(unittest.TestCase):\n"
+                "    def test_c(self):\n        pass\n")
+            S.SRC = tmp
+            tests = [("tests/test_td.py::TestTeardown::test_a", 5.0), ("tests/test_td.py::TestCleanup::test_b", 5.0),
+                     ("tests/test_tdm.py::TestModule::test_c", 5.0)]
+            rep = S.verify_report({}, tests, 60)
+            for t, _ in tests:
+                self.assertNotEqual(rep.get(t), "pass", (t, rep))
         finally:
             S.SRC = old_src
             shutil.rmtree(tmp, ignore_errors=True)
