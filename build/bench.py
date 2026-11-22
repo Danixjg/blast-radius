@@ -77,8 +77,10 @@ def make_app(app, src=None, tar=None, selector=None, map_=None, python=None, pro
         shutil.rmtree(app)
     app.mkdir(parents=True)
     shutil.copyfile(selector or R / "selector.py", app / "selector.py")
-    if (Path(selector).parent if selector else R).joinpath("probe_imports.json").is_file():
-        shutil.copyfile((Path(selector).parent if selector else R) / "probe_imports.json", app / "probe_imports.json")
+    selector_dir = Path(selector).parent if selector else R
+    for name in ("probe_imports.json", "order-boundaries.json"):
+        if (selector_dir / name).is_file():
+            shutil.copyfile(selector_dir / name, app / name)
     raw = Path(map_ or R / "map.pkl").read_bytes()
     try:
         raw = zlib.decompress(raw)
