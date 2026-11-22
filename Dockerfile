@@ -5,11 +5,12 @@ FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf107
 # map.pkl     - per-test coverage map of sqlglot at eb11aec4 (built by build/, see README)
 # profile.pkl - runtime profile: literal-dictionary entry reads and is/== agreement per test
 # order-boundaries.json records exact-integer comparison observations from the same pinned suite.
+# tpcds-check.json: what test_execute_tpcds runs outside optimize() and its pristine optimizer hash.
 # sqlglot itself is fetched from its own repository at the pinned commit during the build and
 # verified file by file against build/sqlglot.manifest; its MIT LICENSE is kept at /app/src/LICENSE.
 # build/verify-requirements.txt pins (by sha256) the labelling environment's versions of the few
 # pure-Python packages the verifier's test runs need, so those runs take the labelled code paths.
-COPY selector.py map.pkl profile.pkl probe_imports.json order-boundaries.json /app/
+COPY selector.py map.pkl profile.pkl probe_imports.json order-boundaries.json tpcds-check.json /app/
 COPY build/fetch_sqlglot.py build/sqlglot.manifest build/verify-requirements.txt /tmp/fetch/
 COPY build/build_import_index.py /tmp/fetch/
 

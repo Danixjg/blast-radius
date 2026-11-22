@@ -39,7 +39,7 @@ KIT = R / "kit"
 STDOUT_LIMIT = 2 * 1024 * 1024
 # optional data files the selector reads from its own directory (HERE); evalsets.files_at ships
 # the same list from a baseline ref, so both apps carry what their selector expects
-APP_DATA_FILES = ("probe_imports.json", "order-boundaries.json")
+APP_DATA_FILES = ("probe_imports.json", "order-boundaries.json", "tpcds-check.json")
 
 
 def load_scorer():
