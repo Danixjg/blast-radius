@@ -8,7 +8,7 @@ FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf107
 # verified file by file against build/sqlglot.manifest; its MIT LICENSE is kept at /app/src/LICENSE.
 # build/verify-requirements.txt pins (by sha256) the labelling environment's versions of the few
 # pure-Python packages the verifier's test runs need, so those runs take the labelled code paths.
-COPY selector.py map.pkl profile.pkl /app/
+COPY selector.py map.pkl profile.pkl probe_imports.json /app/
 COPY build/fetch_sqlglot.py build/sqlglot.manifest build/verify-requirements.txt /tmp/fetch/
 
 RUN python -I /tmp/fetch/fetch_sqlglot.py /app/src /tmp/fetch/sqlglot.manifest \

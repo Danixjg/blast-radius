@@ -716,6 +716,79 @@ class ImportNames(Base):
             self.assertNotEqual(m, self.readers(), text)
 
 
+class TargetedProbe(unittest.TestCase):
+    """The import probe imports `sqlglot`, the patched modules and every module whose import loads
+    one of them (probe_imports.json), unless a patched module mutates state while it imports."""
+    GEN = "sqlglot/generators/postgres.py"
+
+    def setUp(self):
+        self.saved = (S.PROBE_IMPORTS, S.PROBE_TARGETED)
+        S._PROBE_FWD = None
+
+    def tearDown(self):
+        S.PROBE_IMPORTS, S.PROBE_TARGETED = self.saved
+        S._PROBE_FWD = None
+
+    def full(self, files):
+        S.PROBE_TARGETED, S._PROBE_FWD = False, None
+        try:
+            return S._probe_modules(files)
+        finally:
+            S.PROBE_TARGETED, S._PROBE_FWD = True, None
+
+    def test_leaf_patch_imports_only_what_loads_it(self):
+        files = {self.GEN: read(self.GEN) + "\nX = 1\n"}
+        mods = S._probe_modules(files)
+        want = {"sqlglot", "sqlglot.dialects.materialize", "sqlglot.dialects.postgres", "sqlglot.dialects.redshift",
+                "sqlglot.dialects.risingwave", "sqlglot.generators.materialize", "sqlglot.generators.postgres",
+                "sqlglot.generators.redshift", "sqlglot.generators.risingwave"}
+        self.assertEqual(set(mods), want)
+        full = self.full(files)
+        self.assertEqual(mods, [m for m in full if m in want], "same order as the full probe (checkpoints)")
+
+    def test_module_mutating_while_it_imports_gets_the_full_list(self):
+        rel = "sqlglot/dialects/duckdb.py"   # DATE_PART_MAPPING.pop(...) in its class body
+        files = {rel: read(rel) + "\nX = 1\n"}
+        self.assertEqual(S._probe_modules(files), self.full(files))
+
+    def test_patch_adding_a_mutation_gets_the_full_list(self):
+        files = {self.GEN: read(self.GEN) + "\nexp.Select.extra = 1\n"}
+        self.assertEqual(S._probe_modules(files), self.full(files))
+        files = {self.GEN: read(self.GEN) + "\nTRANSFORMS = {}\nTRANSFORMS.update(a=1)\n"}
+        self.assertEqual(S._probe_modules(files), self.full(files))
+
+    def test_patch_outside_sqlglot_gets_the_full_list(self):
+        files = {self.GEN: read(self.GEN) + "\nX = 1\n", "tests/test_zz.py": "x = 1\n"}
+        self.assertEqual(S._probe_modules(files), self.full(files))
+
+    def test_missing_map_or_switch_gets_the_full_list(self):
+        files = {self.GEN: read(self.GEN) + "\nX = 1\n"}
+        S.PROBE_IMPORTS = Path(tempfile.gettempdir()) / "br-no-such-probe-imports.json"
+        self.assertEqual(S._probe_modules(files), self.full(files))
+        S._PROBE_FWD = None
+        S.PROBE_IMPORTS = self.saved[0]
+        S.PROBE_TARGETED = False
+        self.assertEqual(S._probe_modules(files), self.full(files))
+
+    def test_new_and_deleted_modules(self):
+        files = {"sqlglot/dialects/zz_new.py": "X = 1\n"}
+        self.assertIn("sqlglot.dialects.zz_new", S._probe_modules(files))
+        files = {"sqlglot/generators/dremio.py": None}
+        mods = S._probe_modules(files)
+        self.assertNotIn("sqlglot.generators.dremio", mods)
+        self.assertIn("sqlglot.dialects.dremio", mods, "its importer must still be imported")
+
+    def test_verdicts_match_the_full_probe(self):
+        src = read(self.GEN)
+        for text, want in ((src + "\nraise RuntimeError('patched')\n", "broken"), (src + "\nX = 1\n", "ok")):
+            files = {self.GEN: text}
+            got = S.run_probe(files, 60)
+            S.PROBE_TARGETED, S._PROBE_FWD = False, None
+            full = S.run_probe(files, 60)
+            S.PROBE_TARGETED, S._PROBE_FWD = True, None
+            self.assertEqual((got, full), (want, want))
+
+
 class DictEntries(Base):
     REL = "sqlglot/parsers/singlestore.py"
     OLD = '"GROUPS FOR USER": _show_parser("GROUPS FOR USER", target=True),'
