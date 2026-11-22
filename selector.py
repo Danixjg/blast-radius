@@ -103,6 +103,18 @@ def log(*a):
     print(*a, file=sys.stderr)
 
 
+# Fixtures pytest 9 and the installed plugins (xdist, timeout) define. pytest reserves `request`
+# even for unused fixtures; the others can be requested by pytest's own code or plugins (tmpdir
+# requests tmp_path, for example), which no mention in the test sources can rule out.
+PYTEST_FIXTURES = frozenset((
+    "request", "cache", "capsys", "capsysbinary", "capfd", "capfdbinary", "capteesys", "caplog",
+    "doctest_namespace", "pytestconfig", "record_property", "record_xml_attribute",
+    "record_testsuite_property", "recwarn", "subtests", "tmpdir", "tmpdir_factory", "tmp_path",
+    "tmp_path_factory", "monkeypatch", "pytester", "testdir", "linecomp", "LineMatcher",
+    "worker_id", "testrun_uid",
+))
+
+
 def module_of(rel):
     m = rel[:-3].replace("/", ".")
     return m[:-9] if m.endswith(".__init__") else m
@@ -1504,7 +1516,7 @@ class Hunter:
             if not isinstance(decorator, ast.Attribute) or decorator.attr != "fixture" or \
                     not isinstance(decorator.value, ast.Name) or decorator.value.id != "pytest":
                 return False
-            if stmt.name == "request":   # pytest reserves this name even for unused fixtures
+            if stmt.name in PYTEST_FIXTURES:   # pytest and its plugins request these themselves
                 return False
             names.add(stmt.name)
 
@@ -1723,10 +1735,45 @@ class Hunter:
                     continue
                 return self.scope_tests("tests")
             for st in tree.body:
-                if isinstance(st, ast.ImportFrom) and st.level == 0 and (st.module or "").startswith("tests") and \
-                        not self.collected_anyway(st.module):
+                mods = self.imported_test_modules(rel, st)
+                if mods is None or not all(self.collected_anyway(x) for x in mods):
                     return self.scope_tests("tests")   # imports run other test modules' code
         return m
+
+    def imported_test_modules(self, rel, st):
+        """The tests.* modules a top-level statement of the new file `rel` imports, in any spelling:
+        `import tests.a.b` (tests, tests.a, tests.a.b), `from tests.a import b` and the relative
+        `from . import b` / `from .b import x` (the package, plus b wherever b is a submodule).
+        [] for anything else; None when the statement cannot be resolved to modules."""
+        if isinstance(st, ast.Import):
+            out = []
+            for alias in st.names:
+                parts = alias.name.split(".")
+                if parts[0] == "tests":
+                    out += [".".join(parts[:i]) for i in range(1, len(parts) + 1)]
+            return out
+        if not isinstance(st, ast.ImportFrom):
+            return []
+        if st.level:
+            package = module_of(rel).split(".")[:-1]
+            if st.level > len(package):
+                return None   # beyond the top-level package
+            base = package[:len(package) - st.level + 1]
+            parts = base + (st.module.split(".") if st.module else [])
+        else:
+            parts = (st.module or "").split(".")
+        if parts[0] != "tests":
+            return []
+        if any(alias.name == "*" for alias in st.names):
+            return None
+        module = ".".join(parts)
+        out = [".".join(parts[:i]) for i in range(1, len(parts) + 1)]
+        for alias in st.names:
+            sub = module + "." + alias.name
+            path = sub.replace(".", "/")
+            if self.source(path + ".py") is not None or self.source(path + "/__init__.py") is not None:
+                out.append(sub)
+        return out
 
     def collected_anyway(self, module):
         """A tests.* module whose code pytest's collection runs whether or not a new file imports
@@ -2051,11 +2098,34 @@ except BaseException as e:
     os._exit(0)
 os.chdir(src)
 report, by_test = {}, {}
+poisoned = []   # test-id prefixes whose class or module fixture raised; "" covers every test
 
 def mark(test, value):
     key = by_test.get(id(test))
     if key is not None and report.get(key[0], "pass") == "pass":
         report[key[0]] = value
+
+def unowned(test):
+    """Errors from tearDownClass, class cleanups, setUpModule/tearDownModule and module cleanups
+    arrive on a placeholder whose description ends in "(module.Class)" or "(module)", after its
+    tests reported; pytest charges them to a test of that class or module. No test in that scope
+    counts as a pass, earlier or later; an unreadable scope covers every test."""
+    if id(test) in by_test:
+        return False
+    desc = str(getattr(test, "description", "")).strip()
+    scope = ""
+    if desc.endswith(")") and "(" in desc:
+        parts = desc[desc.rindex("(") + 1:-1].split(".")
+        for i in range(len(parts), 0, -1):
+            path = "/".join(parts[:i]) + ".py"
+            if os.path.isfile(path):
+                scope = path + "::" + "".join(p + "::" for p in parts[i:])
+                break
+    poisoned.append(scope)
+    for k, v in list(report.items()):
+        if k.startswith(scope) and v in ("pass", "slow"):
+            report[k] = "error"
+    return True
 
 class _Result(unittest.TestResult):
     def startTest(self, test):
@@ -2065,13 +2135,17 @@ class _Result(unittest.TestResult):
         super().stopTest(test)
         key = by_test.get(id(test))
         if key is not None:
+            if any(key[0].startswith(p) for p in poisoned):
+                report.setdefault(key[0], "error")
             report.setdefault(key[0], "slow" if time.perf_counter() - self._t > key[1] else "pass")
     def addError(self, test, err):
         super().addError(test, err)
-        mark(test, "error")
+        if not unowned(test):
+            mark(test, "error")
     def addFailure(self, test, err):
         super().addFailure(test, err)
-        mark(test, "fail")
+        if not unowned(test):
+            mark(test, "fail")
     def addSubTest(self, test, subtest, err):
         super().addSubTest(test, subtest, err)
         if err is not None:

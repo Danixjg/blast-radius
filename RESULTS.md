@@ -54,8 +54,9 @@ function (`parser`), argument annotations (`generator.sql`), a `TYPE_CHECKING` i
 Public sample with CPU (Windows, `build/bench.py`, whole process tree, 3 runs each): rev3 median
 total 120.5 s (CPU 2.2 s), this version 100.4 s (CPU 3.3 s: 5 verifier runs of about 0.4 s
 each; 2 probes instead of 4). In the real Docker image (`make sample`, then `make measure` with three
-fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 2.67, 2.70 and
-2.64 s across the three runs (median total 99.75 s). The simulated reduction is confirmed under the
+fresh containers and cgroup CPU) this version scored 97.076 s / 0 misses with CPU 2.00, 2.02 and
+1.99 s across the three runs (median total 99.08 s) after the merge with PR #5. Before that merge
+the same sample scored 97.076 s / 0 misses with median total 99.75 s. The simulated reduction is confirmed under the
 official limits; the CPU figure is the container's, not a Windows process-tree estimate. An earlier
 measurement of 3.45/3.75/2.98 s was taken while the independent holdout was being labelled on the
 same machine and is not comparable.
@@ -126,6 +127,19 @@ Most of the remaining 221.9 s is structural:
   "run everything" (62.8 s over the oracle);
 - `is`/`==` swaps and code edits whose selection includes the 21 s `test_execute_tpcds`;
 - class-attribute string edits read by many tests.
+
+### Additional pre-merge holdout (seed 42424242)
+
+A third set was generated from the pre-merge frozen selector
+(`9a95adfba9c68605ccb940f3a8ff749d32800098fb25a96ea5af3836124d2d72`, same profile hash). It is
+not the shipping artifact — PR #5 was merged afterwards — but it is a further check that the gains
+are not seed-specific. 66 patches, 40 breaking, pristine `complete` with 0 failures, all 66 labels
+`complete`:
+
+| selector | simulated seconds | misses |
+| --- | ---: | ---: |
+| rev3 (`fcc7d3a`) | 799.615 | 0 |
+| pre-merge version | 610.261 | 0 |
 
 ## Third independent holdout (frozen follow-up artifact)
 
@@ -205,7 +219,7 @@ Targeted tests were added for the three rules most likely to be overfitted:
   reads; this remains a documented limitation rather than a validated guarantee.
 
 After the fix, the first holdout still scores 571.500 s / 0 misses and the public sample still
-scores 97.076 s / 0 misses in Docker (median total 99.75 s).
+scores 97.076 s / 0 misses in Docker (median total 99.08 s after the PR #5 merge).
 
 ## Versions
 
