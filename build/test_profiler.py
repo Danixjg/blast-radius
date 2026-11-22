@@ -260,9 +260,25 @@ class Comparisons(unittest.TestCase):
         self.assertTrue(r)
         self.assertEqual(self.ns["Obj"].calls, 0, "recording `o is not None` must not call __eq__")
         fact = self.facts(rec, 12)
-        self.assertEqual(fact, {(False, None, False)})
+        self.assertEqual(fact, {(False, None, False, ("sqlglot.fake_module.Obj.__eq__", "builtins.object.__ne__"))},
+                         "against None: the implementations the swap would run, looked up, not called")
         self.assertFalse(S.Hunter._swap_preserves(next(iter(fact)), negated=True),
                          "`is not` -> `!=` would run the side-effecting __eq__")
+        h = S.Hunter(S.load_map())
+        self.assertFalse(h._preserves(next(iter(fact)), negated=True), "not provably identity's answer")
+
+    def test_none_answer_of_sqlglot_equality(self):
+        h = S.Hunter(S.load_map())
+        eq, ne = "sqlglot.expressions.core.Expression.__eq__", "sqlglot.expressions.core.Expression.__ne__"
+        # `self is other or (type(self) is type(other) and hash(self) == hash(other))`: decided
+        # False for None before hash() would run
+        self.assertTrue(h._preserves((False, None, False, (eq, ne)), negated=False))
+        self.assertTrue(h._preserves((False, None, False, (eq, ne)), negated=True), "`not self.__eq__(other)`")
+        self.assertTrue(h._preserves((False, None, False, ("builtins.list.__eq__", "builtins.list.__ne__")), True))
+        for impl in (("sqlglot.dialects.dialect.Dialect.__eq__", "builtins.object.__ne__"),   # a metaclass __eq__
+                     ("numpy.ndarray.__eq__", "numpy.ndarray.__ne__"), (None, None)):
+            self.assertFalse(h._preserves((False, None, False, impl), negated=False), impl)
+        self.assertTrue(h._preserves((True, True, True), negated=False), "3-tuples as before")
 
     def test_ne_original_cannot_drop_its_side_effects(self):
         o = self.ns["Obj"]()

@@ -391,16 +391,31 @@ def ne_pure(a, b):
     return eq_pure(a, b) and _slot(type(a), "__ne__") in _PURE_NE and _slot(type(b), "__ne__") in _PURE_NE
 
 
+def _impl(tp, name):
+    """Qualified name of the method Python calls for `name` on instances of tp, or None."""
+    f = _slot(tp, name)
+    if f is None:
+        return None
+    owner = getattr(f, "__objclass__", None)
+    mod = getattr(f, "__module__", None) or getattr(owner, "__module__", None)
+    qual = getattr(f, "__qualname__", None)
+    return f"{mod}.{qual}" if mod and qual else None
+
+
 def cmp(site, op, a, b):
     """op 0: is, 1: is not, 2: ==, 3: !=. Returns exactly what the original comparison returns.
 
     Records one pristine operand fact per evaluation, never an edit outcome:
-        (identical, eq, ne_ok)
+        (identical, eq, ne_ok)            or, against None with a non-builtin equality,
+        (identical, eq, ne_ok, impl)
     identical  a is b
     eq         the bool a == b evaluates to, when that evaluation runs only side-effect-free
                builtin code (computed here only in that case, so the recorder adds no side
                effects); None otherwise
     ne_ok      a != b would also run only side-effect-free builtin code (then a != b is not eq)
+    impl       when exactly one operand is None and eq is None: the qualified names of the
+               __eq__ and __ne__ the other operand's type supplies (nothing is called to get
+               them), so the selector can decide from that code what `x == None` would do
     The selector decides at run time, from these facts, whether a given operator edit can change
     the result or the side effects for each test."""
     if op == 0:
@@ -423,7 +438,11 @@ def cmp(site, op, a, b):
         if pure:
             v = a == b
             eq = v if type(v) is bool else None
-    _target().cmp.add((site, (identical, eq, ne_ok)))
+    fact = (identical, eq, ne_ok)
+    if eq is None and (a is None) != (b is None):
+        other = type(b if a is None else a)
+        fact += ((_impl(other, "__eq__"), _impl(other, "__ne__")),)
+    _target().cmp.add((site, fact))
     return r
 
 
