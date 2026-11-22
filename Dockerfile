@@ -18,7 +18,7 @@ RUN python -I /tmp/fetch/fetch_sqlglot.py /app/src /tmp/fetch/sqlglot.manifest \
  && python -m pip install --no-cache-dir --no-deps --only-binary=:all: --require-hashes --disable-pip-version-check --root-user-action=ignore -r /tmp/fetch/verify-requirements.txt \
  && rm -rf /tmp/fetch \
  && python -c "import zlib, pathlib; [p.write_bytes(zlib.decompress(p.read_bytes())) for p in map(pathlib.Path, ('/app/map.pkl', '/app/profile.pkl'))]" \
- && python -m compileall -q -x '[/\\](site-packages|tests?|idle_test)[/\\]' /usr/local/lib/python3.13 \
+ && python -m compileall -q -x '(^|[^A-Za-z0-9_])(site-packages|tests?|idle_test)([^A-Za-z0-9_]|$)' /usr/local/lib/python3.13 \
  && python -m compileall -q /app/src/sqlglot /app/src/tests /app/selector.py \
  && chmod -R a+rX /app
 
