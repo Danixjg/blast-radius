@@ -49,7 +49,7 @@ IMPORT_SITE_INDEX_VERSION = 2
 # is read at run time under derived names, so "readers that also instantiated" misses its users
 INST_NARROW = os.environ.get("BR_INST_NARROW", "0") == "1"
 GENMEM_DROP = os.environ.get("BR_GENMEM_DROP", "1") == "1"
-GENMEM_NUM = 1224
+GENMEM_ID = "tests/test_generator.py::TestGenerator::test_generator_memory"
 GENMEM_MAX_SELECTED = 500
 # which sqlglot modules importing each module loads (build/mkimports.py). The targeted probe
 # imports only that subset, which saves CPU but can miss an order-dependent import failure and
@@ -3938,19 +3938,20 @@ def verify(hunter, catalog, selected, verify_files, ms_by_num, idx_to_num):
         selected[cid] = kept
 
 
-def drop_genmem(selected, direct, import_broken=()):
+def drop_genmem(selected, direct, import_broken=(), genmem_num=None):
     """R6 (pp2.py): drop test_generator_memory from small selections unless line or file
     coverage selected it directly. `direct` maps commit id -> that direct-coverage evidence.
     `import_broken` holds commits whose import probe failed: there #8's mass_failure_mask keeps
-    genmem, so R6 must not undo that decision."""
-    if not GENMEM_DROP:
+    genmem, so R6 must not undo that decision. `genmem_num` is the test's number in this
+    catalogue, looked up by id; None (absent from the catalogue or the map) drops nothing."""
+    if not GENMEM_DROP or genmem_num is None:
         return
     for cid, nums in selected.items():
-        if nums is None or GENMEM_NUM not in nums or len(nums) > GENMEM_MAX_SELECTED:
+        if nums is None or genmem_num not in nums or len(nums) > GENMEM_MAX_SELECTED:
             continue
         if direct.get(cid) or cid in import_broken:
             continue
-        nums.discard(GENMEM_NUM)
+        nums.discard(genmem_num)
         log(cid, "genmem: dropped from a small, non-direct selection")
 
 
@@ -4053,9 +4054,12 @@ def main():
             log("verification failed, selections kept:", repr(e))
 
     if GENMEM_DROP and hunter is not None:
+        # by id, not by number: another catalogue may number it differently. Absent from the
+        # catalogue or from the map, it is unmapped (kept in every selection) and R6 stays off.
+        genmem_num = next((t["number"] for t in catalog if t["id"] == GENMEM_ID), None)
         genmem_bit = 0
-        if GENMEM_NUM in idx_to_num:
-            genmem_bit = 1 << idx_to_num.index(GENMEM_NUM)
+        if genmem_num is not None and genmem_num in idx_to_num:
+            genmem_bit = 1 << idx_to_num.index(genmem_num)
         direct = {}
         if genmem_bit:
             for p in patches:
@@ -4072,7 +4076,7 @@ def main():
                         if nl:
                             m |= hunter.span_mask(rel, ns, ns + nl - 1)
                 direct[cid] = bool(m & genmem_bit)
-        drop_genmem(selected, direct, import_broken)
+            drop_genmem(selected, direct, import_broken, genmem_num)
 
     out, total = [], 0
     all_schedule = None
