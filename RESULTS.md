@@ -371,6 +371,15 @@ Regression checks: holdout 2 goes from 464.316 to 447.102, from its one expected
 (`h33743`, earlier 25.454 s and now 8.240 s, with its labelled failure kept). Holdout 2 unique goes
 from 453.088 to 435.874. All other sets are unchanged, with 0 misses.
 
+
+**Packaging (review fix).** The image and `bench.py`'s app held only `sqlglot/**`, `tests/**/*.py` and
+three root files, so in the container the pristine fixture was missing, the rule fell back to every
+opener, and none of the gains above appeared end to end (the unit tests read the full checkout).
+`fetch_sqlglot.wanted` now also extracts `tests/fixtures/optimizer/tpc-{ds,h}/tpc-{ds,h}.sql`, the
+manifest pins their SHA-256, `bench.py` copies them, and `FixturePackaging` checks both. Linux rescore
+against `main` (with #10), simulated seconds: holdout 2 427.492 → 410.278, holdout 2 unique 416.264
+→ 399.050, mutants 924.094 → 906.880, seed 8675309 476.872 → 458.955. Sample, holdout 1, seed
+42424242 and seed 314159 are unchanged. Every set has 0 misses.
 ## `x is None` vs `x == None` on sqlglot objects (follow-up to the import index)
 
 Swapping `is None` and `== None` is a common edit. When the operand is a sqlglot `Expression`,
