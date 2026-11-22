@@ -22,6 +22,7 @@ Standard library only. stdout carries exactly one JSON line per commit; logs go 
 """
 
 import ast
+import collections
 import io
 import json
 import os
@@ -256,6 +257,14 @@ def line_map(hunks):
                 break
         return line + shift
     return ochanged, nchanged, to_new
+
+
+_EQ_TOKENS = ("__eq__", "__ne__", "setattr", "__dict__")
+
+
+def _eq_lines(text):
+    """The lines of a source text that could rebind an equality method, with their counts."""
+    return collections.Counter(ln.strip() for ln in text.splitlines() if any(t in ln for t in _EQ_TOKENS))
 
 
 _DOC_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
@@ -1822,7 +1831,9 @@ class Hunter:
         """The patch changes no __eq__/__ne__ definition and no class's bases, keywords or
         decorators in any file it touches (which method type(x).__eq__ is stays what the profile
         recorded), and binds no new name `type` at module level."""
-        key = id(self.probe_files)
+        # keyed on the patch's content: one Hunter sees every patch, and a freed probe_files
+        # dict's id comes back for the next one
+        key = tuple(sorted((rel, text) for rel, text in self.probe_files.items() if rel.endswith(".py")))
         if getattr(self, "_eq_stable", (None, None))[0] == key:
             return self._eq_stable[1]
 
@@ -1849,7 +1860,11 @@ class Hunter:
                 continue
             old = self.source(rel)
             try:
-                if old is None or text is None or signature(old) != signature(text):
+                # any added or removed line naming the equality methods, setattr or __dict__
+                # (tuple targets, defs nested in the class body, Cls.__eq__ = ... at module level,
+                # setattr with a computed name) may change which __eq__ runs
+                if old is None or text is None or _eq_lines(old) != _eq_lines(text) or \
+                        signature(old) != signature(text):
                     ok = False
                     break
             except (SyntaxError, ValueError, RecursionError):

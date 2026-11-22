@@ -381,6 +381,25 @@ class NoneEqualityProof(unittest.TestCase):
         self.assertTrue(with_patch({"sqlglot/other.py": "class Base:\n    pass\n\n\nclass Leaf(Base):\n    x = 1\n"}),
                         "unrelated edits keep the proof")
 
+    def test_guard_is_decided_for_each_patch(self):
+        # main() runs every patch through one Hunter; a freed probe_files dict's id comes back for
+        # the next patch, so the guard must not be keyed on the dict's identity
+        files = {}
+        self.h.probe_files = files
+        self.assertTrue(self.h._preserves(self.fact("Ident"), negated=False))
+        files["sqlglot/other.py"] = "class Base:\n    pass\n\n\nclass Leaf(Base, dict):\n    pass\n"
+        self.assertFalse(self.h._preserves(self.fact("Ident"), negated=False), "same dict object, new patch")
+
+    def test_other_ways_to_rebind_equality(self):
+        base = "class Base:\n    pass\n\n\nclass Leaf(Base):\n    pass\n"
+        for label, text in (
+                ("tuple target", base.replace("class Leaf(Base):\n    pass", "class Leaf(Base):\n    __eq__, _x = (lambda s, o: True), 0")),
+                ("def under if", base.replace("class Leaf(Base):\n    pass", "class Leaf(Base):\n    if True:\n        def __eq__(s, o):\n            return True")),
+                ("module-level assignment", base + "\n\nLeaf.__eq__ = lambda s, o: True\n"),
+                ("setattr", base + "\n\nsetattr(Leaf, '_' + '_eq__', lambda s, o: True)\n")):
+            self.h.probe_files = {"sqlglot/other.py": text}
+            self.assertFalse(self.h._preserves(self.fact("Ident"), negated=False), label)
+
 
 if __name__ == "__main__":
     unittest.main()
