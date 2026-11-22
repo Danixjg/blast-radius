@@ -626,6 +626,48 @@ def _imported_modules(st, rel):
     return out
 
 
+def _module_binds(tree, name):
+    """The module (re)binds `name` in its global namespace: assignment, annotated or augmented
+    assignment, walrus, import (also star imports, which could bring anything), def or class, loop,
+    with or except target at module level (compound statements included), or a `global name`
+    anywhere. None (no tree) counts as binding."""
+    if tree is None:
+        return True
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Global) and name in node.names:
+            return True
+
+    def binds(st):
+        for n in ast.walk(st):
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)) and n is not st:
+                continue
+            if isinstance(n, ast.Name) and n.id == name and isinstance(n.ctx, (ast.Store, ast.Del)):
+                return True
+            if isinstance(n, (ast.Import, ast.ImportFrom)):
+                for a in n.names:
+                    if a.name == "*" or (a.asname or a.name.split(".")[0]) == name:
+                        return True
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and n.name == name:
+                return True
+            if isinstance(n, ast.ExceptHandler) and n.name == name:
+                return True
+        return False
+
+    def visit(body):
+        for st in body:
+            if isinstance(st, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if st.name == name:
+                    return True
+                if isinstance(st, ast.ClassDef):
+                    continue   # class bodies have their own namespace
+                continue
+            if binds(st):
+                return True
+        return False
+
+    return visit(tree.body)
+
+
 def is_docstring(st):
     return isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant) and isinstance(st.value.value, str)
 
@@ -1728,6 +1770,8 @@ class Hunter:
         keeps it when that code gives identity's answer for None and runs nothing else."""
         if len(fact) < 4 or fact[0] or fact[1] is not None:
             return self._swap_preserves(fact, negated)
+        if not self._equality_code_unchanged():
+            return False   # the patch may change which __eq__/__ne__ runs: the recorded names are stale
         eq_impl, ne_impl = fact[3]
         if self._none_answer(eq_impl, "__eq__", eq_impl) is not False:
             return False
@@ -1737,11 +1781,54 @@ class Hunter:
             return True   # object.__ne__ inverts the __eq__ just vouched for
         return self._none_answer(ne_impl, "__ne__", eq_impl) is True
 
+    def _equality_code_unchanged(self):
+        """The patch changes no __eq__/__ne__ definition and no class's bases, keywords or
+        decorators in any file it touches (which method type(x).__eq__ is stays what the profile
+        recorded), and binds no new name `type` at module level."""
+        key = id(self.probe_files)
+        if getattr(self, "_eq_stable", (None, None))[0] == key:
+            return self._eq_stable[1]
+
+        def signature(text):
+            tree = ast.parse(text)
+            sig = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    sig.add(("class", node.name, _dump(ast.Tuple(elts=node.bases + [k.value for k in node.keywords]
+                                                                + node.decorator_list, ctx=ast.Load())),
+                             tuple(k.arg or "" for k in node.keywords)))
+                    for s in node.body:
+                        if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) and s.name in ("__eq__", "__ne__"):
+                            sig.add(("method", node.name, s.name, _dump(s)))
+                        elif any(isinstance(t, ast.Name) and t.id in ("__eq__", "__ne__")
+                                 for t in getattr(s, "targets", [getattr(s, "target", None)]) if t is not None):
+                            sig.add(("assigned", node.name, _dump(s)))
+            sig.add(("binds-type", _module_binds(tree, "type")))
+            return sig
+
+        ok = True
+        for rel, text in self.probe_files.items():
+            if not rel.endswith(".py"):
+                continue
+            old = self.source(rel)
+            try:
+                if old is None or text is None or signature(old) != signature(text):
+                    ok = False
+                    break
+            except (SyntaxError, ValueError, RecursionError):
+                ok = False
+                break
+        self._eq_stable = (key, ok)
+        return ok
+
     def _none_answer(self, impl, name, eq_impl, depth=0):
         """What `impl(self, None)` returns (True/False), provided it provably returns that bool
         without running anything else, or None. Builtins from NONE_SAFE_BUILTIN; a sqlglot method
-        whose body is one `return` of identity/type tests combined with and/or/not, decided before
-        anything else would be evaluated, and which the patch leaves as it is."""
+        whose body is one `return` of identity tests (`is`, `is not`: never user code) on self,
+        other, None and builtin type(...), combined with and/or/not and decided before anything
+        else would be evaluated, in a module that does not rebind `type` (before or after the
+        patch), and which the patch leaves as it is. `==` and `!=` can run user code (even this
+        very method again), so they decide nothing."""
         if impl in self.NONE_SAFE_BUILTIN:
             return name == "__ne__"
         if not impl or not impl.startswith("sqlglot.") or depth > 3:
@@ -1757,14 +1844,21 @@ class Hunter:
         body = [s for s in fn.body if not is_docstring(s)]
         if len(body) != 1 or not isinstance(body[0], ast.Return) or body[0].value is None:
             return None
+        if any(isinstance(n, ast.NamedExpr) for n in ast.walk(body[0].value)):
+            return None   # a binding inside the expression could change what self or other mean
+        type_ok = "type" not in (me, other) and not _module_binds(self.tree(rel), "type")
         new = self.probe_files.get(rel)
-        if new is not None:   # the patch edits this file: the method must stay the same
+        if rel in self.probe_files:   # the patch edits this file: the method must stay the same
+            if new is None:
+                return None
             try:
-                nfound = self._method_in(ast.parse(new), path)
+                ntree = ast.parse(new)
             except SyntaxError:
                 return None
+            nfound = self._method_in(ntree, path)
             if nfound is None or ast.dump(nfound) != ast.dump(fn):
                 return None
+            type_ok = type_ok and not _module_binds(ntree, "type")
 
         def ev(node):
             if isinstance(node, ast.Constant) and isinstance(node.value, bool):
@@ -1783,15 +1877,16 @@ class Hunter:
                 return not stop
             if isinstance(node, ast.Compare) and len(node.ops) == 1:
                 left, right, op = node.left, node.comparators[0], node.ops[0]
+                if not isinstance(op, (ast.Is, ast.IsNot)):
+                    return None   # == and != call __eq__/__ne__: user code
                 kinds = {kind(left), kind(right)}
-                if isinstance(op, (ast.Is, ast.IsNot, ast.Eq, ast.NotEq)) and kinds in (
-                        {"self", "other"}, {"self", "none"}, {"type_self", "type_other"}):
+                if kinds in ({"self", "other"}, {"self", "none"}, {"type_self", "type_other"}):
                     differ = True   # self is an instance, never None; its type is not NoneType
-                elif isinstance(op, (ast.Is, ast.IsNot)) and kinds == {"other", "none"}:
+                elif kinds == {"other", "none"}:
                     differ = False
                 else:
                     return None
-                return differ if isinstance(op, (ast.IsNot, ast.NotEq)) else not differ
+                return differ if isinstance(op, ast.IsNot) else not differ
             if isinstance(node, ast.Call) and not node.keywords and len(node.args) == 1 and \
                     isinstance(node.func, ast.Attribute) and kind(node.func.value) == "self" and \
                     node.func.attr == "__eq__" and kind(node.args[0]) == "other" and name == "__ne__":
@@ -1803,7 +1898,7 @@ class Hunter:
                 return "self" if node.id == me else "other" if node.id == other else None
             if isinstance(node, ast.Constant) and node.value is None:
                 return "none"
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type" and \
+            if type_ok and isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type" and \
                     len(node.args) == 1 and not node.keywords:
                 k = kind(node.args[0])
                 return f"type_{k}" if k in ("self", "other") else None
